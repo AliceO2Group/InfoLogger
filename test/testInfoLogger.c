@@ -1,16 +1,17 @@
 #include <InfoLogger.h>
 #include <stdio.h>
 
-int main() {
+int main()
+{
   InfoLoggerHandle logH;
-  
+
   int err;
-  err=infoLoggerOpen(&logH);
-  printf("infoLoggerOpen() = %d\n",err);
-  err=infoLoggerLog(logH,"infoLogger message test");
-  printf("infoLoggerLog() = %d\n",err);
-  err=infoLoggerClose(&logH);
-  printf("infoLoggerClose() = %d\n",err);
+  err = infoLoggerOpen(&logH);
+  printf("infoLoggerOpen() = %d\n", err);
+  err = infoLoggerLog(logH, "infoLogger message test");
+  printf("infoLoggerLog() = %d\n", err);
+  err = infoLoggerClose(&logH);
+  printf("infoLoggerClose() = %d\n", err);
 
   return 0;
 }

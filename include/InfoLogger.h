@@ -4,7 +4,8 @@
 /// \author Sylvain Chapeland, CERN
 
 
-typedef void* InfoLoggerHandle; /// Handle to infoLogger connection
+/// Handle to infoLogger connection
+typedef void* InfoLoggerHandle;
 
 
 /// Open infoLogger connection.
@@ -21,5 +22,6 @@ int infoLoggerClose(InfoLoggerHandle handle);
 /// Log a message.
 /// \param handle   Handle to InfoLogger, as created by a previous infoLoggerOpen() call.
 /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
+/// \param ...      Extra optionnal parameters for formatting.
 /// \return         0 on success, an error code otherwise.
 int infoLoggerLog(InfoLoggerHandle handle, const char *message, ...) __attribute__((format(printf, 2, 3)));

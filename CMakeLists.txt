@@ -48,11 +48,13 @@ include_directories (
 add_library (
   InfoLogger-static STATIC
   src/InfoLogger.c
+  src/InfoLogger.cxx
 )
 
 add_library (
   InfoLogger-shared SHARED
   src/InfoLogger.c
+  src/InfoLogger.cxx
 )
 
 add_executable (
@@ -62,6 +64,16 @@ add_executable (
 
 target_link_libraries(
   testInfoLoggerC
+  InfoLogger-static
+)
+
+add_executable (
+  testInfoLoggerCXX
+  test/testInfoLogger.cxx
+)
+
+target_link_libraries(
+  testInfoLoggerCXX
   InfoLogger-static
 )
 

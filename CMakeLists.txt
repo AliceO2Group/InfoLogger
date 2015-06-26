@@ -40,13 +40,17 @@ else()
   message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-include_directories(
-)
 file(
   GLOB_RECURSE
   source_files
   src/*
   test/*
+)
+
+file(
+  GLOB_RECURSE
+  PUBLIC_HEADERS
+  include/*
 )
 
 include_directories (
@@ -87,8 +91,13 @@ target_link_libraries(
 )
 
 
-# documentation
+# Specify how/where to install this libraries and headers
+install(FILES ${PUBLIC_HEADERS}
+  DESTINATION include COMPONENT dev 
+)
 
+
+# documentation
 include(FindDoxygen)
 
 # Add an option for the user to enable or not the documentation generation. 

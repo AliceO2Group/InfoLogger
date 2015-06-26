@@ -92,8 +92,19 @@ target_link_libraries(
 
 
 # Specify how/where to install this libraries and headers
-install(FILES ${PUBLIC_HEADERS}
-  DESTINATION include COMPONENT dev 
+set_target_properties(InfoLogger-static PROPERTIES
+    VERSION ${VERSION}
+    PUBLIC_HEADER "${PUBLIC_HEADERS}"
+)
+set_target_properties(InfoLogger-shared PROPERTIES
+    VERSION ${VERSION}
+)
+install(TARGETS InfoLogger-shared InfoLogger-static
+  ARCHIVE DESTINATION lib COMPONENT dev   # static lib
+  RUNTIME DESTINATION bin COMPONENT libs  # binaries
+  LIBRARY DESTINATION lib COMPONENT libs  # shared lib
+  FRAMEWORK DESTINATION lib COMPONENT libs # for Mac
+  PUBLIC_HEADER DESTINATION include COMPONENT dev   # headers
 )
 
 
@@ -119,4 +130,24 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     COMMENT "Generating API documentation using doxygen" VERBATIM)
 
 endif(BUILD_DOCS AND DOXYGEN_FOUND)
+
+
+# For other packages to find this one
+set(INCLUDE_INSTALL_DIR include/ CACHE STRING "INCLUDE_INSTALL_DIR")
+set(LIB_INSTALL_DIR lib/ CACHE STRING "LIB_INSTALL_DIR")
+set(SHARE_INSTALL_DIR share/ CACHE STRING "SHARE_INSTALL_DIR")
+include(CMakePackageConfigHelpers)
+configure_package_config_file(InfoLoggerConfig.cmake.in 
+                              ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfig.cmake
+                              INSTALL_DESTINATION ${SHARE_INSTALL_DIR}/InfoLogger-${VERSION_MAJOR}/cmake
+                              PATH_VARS INCLUDE_INSTALL_DIR 
+                                        LIB_INSTALL_DIR 
+                                        SHARE_INSTALL_DIR)
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfigVersion.cmake
+                                 VERSION ${VERSION}
+                                 COMPATIBILITY SameMajorVersion )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfig.cmake 
+              ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfigVersion.cmake
+        DESTINATION ${SHARE_INSTALL_DIR}/InfoLogger-${VERSION_MAJOR}/cmake )
+
 

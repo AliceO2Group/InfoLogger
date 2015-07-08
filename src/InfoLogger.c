@@ -6,7 +6,6 @@
 #include <InfoLogger.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <time.h>
 
 #define InfoLoggerMagicNumber 0xABABAC00
@@ -22,13 +21,13 @@ int infoLoggerOpen(InfoLoggerHandle *handle)
   if (handle == NULL) {
     return __LINE__;
   }
-  *handle=NULL;
+  *handle = NULL;
   InfoLoggerHandleData *handleData;
-  handleData=(InfoLoggerHandleData *)malloc(sizeof(InfoLoggerHandleData));
+  handleData = (InfoLoggerHandleData *) malloc(sizeof(InfoLoggerHandleData));
   if (handleData == NULL) { return __LINE__; }
-  handleData->magicTag=InfoLoggerMagicNumber;
-  handleData->numberOfMessages=0;
-  *handle=handleData;
+  handleData->magicTag = InfoLoggerMagicNumber;
+  handleData->numberOfMessages = 0;
+  *handle = handleData;
   return 0;
 }
 
@@ -36,8 +35,8 @@ int infoLoggerClose(InfoLoggerHandle handle)
 {
   InfoLoggerHandleData *handleData = (InfoLoggerHandleData *) handle;
   if (handleData == NULL) { return __LINE__; }
-  if (handleData->magicTag!=InfoLoggerMagicNumber) { return __LINE__; }
-  handleData->magicTag=0;
+  if (handleData->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  handleData->magicTag = 0;
   free(handleData);
   return 0;
 }
@@ -46,10 +45,10 @@ int infoLoggerLogV(InfoLoggerHandle handle, const char *message, va_list ap)
 {
   InfoLoggerHandleData *handleData = (InfoLoggerHandleData *) handle;
   if (handleData == NULL) { return __LINE__; }
-  if (handleData->magicTag!=InfoLoggerMagicNumber) { return __LINE__; }
+  if (handleData->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
 
-  char buffer[1024]="";
-  int len=0;
+  char buffer[1024] = "";
+  size_t len = 0;
 
   time_t now;
   struct tm tm_str;
@@ -67,11 +66,11 @@ int infoLoggerLogV(InfoLoggerHandle handle, const char *message, va_list ap)
 
 int infoLoggerLog(InfoLoggerHandle handle, const char *message, ...)
 {
-  int err=0;
-  
+  int err = 0;
+
   va_list ap;
   va_start(ap, message);
-  err=infoLoggerLogV(handle,message,ap);
+  err = infoLoggerLogV(handle, message, ap);
   va_end(ap);
 
   return err;

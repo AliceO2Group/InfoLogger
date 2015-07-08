@@ -9,11 +9,15 @@
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 
+namespace AliceO2 {
+namespace InfoLogger {
+
 class InfoLoggerPrivate;
 
 
 /// This class instanciates an infoLogger connection.
-class InfoLogger {
+class InfoLogger
+{
 
   public:
 
@@ -31,30 +35,32 @@ class InfoLogger {
 
 
   /// Control commands for infoLogger stream (accepted by << operator)
-  enum StreamOps {
+  enum StreamOps
+  {
     endm    ///< tag to mark end of message, and flush current buffer
   };
-  
+
 
   /// Specialized << version for std::string  
-  InfoLogger & operator<<(const std::string message);
+  InfoLogger &operator<<(const std::string message);
 
   /// Specialized << version for control commands
   /// In particular, to mark (and flush) the end of a message.
-  InfoLogger & operator<<(const InfoLogger::StreamOps op);
+  InfoLogger &operator<<(const InfoLogger::StreamOps op);
 
- 
+
   /// Log a message using the << operator, like for std::cout.
   /// All messages must be ended with the InfoLogger::StreamOps::endm tag. 
   template<typename T>
-  InfoLogger & operator<<(const T &message) {
+  InfoLogger &operator<<(const T &message)
+  {
     *this << boost::lexical_cast<std::string>(message);
     return *this;
   }
 
-
-  
   private:
-    InfoLoggerPrivate *dPtr;
+  InfoLoggerPrivate *dPtr;
 };
 
+}
+}

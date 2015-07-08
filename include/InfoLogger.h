@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /// Handle to infoLogger connection
-typedef void* InfoLoggerHandle;
+typedef void *InfoLoggerHandle;
 
 
 /// Open infoLogger connection.

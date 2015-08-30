@@ -3,7 +3,7 @@
 ///
 /// \author Sylvain Chapeland, CERN
 
-#include <InfoLogger.h>
+#include "InfoLogger/InfoLogger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

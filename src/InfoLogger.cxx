@@ -3,8 +3,8 @@
 ///
 /// \author Sylvain Chapeland, CERN
 
-#include <InfoLogger.hxx>
-#include <InfoLogger.h>
+#include "InfoLogger/InfoLogger.hxx"
+#include "InfoLogger/InfoLogger.h"
 
 namespace AliceO2 {
 namespace InfoLogger {

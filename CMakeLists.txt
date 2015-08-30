@@ -2,7 +2,7 @@
 #
 # @author  sylvain.chapeland@cern.ch
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.8)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake) # main (top) cmake dir
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake) # project specific cmake dir
 
@@ -14,6 +14,8 @@ set(VERSION_MAJOR "0")
 set(VERSION_MINOR "0")
 set(VERSION_PATCH "0")
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+
+include(O2)
 
 ## Git (and its revision)
 find_package(Git QUIET) # if we don't find git or FindGit.cmake is not on the system we ignore it.
@@ -38,6 +40,13 @@ if(COMPILER_SUPPORTS_CXX11)
 else()
   message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
+
+# Mac required variables (http://www.cmake.org/Wiki/CMake_RPATH_handling#Mac_OS_X_and_the_RPATH)
+set(CMAKE_MACOSX_RPATH ON)
+#set(CMAKE_SKIP_BUILD_RPATH FALSE)
+#set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+#set(CMAKE_INSTALL_RPATH "")
+#set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 file(
   GLOB_RECURSE
@@ -128,5 +137,3 @@ write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfigVer
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfig.cmake 
               ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfigVersion.cmake
         DESTINATION ${SHARE_INSTALL_DIR}/InfoLogger-${VERSION_MAJOR}/cmake )
-
-

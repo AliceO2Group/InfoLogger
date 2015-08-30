@@ -3,7 +3,7 @@
 ///
 /// \author Sylvain Chapeland, CERN
 
-#include <InfoLogger.hxx>
+#include "InfoLogger/InfoLogger.hxx"
 #include <boost/format.hpp>
 
 using namespace AliceO2::InfoLogger;

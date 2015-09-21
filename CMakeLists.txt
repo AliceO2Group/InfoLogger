@@ -1,10 +1,15 @@
-# INFOLOGGER CMAKELISTS.TXT
+# REFERENCE PROJECT CMAKELISTS.TXT
 #
-# @author  sylvain.chapeland@cern.ch
+# @author Barthélémy von Haller
 
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake) # main (top) cmake dir
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake) # project specific cmake dir
+
+# CMake useful variables
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib") 
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 # Set the name of your project here
 project("InfoLogger")
@@ -16,6 +21,19 @@ set(VERSION_PATCH "0")
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 include(O2)
+
+# SVN (and its revision)
+#include(FindSubversion)
+#IF(Subversion_FOUND)
+#    if(EXISTS "${CMAKE_SOURCE_DIR}/.svn")
+#        Subversion_WC_INFO(${CMAKE_SOURCE_DIR} MY)
+#        SET(VCS_REVISION "${MY_WC_REVISION}")
+#    else ()
+#        SET(VCS_REVISION "-1")
+#    endif()
+#ELSE(Subversion_FOUND)
+#    SET(VCS_REVISION "-1")
+#ENDIF(Subversion_FOUND)
 
 ## Git (and its revision)
 find_package(Git QUIET) # if we don't find git or FindGit.cmake is not on the system we ignore it.
@@ -32,108 +50,41 @@ if(GIT_FOUND)
     set (VCS_REVISION ${GIT_SHA1})
 endif()
 
-# C++11 needed
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG(-std=c++11 COMPILER_SUPPORTS_CXX11)
-if(COMPILER_SUPPORTS_CXX11)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-else()
-  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
-endif()
+# This line finds the boost lib and headers. 
+set(Boost_NO_BOOST_CMAKE ON) #  Don't do a find_package in config mode before searching for a regular boost install.
+find_package(Boost COMPONENTS unit_test_framework program_options REQUIRED)
 
-# Mac required variables (http://www.cmake.org/Wiki/CMake_RPATH_handling#Mac_OS_X_and_the_RPATH)
+# This sets the include directory for the reference project. This is the -I flag in gcc.
+# All the includes should be in this variable To add new directories to the include path,
+# just add them in this list (after a space), or add an include_directories statement in a
+# subdirectory's CMakeLists.
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_BINARY_DIR}/include   # add the binary tree to the search path so that we will find Version.h
+    ${Boost_INCLUDE_DIRS}
+)
+
+# Mac needed variables (adapt according to your needs)
 set(CMAKE_MACOSX_RPATH ON)
 #set(CMAKE_SKIP_BUILD_RPATH FALSE)
 #set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-#set(CMAKE_INSTALL_RPATH "")
-#set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+#set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+#set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-file(
-  GLOB_RECURSE
-  source_files
-  src/*
-  test/*
-)
-
-file(
-  GLOB_RECURSE
-  PUBLIC_HEADERS
-  include/InfoLogger/*
-)
-
-include_directories (
-  include
-  src
-)
-
-add_library (
-  InfoLogger-static STATIC
-  src/InfoLogger.c
-  src/InfoLogger.cxx
-)
-
-add_library (
-  InfoLogger-shared SHARED
-  src/InfoLogger.c
-  src/InfoLogger.cxx
-)
-
-add_executable (
-  testInfoLoggerC
-  test/testInfoLogger.c
-)
-
-target_link_libraries(
-  testInfoLoggerC
-  InfoLogger-static
-)
-
-add_executable (
-  testInfoLoggerCXX
-  test/testInfoLogger.cxx
-)
-
-target_link_libraries(
-  testInfoLoggerCXX
-  InfoLogger-static
-)
-
-
-# Specify how/where to install this libraries and headers
-set_target_properties(InfoLogger-static PROPERTIES
-    VERSION ${VERSION}
-    PUBLIC_HEADER "${PUBLIC_HEADERS}"
-)
-set_target_properties(InfoLogger-shared PROPERTIES
-    VERSION ${VERSION}
-)
-install(TARGETS InfoLogger-shared InfoLogger-static
-  ARCHIVE DESTINATION lib COMPONENT dev   # static lib
-  RUNTIME DESTINATION bin COMPONENT libs  # binaries
-  LIBRARY DESTINATION lib COMPONENT libs  # shared lib
-  FRAMEWORK DESTINATION lib COMPONENT libs # for Mac
-  PUBLIC_HEADER DESTINATION include/${PROJECT_NAME} COMPONENT dev   # headers
-)
-
-
-# documentation
+enable_testing()
+add_subdirectory(include)
+add_subdirectory(src)
 add_subdirectory(doc)
+add_subdirectory(test)
 
+#
+# SYSTEM PACKAGING (RPM, TGZ, ...)
+# _____________________________________________________________________________
 
-# For other packages to find this one
-set(INCLUDE_INSTALL_DIR include/ CACHE STRING "INCLUDE_INSTALL_DIR")
-set(LIB_INSTALL_DIR lib/ CACHE STRING "LIB_INSTALL_DIR")
-set(SHARE_INSTALL_DIR share/ CACHE STRING "SHARE_INSTALL_DIR")
-include(CMakePackageConfigHelpers)
-configure_package_config_file(InfoLoggerConfig.cmake.in 
-                              ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfig.cmake
-                              INSTALL_DESTINATION ${SHARE_INSTALL_DIR}/InfoLogger-${VERSION_MAJOR}/cmake
-                              PATH_VARS INCLUDE_INSTALL_DIR 
-                                        LIB_INSTALL_DIR 
-                                        SHARE_INSTALL_DIR)
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfigVersion.cmake
-                                 VERSION ${VERSION}
-                                 COMPATIBILITY SameMajorVersion )
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfig.cmake 
-              ${CMAKE_CURRENT_BINARY_DIR}/InfoLoggerConfigVersion.cmake
-        DESTINATION ${SHARE_INSTALL_DIR}/InfoLogger-${VERSION_MAJOR}/cmake )
+include(CPackConfig)
+
+#
+# CMAKE PACKAGING (for other CMake projects to use this one easily)
+# _____________________________________________________________________________
+
+include(PackageConfigurator)

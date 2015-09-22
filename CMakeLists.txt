@@ -89,3 +89,11 @@ include(CPackConfig)
 # _____________________________________________________________________________
 
 include(PackageConfigurator)
+
+#
+# Make sure we tell the topdir CMakeLists that we exist (if build from topdir)
+# _____________________________________________________________________________
+#if(NOT TARGET ${PROJECT_NAME})
+#    add_custom_target()
+#endif(NOT TARGET ${PROJECT_NAME})
+#set(FOO "${FOO}" PARENT_SCOPE)

@@ -20,6 +20,7 @@ set(VERSION_MINOR "0")
 set(VERSION_PATCH "0")
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
+# Macros and variables for all O2 subprojects
 include(O2)
 
 # SVN (and its revision)

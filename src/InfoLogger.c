@@ -4,11 +4,14 @@
 /// \author Sylvain Chapeland, CERN
 
 #include "InfoLogger/InfoLogger.h"
+
+#define _POSIX_SOURCE 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#define InfoLoggerMagicNumber 0xABABAC00
+#define InfoLoggerMagicNumber (int)0xABABAC00
 
 typedef struct
 {

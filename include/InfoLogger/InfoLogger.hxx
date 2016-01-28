@@ -4,6 +4,10 @@
 ///  See inline documentation, and testInfoLogger.cxx for example usage.
 ///
 /// \author Sylvain Chapeland, CERN
+///
+
+#ifndef INFOLOGGER_INFOLOGGER_HXX
+#define INFOLOGGER_INFOLOGGER_HXX
 
 #include <string>
 #include <iostream>
@@ -64,3 +68,5 @@ class InfoLogger
 
 }
 }
+
+#endif //INFOLOGGER_INFOLOGGER_HXX

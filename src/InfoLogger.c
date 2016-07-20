@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 
 #define InfoLoggerMagicNumber (int)0xABABAC00
 
@@ -53,11 +54,24 @@ int infoLoggerLogV(InfoLoggerHandle handle, const char *message, va_list ap)
   char buffer[1024] = "";
   size_t len = 0;
 
+  // timestamp (microsecond)
+  struct timeval tv;
+  double fullTimeNow=-1;
+  if(gettimeofday(&tv,NULL) == -1){
+    fullTimeNow = time(NULL);
+  } else {
+    fullTimeNow = (double)tv.tv_sec + (double)tv.tv_usec/1000000;
+  }
   time_t now;
   struct tm tm_str;
-  now = time(NULL);
+  now = (time_t)fullTimeNow;
   localtime_r(&now, &tm_str);
-  len = strftime(buffer, sizeof(buffer), "%Y-%m-%d %T\t", &tm_str);
+  double fractionOfSecond=fullTimeNow-now;
+  len = strftime(buffer, sizeof(buffer), "%Y-%m-%d %T", &tm_str);
+  len+=snprintf(&buffer[len],sizeof(buffer)-len,".%.3lf\t",fractionOfSecond);
+  if (len>sizeof(buffer)) {
+    len=sizeof(buffer);
+  }
 
   vsnprintf(&buffer[len], sizeof(buffer) - len, message, ap);
 

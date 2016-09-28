@@ -7,7 +7,12 @@ set(LIB_HEADERS
 
 set(LIB_SOURCES
   InfoLogger.cxx
-  InfoLogger.c
+  infoLoggerMessage.c
+  utility.c
+#  InfoLogger.c
+  InfoLoggerClient.cxx
+  SimpleLog.cxx
+  InfoLoggerMessageHelper
 )
 
 # Define two variables in order not to repeat ourselves.
@@ -17,6 +22,10 @@ set(LIBRARY_NAME_STATIC InfoLogger-static)
 # Define the library
 add_library(${LIBRARY_NAME_SHARED} SHARED ${LIB_SOURCES})
 add_library(${LIBRARY_NAME_STATIC} STATIC ${LIB_SOURCES})
+
+
+add_library(InfoLogger-utils-static STATIC SimpleLog.cxx Daemon.cxx InfoLoggerMessageHelper.cxx)
+
 
 # Set the build version. It will be used in the name of the lib, with corresponding
 # symlinks created. SOVERSION could also be specified for api version. 
@@ -30,7 +39,26 @@ set_target_properties(${LIBRARY_NAME_STATIC} PROPERTIES
         FRAMEWORK FALSE
         PUBLIC_HEADER "${LIB_HEADERS}" # specify the public headers
         )
-        
+
+
+  
+#add_executable(infoLoggerClient infoLoggerClient.cxx)
+#target_link_libraries(infoLoggerClient ${LIBRARY_NAME} InfoLogger-utils-static pthread Common)
+
+
+set_source_files_properties(simplelog.c PROPERTIES LANGUAGE CXX )
+
+
+add_library(infoLogger-legacy-utils STATIC utility.c transport_server.c transport_client.c transport_files.c simplelog.c transport_proxy.c permanentFIFO.c infoLoggerMessage.c)
+
+add_executable(infoLoggerServer infoLoggerServer.cxx)
+target_link_libraries(infoLoggerServer pthread Common InfoLogger-utils-static infoLogger-legacy-utils)
+
+
+add_executable(infoLoggerD infoLoggerD.cxx)
+target_link_libraries(infoLoggerD pthread Common InfoLogger-utils-static infoLogger-legacy-utils)
+  
+  
 # Says how and where to install software
 # Targets:
 #   * <prefix>/lib/<libraries>

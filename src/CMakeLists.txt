@@ -11,7 +11,7 @@ set(LIB_SOURCES
   utility.c
 #  InfoLogger.c
   InfoLoggerClient.cxx
-  SimpleLog.cxx
+#  SimpleLog.cxx
   InfoLoggerMessageHelper
 )
 
@@ -23,8 +23,8 @@ set(LIBRARY_NAME_STATIC InfoLogger-static)
 add_library(${LIBRARY_NAME_SHARED} SHARED ${LIB_SOURCES})
 add_library(${LIBRARY_NAME_STATIC} STATIC ${LIB_SOURCES})
 
-
-add_library(InfoLogger-utils-static STATIC SimpleLog.cxx Daemon.cxx InfoLoggerMessageHelper.cxx)
+#SimpleLog.cxx Daemon.cxx
+add_library(InfoLogger-utils-static STATIC  InfoLoggerMessageHelper.cxx)
 
 
 # Set the build version. It will be used in the name of the lib, with corresponding

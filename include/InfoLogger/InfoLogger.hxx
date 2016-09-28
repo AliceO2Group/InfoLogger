@@ -16,8 +16,6 @@
 namespace AliceO2 {
 namespace InfoLogger {
 
-class InfoLoggerPrivate;
-
 
 /// This class instanciates an infoLogger connection.
 class InfoLogger
@@ -37,6 +35,14 @@ class InfoLogger
   /// \return         0 on success, an error code otherwise.
   int log(const char *message, ...) __attribute__((format(printf, 2, 3)));
 
+  /// Log a message, with a list of arguments of type va_list.
+  /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
+  /// \param ap       Variable list of arguments (c.f. vprintf)
+  /// \return         0 on success, an error code otherwise.
+  int logV(const char *message, va_list ap) __attribute__((format(printf, 2, 0)));
+
+
+  enum Severity {Info='I', Error='E', Fatal='F', Warning='W', Debug='D'};
 
   /// Control commands for infoLogger stream (accepted by << operator)
   enum StreamOps
@@ -62,8 +68,10 @@ class InfoLogger
     return *this;
   }
 
+
   private:
-  InfoLoggerPrivate *dPtr;
+  class Impl;                       // private class for implementation
+  std::unique_ptr<Impl> pImpl;      // handle to private class instance at runtime
 };
 
 }

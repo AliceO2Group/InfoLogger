@@ -26,6 +26,8 @@
 //////////////////////////////////////////////////////////
 /// implementation of the C API
 /// (wrapper to C++ interface)
+using namespace AliceO2::InfoLogger;
+
 int infoLoggerOpen(InfoLoggerHandle *handle)
 {
   if (handle == NULL) {
@@ -33,7 +35,7 @@ int infoLoggerOpen(InfoLoggerHandle *handle)
   }
   *handle = NULL;
   
-  AliceO2::InfoLogger::InfoLogger *log=new AliceO2::InfoLogger::InfoLogger();
+  InfoLogger *log=new InfoLogger();
   if (log==NULL) {return __LINE__;}
   *handle = (InfoLoggerHandle *) log;  
   return 0;
@@ -41,7 +43,7 @@ int infoLoggerOpen(InfoLoggerHandle *handle)
 
 int infoLoggerClose(InfoLoggerHandle handle)
 {
-  AliceO2::InfoLogger::InfoLogger *log= (AliceO2::InfoLogger::InfoLogger *) handle;
+  InfoLogger *log= (InfoLogger *) handle;
   if (log == NULL) { return __LINE__; }
   delete log;
   return 0;
@@ -49,22 +51,74 @@ int infoLoggerClose(InfoLoggerHandle handle)
 
 int infoLoggerLogV(InfoLoggerHandle handle, const char *message, va_list ap)
 {
-  AliceO2::InfoLogger::InfoLogger *log= (AliceO2::InfoLogger::InfoLogger *) handle;
+  InfoLogger *log= (InfoLogger *) handle;
   if (log == NULL) { return __LINE__; }
 
-  return log->logV(message,ap);
+  return log->logV(InfoLogger::Severity::Info,message,ap);
 }
 
 
 int infoLoggerLog(InfoLoggerHandle handle, const char *message, ...)
 {
-  AliceO2::InfoLogger::InfoLogger *log= (AliceO2::InfoLogger::InfoLogger *) handle;
+  InfoLogger *log= (InfoLogger *) handle;
   if (log == NULL) { return __LINE__; }
 
   int err = 0;
   va_list ap;
   va_start(ap, message);
-  err = log->logV(message, ap);
+  err = log->logV(InfoLogger::Severity::Info,message, ap);
+  va_end(ap);
+  return err;
+}
+
+
+int infoLoggerLogInfo(InfoLoggerHandle handle, const char *message, ...) {
+  InfoLogger *log= (InfoLogger *) handle;
+  if (log == NULL) { return __LINE__; }
+  int err = 0;
+  va_list ap;
+  va_start(ap, message);
+  err = log->logV(InfoLogger::Severity::Info,message, ap);
+  va_end(ap);
+  return err;
+}
+int infoLoggerLogWarning(InfoLoggerHandle handle, const char *message, ...) {
+  InfoLogger *log= (InfoLogger *) handle;
+  if (log == NULL) { return __LINE__; }
+  int err = 0;
+  va_list ap;
+  va_start(ap, message);
+  err = log->logV(InfoLogger::Severity::Warning,message, ap);
+  va_end(ap);
+  return err;
+}
+int infoLoggerLogError(InfoLoggerHandle handle, const char *message, ...) {
+  InfoLogger *log= (InfoLogger *) handle;
+  if (log == NULL) { return __LINE__; }
+  int err = 0;
+  va_list ap;
+  va_start(ap, message);
+  err = log->logV(InfoLogger::Severity::Error,message, ap);
+  va_end(ap);
+  return err;
+}
+int infoLoggerLogFatal(InfoLoggerHandle handle, const char *message, ...) {
+  InfoLogger *log= (InfoLogger *) handle;
+  if (log == NULL) { return __LINE__; }
+  int err = 0;
+  va_list ap;
+  va_start(ap, message);
+  err = log->logV(InfoLogger::Severity::Fatal,message, ap);
+  va_end(ap);
+  return err;
+}
+int infoLoggerLogDebug(InfoLoggerHandle handle, const char *message, ...) {
+  InfoLogger *log= (InfoLogger *) handle;
+  if (log == NULL) { return __LINE__; }
+  int err = 0;
+  va_list ap;
+  va_start(ap, message);
+  err = log->logV(InfoLogger::Severity::Debug,message, ap);
   va_end(ap);
   return err;
 }
@@ -144,15 +198,38 @@ class InfoLogger::Impl {
       throw __LINE__;
     }
     refreshDefaultMsg();
+    currentMode=stdout;
+    client=nullptr;
+    if (currentMode==OutputMode::infoLoggerD) {
+      client=new InfoLoggerClient;
+    }
+    // todo
+    // switch mode based on configuration / environment
+    // connect to client only on first message (or try again after timeout)
   }
   ~Impl() {
     magicTag = 0;
+    if (client!=nullptr) {
+      delete client;
+    }
   }
 
-  int pushMessage(const char *msg); // todo: add extra "configurable" fields, e.g. line, etc
+  int pushMessage(InfoLogger::Severity severity, const char *msg); // todo: add extra "configurable" fields, e.g. line, etc
 
   friend class InfoLogger;  //< give access to this data from InfoLogger class
 
+  enum OutputMode {stdout, file, infoLoggerD};  // available options for output
+  OutputMode currentMode; // current option for output
+  
+  
+
+  /// Log a message, with a list of arguments of type va_list.
+  /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
+  /// \param ap       Variable list of arguments (c.f. vprintf)
+  /// \return         0 on success, an error code otherwise.
+  int logV(InfoLogger::Severity severity, const char *message, va_list ap) __attribute__((format(printf, 3, 0)));
+  
+  
   protected:
   int magicTag;                     //< A static tag used for handle validity cross-check
   int numberOfMessages;             //< number of messages received by this object
@@ -163,7 +240,8 @@ class InfoLogger::Impl {
   void refreshDefaultMsg();  
   infoLog_msg_t defaultMsg;         //< default log message (in particular, to complete optionnal fields)
   
-  InfoLoggerClient client; //< entity to communicate with local infoLoggerD
+  InfoLoggerClient *client; //< entity to communicate with local infoLoggerD
+  SimpleLog stdLog;  //< object to output messages to stdout/file
 };
 
 
@@ -192,7 +270,7 @@ void InfoLogger::Impl::refreshDefaultMsg() {
 
 #define LOG_MAX_SIZE 1024
 
-int InfoLogger::Impl::pushMessage(const char *messageBody) {
+int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *messageBody) {
   infoLog_msg_t msg=defaultMsg;
 
   struct timeval tv;
@@ -205,46 +283,29 @@ int InfoLogger::Impl::pushMessage(const char *messageBody) {
     InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_message,String,messageBody);
   }
   
+  char strSeverity[2]={(char)(severity),0};
+  InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_severity,String,strSeverity);
+  
+  
   char buffer[LOG_MAX_SIZE];
   msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Encoded);
 //  printf("%s\n",buffer);
-  client.send(buffer,strlen(buffer));
+
+  if (client!=nullptr) {
+    client->send(buffer,strlen(buffer));
+    
+    // todo
+    // on error, close connection / use stdout / buffer messages in memory ?
+  }
+  if (currentMode==OutputMode::stdout) {
+    stdLog.info(messageBody);
+  }
   
   return 0;
 }
 
-
-
-
-
-
-InfoLogger::InfoLogger()
+int InfoLogger::Impl::logV(InfoLogger::Severity severity, const char *message, va_list ap)
 {
-  pImpl=std::make_unique<InfoLogger::Impl>();
-  if (pImpl==NULL) { throw __LINE__; }
-}
-
-
-InfoLogger::~InfoLogger()
-{
-  // pImpl is automatically destroyed
-}
-
-int InfoLogger::log(const char *message, ...)
-{
-  // forward variable list of arguments to logV method
-  int err;
-  va_list ap;
-  va_start(ap, message);
-  err = logV(message, ap);
-  va_end(ap);
-  return err;
-}
-
-int InfoLogger::logV(const char *message, va_list ap)
-{
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
-
   char buffer[1024] = "";
   size_t len = 0;
 /*
@@ -271,10 +332,56 @@ int InfoLogger::logV(const char *message, va_list ap)
 
   //printf("%s\n", buffer);
   
-  pImpl->pushMessage(buffer);
+  pushMessage(severity,buffer);
   
-  pImpl->numberOfMessages++;
+  numberOfMessages++;
   return 0;
+}
+
+
+
+
+
+
+InfoLogger::InfoLogger()
+{
+  pImpl=std::make_unique<InfoLogger::Impl>();
+  if (pImpl==NULL) { throw __LINE__; }
+}
+
+
+InfoLogger::~InfoLogger()
+{
+  // pImpl is automatically destroyed
+}
+
+int InfoLogger::log(const char *message, ...)
+{
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = logV(InfoLogger::Severity::Info,message, ap);
+  va_end(ap);
+  return err;
+}
+
+
+int InfoLogger::log(Severity severity, const char *message, ...)
+{
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = logV(severity,message, ap);
+  va_end(ap);
+  return err;
+}
+
+
+int InfoLogger::logV(Severity severity, const char *message, va_list ap) {
+  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  return pImpl->logV(severity, message, ap);
 }
 
 
@@ -291,7 +398,7 @@ InfoLogger &InfoLogger::operator<<(InfoLogger::StreamOps op)
 
   // end of message: flush current buffer in a single message
   if (op == endm) {
-    log(pImpl->currentStreamMessage.c_str());
+    log(InfoLogger::Severity::Info,pImpl->currentStreamMessage.c_str());
     pImpl->currentStreamMessage.clear();
   }
   return *this;

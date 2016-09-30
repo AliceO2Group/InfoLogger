@@ -29,20 +29,31 @@ class InfoLogger
   /// Destructor
   ~InfoLogger();
 
-  /// Log a message.
+
+  /// Definition of possible message severities
+  enum Severity {Info='I', Error='E', Fatal='F', Warning='W', Debug='D'};
+
+
+  /// Log a message. (severity set to info)
   /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
   /// \param ...      Extra optionnal parameters for formatting.
   /// \return         0 on success, an error code otherwise.
   int log(const char *message, ...) __attribute__((format(printf, 2, 3)));
 
+  /// Log a message.
+  /// \param severity Message severity (info, error, ...)
+  /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
+  /// \param ...      Extra optionnal parameters for formatting.
+  /// \return         0 on success, an error code otherwise.
+  int log(Severity severity, const char *message, ...) __attribute__((format(printf, 3, 4)));
+
   /// Log a message, with a list of arguments of type va_list.
+  /// \param severity Message severity (info, error, ...)
   /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
   /// \param ap       Variable list of arguments (c.f. vprintf)
   /// \return         0 on success, an error code otherwise.
-  int logV(const char *message, va_list ap) __attribute__((format(printf, 2, 0)));
+  int logV(Severity severity, const char *message, va_list ap) __attribute__((format(printf, 3, 0)));
 
-
-  enum Severity {Info='I', Error='E', Fatal='F', Warning='W', Debug='D'};
 
   /// Control commands for infoLogger stream (accepted by << operator)
   enum StreamOps

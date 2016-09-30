@@ -40,6 +40,15 @@ int infoLoggerLog(InfoLoggerHandle handle, const char *message, ...) __attribute
 /// \return         0 on success, an error code otherwise.
 int infoLoggerLogV(InfoLoggerHandle handle, const char *message, va_list ap) __attribute__((format(printf, 2, 0)));
 
+/// Functions to log messages of type Info,Warning,Error,Fatal,Debug
+/// \see { infoLoggerLog }
+int infoLoggerLogInfo(InfoLoggerHandle handle, const char *message, ...) __attribute__((format(printf, 2, 3)));
+int infoLoggerLogWarning(InfoLoggerHandle handle, const char *message, ...) __attribute__((format(printf, 2, 3)));
+int infoLoggerLogError(InfoLoggerHandle handle, const char *message, ...) __attribute__((format(printf, 2, 3)));
+int infoLoggerLogFatal(InfoLoggerHandle handle, const char *message, ...) __attribute__((format(printf, 2, 3)));
+int infoLoggerLogDebug(InfoLoggerHandle handle, const char *message, ...) __attribute__((format(printf, 2, 3)));
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -304,8 +304,10 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *mes
     switch(severity) {
       case(InfoLogger::Severity::Fatal):
       case(InfoLogger::Severity::Error):
+        stdLog.error("\033[1;31m%s\e[0m",buffer);
+        break;
       case(InfoLogger::Severity::Warning):
-        stdLog.error("%s",buffer);
+        stdLog.warning("\033[1;33m%s\e[0m",buffer);
         break;
       case(InfoLogger::Severity::Info):
       case(InfoLogger::Severity::Debug):

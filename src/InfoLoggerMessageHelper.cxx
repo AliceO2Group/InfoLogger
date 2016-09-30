@@ -110,6 +110,8 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t *msg, char *buffer, int
   int all=1;
   int status;
   
+  // todo: escape %... & other printf formats ?
+  
   switch (format) {
 
      case InfoLoggerMessageHelper::Format::Simple :

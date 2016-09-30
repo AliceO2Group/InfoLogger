@@ -285,20 +285,34 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *mes
   
   char strSeverity[2]={(char)(severity),0};
   InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_severity,String,strSeverity);
-  
-  
-  char buffer[LOG_MAX_SIZE];
-  msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Encoded);
+   
 //  printf("%s\n",buffer);
 
   if (client!=nullptr) {
+    char buffer[LOG_MAX_SIZE];
+    msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Encoded);
     client->send(buffer,strlen(buffer));
     
     // todo
     // on error, close connection / use stdout / buffer messages in memory ?
   }
+  
   if (currentMode==OutputMode::stdout) {
-    stdLog.info(messageBody);
+      char buffer[LOG_MAX_SIZE];
+      msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Simple);
+
+    switch(severity) {
+      case(InfoLogger::Severity::Fatal):
+      case(InfoLogger::Severity::Error):
+      case(InfoLogger::Severity::Warning):
+        stdLog.error("%s",buffer);
+        break;
+      case(InfoLogger::Severity::Info):
+      case(InfoLogger::Severity::Debug):
+      default:
+        stdLog.info("%s",buffer);
+        break;
+    }
   }
   
   return 0;

@@ -12,6 +12,7 @@
 #include <string>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
+#include <memory>
 
 namespace AliceO2 {
 namespace InfoLogger {

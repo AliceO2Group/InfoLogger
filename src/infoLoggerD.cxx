@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include <signal.h>
-
+#include <limits.h>
 
 #include <list>
 
@@ -34,6 +34,7 @@
 #include <Common/SimpleLog.h>
 #include "transport_client.h"
 
+#include "simplelog.h"
 
 
 //////////////////////////////////////////////////////
@@ -99,7 +100,6 @@ void ConfigInfoLoggerD::resetConfig() {
 //////////////////////////////////////////////////////
 
 
-#define PATH_MAX 1024
 int checkDirAndCreate(const char *dir, SimpleLog *log=NULL) {
   char path[PATH_MAX];
   struct stat info;
@@ -210,6 +210,9 @@ InfoLoggerD::InfoLoggerD() {
  
     numberOfMessagesReceived=0;
     rxSocket=-1; 
+   
+    // redirect legacy simplelog interface to SimpleLog
+    setSimpleLog(&log);
    
     // check directory for local storage
     log.info("Using directory %s for local storage",cfg.localLogDirectory->c_str());

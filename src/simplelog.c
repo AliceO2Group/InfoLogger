@@ -71,9 +71,9 @@ static int slog_file_open();
   *
   * buffer is filled with a formatted log message.
 */
-int slog_vformat(char *buffer, size_t size, slog_Severity severity, char *message, va_list ap){
+int slog_vformat(char *buffer, size_t size, slog_Severity severity, const char *message, va_list ap){
 
-  char        *level_msg;                   /* message severity string */
+  const char        *level_msg;             /* message severity string */
   time_t      now;                          /* time now */
   struct tm   tm_str;                       /* time struct for now */
   int         len;                          /* current message length */    
@@ -140,7 +140,7 @@ int slog_vformat(char *buffer, size_t size, slog_Severity severity, char *messag
   *
   * buffer is filled with a formatted log message.
 */
-int slog_format(char *buffer, size_t size, slog_Severity severity, char *message, ...){
+int slog_format(char *buffer, size_t size, slog_Severity severity, const char *message, ...){
 
   int         err;                          /* error code */
   va_list     ap;                           /* list of additionnal params */
@@ -165,15 +165,31 @@ void slog(slog_Severity severity, char *message, ...){
   /* skip debug messages if needed */
   if ((severity==SLOG_DEBUG) && slog_no_debug) return;
 
+  /* special handling - redirection to SimpleLog when available */
+  if (theLog!=NULL) {
+    va_start(ap, message);
+    vsnprintf(buffer,sizeof(buffer),message,ap);
+    va_end(ap);
+    switch(severity) {
+      case SLOG_WARNING:
+        theLog->warning("%s",buffer);
+        break;
+      case SLOG_ERROR:
+      case SLOG_FATAL:
+        theLog->warning("%s",buffer);
+        break;
+      default:
+        theLog->info("%s",buffer);
+        break;
+    }                
+    return;
+  }
+
+
   /* format message */
   va_start(ap, message);
   buffer_short=slog_vformat(buffer,sizeof(buffer),severity,message,ap);
   va_end(ap);
-
-  if (theLog!=NULL) {
-    theLog->info("%s",buffer);
-    return;
-  }
 
   /* CRITICAL SECTION - start */
   pthread_mutex_lock(&mutex_log);

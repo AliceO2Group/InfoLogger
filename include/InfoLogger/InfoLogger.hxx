@@ -70,9 +70,13 @@ class InfoLogger
   /// In particular, to mark (and flush) the end of a message.
   InfoLogger &operator<<(const InfoLogger::StreamOps op);
 
+  /// Specialized << version to set message severity
+  InfoLogger &operator<<(const InfoLogger::Severity severity);
+
 
   /// Log a message using the << operator, like for std::cout.
-  /// All messages must be ended with the InfoLogger::StreamOps::endm tag. 
+  /// All messages must be ended with the InfoLogger::StreamOps::endm tag.
+  /// Severity can be set at any point in the stream (before endm). Set to Info by default.
   template<typename T>
   InfoLogger &operator<<(const T &message)
   {

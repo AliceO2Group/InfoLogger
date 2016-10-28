@@ -20,6 +20,8 @@ int main()
   theLog.log(InfoLogger::Severity::Debug,"infoLogger DEBUG message test");
         
   theLog << "another test message " << InfoLogger::endm;
+  theLog << InfoLogger::Severity::Error << "another (stream error) message " << InfoLogger::endm;
+  theLog << InfoLogger::Severity::Warning << "another (stream warning) message " << InfoLogger::endm;
   theLog << "yet another test message " << "(in " << 2 << " parts)" << InfoLogger::endm;
   theLog << "message with formatting: " << boost::format("%+5d %.3f") % 12345 % 5.4321 << InfoLogger::endm;
 

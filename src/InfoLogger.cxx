@@ -194,6 +194,8 @@ class InfoLogger::Impl {
     magicTag = InfoLoggerMagicNumber;
     numberOfMessages = 0;
     currentStreamMessage.clear();
+    currentStreamSeverity=Severity::Info;
+    
     if (infoLog_proto_init()) {
       throw __LINE__;
     }
@@ -234,7 +236,8 @@ class InfoLogger::Impl {
   int magicTag;                     //< A static tag used for handle validity cross-check
   int numberOfMessages;             //< number of messages received by this object
   std::string currentStreamMessage; //< temporary variable to store message when concatenating << operations, until "endm" is received
-  
+  Severity currentStreamSeverity;  //< temporary variable to store message severity when concatenating << operations, until "endm" is received
+    
   ProcessInfo processInfo;
   InfoLoggerMessageHelper msgHelper; 
   void refreshDefaultMsg();  
@@ -414,13 +417,18 @@ InfoLogger &InfoLogger::operator<<(InfoLogger::StreamOps op)
 
   // end of message: flush current buffer in a single message
   if (op == endm) {
-    log(InfoLogger::Severity::Info,pImpl->currentStreamMessage.c_str());
+    log(pImpl->currentStreamSeverity,pImpl->currentStreamMessage.c_str());
     pImpl->currentStreamMessage.clear();
+    pImpl->currentStreamSeverity=Severity::Info;
   }
   return *this;
 }
 
-
+InfoLogger &InfoLogger::operator<<(const InfoLogger::Severity severity)
+{
+  pImpl->currentStreamSeverity=severity;
+  return *this;
+}
 
 
 

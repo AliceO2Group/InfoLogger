@@ -29,7 +29,7 @@ class InfoLogger
   InfoLogger();
 
   /// Destructor
-  ~InfoLogger();
+  virtual ~InfoLogger();
 
 
   /// Definition of possible message severities

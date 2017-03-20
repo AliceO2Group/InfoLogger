@@ -57,6 +57,10 @@ target_link_libraries(infoLoggerServer pthread Common InfoLogger-utils-static in
 
 add_executable(infoLoggerD infoLoggerD.cxx)
 target_link_libraries(infoLoggerD pthread Common InfoLogger-utils-static infoLogger-legacy-utils)
+
+add_executable(log log.cxx)
+target_link_libraries(log pthread Common InfoLogger-utils-static InfoLogger-static)
+
   
   
 # Says how and where to install software

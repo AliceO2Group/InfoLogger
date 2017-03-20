@@ -20,9 +20,9 @@ void print_usage(){
   printf("InfoLogger command line utility to inject messages.\n");
   printf("Usage: log [options] message(s)\n");
   printf("Options: \n");
-  printf("  -s [info,error,fatal]     (default=info)    \n");
-  printf("  -x                        If set, reads data coming on stdin line by line\n");
-  printf("                            and transmit them as messages (1 line = 1 message).\n");
+  printf("  -s [severity]    Possible values: Info (default), Error, Fatal, Warning, Debug.\n");
+  printf("  -x               If set, reads data coming on stdin line by line\n");
+  printf("                   and transmit them as messages (1 line = 1 message).\n");
 }
 
 
@@ -41,7 +41,12 @@ int main(int argc, char **argv){
     switch(option){
 
       case 's':
-//        severity=optarg;
+        severity=getSeverityFromString(optarg);
+        if (severity==InfoLogger::Severity::Undefined) {
+          printf("Bad severity\n");
+          print_usage();
+          return -1;
+        }
         break;
 
       case 'x':

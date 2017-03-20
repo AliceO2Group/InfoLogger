@@ -33,7 +33,7 @@ class InfoLogger
 
 
   /// Definition of possible message severities
-  enum Severity {Info='I', Error='E', Fatal='F', Warning='W', Debug='D'};
+  enum Severity {Info='I', Error='E', Fatal='F', Warning='W', Debug='D', Undefined='U'};
 
 
   /// Log a message. (severity set to info)
@@ -90,6 +90,14 @@ class InfoLogger
   class Impl;                       // private class for implementation
   std::unique_ptr<Impl> pImpl;      // handle to private class instance at runtime
 };
+
+
+
+/// Convert a string to an infologger severity
+/// \param text  NUL-terminated word to convert to InfoLogger severity type. Current implementation is not exact-match, it takes closest based on first-letter value
+/// \return      Corresponding severity (InfoLogger::Undefined if no match found)
+InfoLogger::Severity getSeverityFromString(const char *text);
+
 
 }
 }

@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <ctype.h>
 
 #include "InfoLoggerMessageHelper.h"
 
@@ -417,6 +418,41 @@ InfoLogger &InfoLogger::operator<<(const InfoLogger::Severity severity)
 {
   pImpl->currentStreamSeverity=severity;
   return *this;
+}
+
+InfoLogger::Severity getSeverityFromString(const char *txt) {
+  // permissive implementation
+  switch (tolower(txt[0])) {
+    case 'i':
+    return InfoLogger::Severity::Info;
+    case 'e':
+    return InfoLogger::Severity::Error;
+    case 'f':
+    return InfoLogger::Severity::Fatal;
+    case 'w':
+    return InfoLogger::Severity::Warning;
+    case 'd':
+    return InfoLogger::Severity::Debug;
+    default:
+    return InfoLogger::Severity::Undefined;
+  }
+  
+  
+/*
+  // strict implementation  
+  if (!strcmp(txt,"Info")) {
+    return InfoLogger::Severity::Info;
+  } else if (!strcmp(txt,"Error")) {
+    return InfoLogger::Severity::Error;
+  } else if (!strcmp(txt,"Fatal")) {
+    return InfoLogger::Severity::Fatal;
+  } else if (!strcmp(txt,"Warning")) {
+    return InfoLogger::Severity::Warning;
+  } else if (!strcmp(txt,"Debug")) {
+    return InfoLogger::Severity::Debug;
+  }
+*/
+  return InfoLogger::Severity::Undefined;
 }
 
 

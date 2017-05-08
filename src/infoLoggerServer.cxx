@@ -23,6 +23,7 @@ class InfoLoggerServer:public Daemon {
 InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
   if (isOk()) { // proceed only if base daemon init was a success
     isInitialized=0;
+    tcpServerHandle=NULL;
     
     setSimpleLog(&log);
 
@@ -47,7 +48,11 @@ InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
  
 
 InfoLoggerServer::~InfoLoggerServer() {
-  TR_server_stop(tcpServerHandle);  
+  if (isOk()) { // proceed only if base daemon init was a success
+    if (tcpServerHandle!=NULL) {
+      TR_server_stop(tcpServerHandle);  
+    }
+  }
 }
 
 

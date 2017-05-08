@@ -44,7 +44,7 @@ ConfigInfoLoggerClient::~ConfigInfoLoggerClient(){
 void ConfigInfoLoggerClient::resetConfig() {
   // assign default values to all config parameters
   txSocketPath=new std::string("infoLoggerD");
-  txSocketOutBufferSize=1024*1024*8;
+  txSocketOutBufferSize=-1;
 }
 
 //////////////////////////////////////////////////////
@@ -70,7 +70,7 @@ InfoLoggerClient::InfoLoggerClient() {
     log.info("Creating transmission socket named %s",cfg.txSocketPath->c_str());
     txSocket=socket(PF_LOCAL,SOCK_STREAM,0);
     if (txSocket==-1) {
-      log.error("Could not create receiving socket: %s",strerror(errno));
+      log.error("Could not create socket: %s",strerror(errno));
       throw __LINE__;
     }
 

@@ -208,6 +208,22 @@ class InfoLogger::Impl {
     }
     refreshDefaultMsg();
     currentMode=OutputMode::stdout;
+        
+    const char* confEnv=getenv("INFOLOGGER_MODE");  
+    if (confEnv!=NULL) {
+      if (!strcmp(confEnv,"stdout")) {
+      } else if (!strcmp(confEnv,"infoLoggerD")) {
+        currentMode=OutputMode::infoLoggerD;      
+      } else if (!strncmp(confEnv,"file",4)) {
+        currentMode=OutputMode::file;
+        const char *logFile="./log.txt";
+        if (confEnv[4]==':') {
+          logFile=&confEnv[5];
+        }
+        printf("Logging to file %s\n",logFile);
+        stdLog.setLogFile(logFile);
+      }
+    }
     client=nullptr;
     if (currentMode==OutputMode::infoLoggerD) {
       client=new InfoLoggerClient;
@@ -215,6 +231,7 @@ class InfoLogger::Impl {
     // todo
     // switch mode based on configuration / environment
     // connect to client only on first message (or try again after timeout)
+    // - mode: can be OR of several modes?
   }
   ~Impl() {
     magicTag = 0;
@@ -307,7 +324,7 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *mes
     // on error, close connection / use stdout / buffer messages in memory ?
   }
   
-  if (currentMode==OutputMode::stdout) {
+  if ((currentMode==OutputMode::stdout)||(currentMode==OutputMode::file)) {
       char buffer[LOG_MAX_SIZE];
       msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Simple);
 

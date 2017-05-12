@@ -9,13 +9,15 @@
 #include "InfoLoggerMessageList.h"
 #include <Common/Fifo.h>
 #include <Common/Thread.h>
+#include <Common/SimpleLog.h>
+#include <memory>
 
 using namespace AliceO2::Common;
 
 class InfoLoggerDispatch {
 
   public:
-    InfoLoggerDispatch();
+    InfoLoggerDispatch(SimpleLog  *theLog=NULL);
     virtual ~InfoLoggerDispatch();
   
     // todo: define settings: non-blocking, etc
@@ -28,10 +30,15 @@ class InfoLoggerDispatch {
     virtual int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg)=0;
     virtual int customLoop();
     
-    std::unique_ptr<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>> input;
-    std::unique_ptr<AliceO2::Common::Thread> dispatchThread;
     
 //    virtual customDispatch...
+
+  protected:
+    std::unique_ptr<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>> input;
+    std::unique_ptr<AliceO2::Common::Thread> dispatchThread;
+    SimpleLog *theLog;
+    SimpleLog defaultLog;
+    
 };
 
 
@@ -43,7 +50,7 @@ class InfoLoggerDispatchOnlineBrowserImpl;
 
 class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
   public:
-  InfoLoggerDispatchOnlineBrowser();
+  InfoLoggerDispatchOnlineBrowser(SimpleLog *theLog);
   ~InfoLoggerDispatchOnlineBrowser();
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
   int customLoop();

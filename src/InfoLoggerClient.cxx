@@ -63,6 +63,7 @@ InfoLoggerClient::InfoLoggerClient() {
   txSocket=-1;
   
   isInitialized=0;
+  log.setLogFile("/dev/null");
   
   try {
 

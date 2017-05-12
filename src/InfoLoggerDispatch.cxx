@@ -10,12 +10,15 @@
 #include <unistd.h>
 
 
-
-InfoLoggerDispatch::InfoLoggerDispatch() {
-  
+InfoLoggerDispatch::InfoLoggerDispatch(SimpleLog *vLog) {
   dispatchThread=std::make_unique<Thread>(InfoLoggerDispatch::threadCallback,this);
   input=std::make_unique<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>>(1000);
-  dispatchThread->start();
+  dispatchThread->start();  
+  if (vLog!=NULL) {
+    theLog=vLog;
+  } else {
+    theLog=&defaultLog;
+  }
 }
 
 
@@ -29,7 +32,7 @@ int InfoLoggerDispatch::pushMessage(const std::shared_ptr<InfoLoggerMessageList>
     return -1;
   }
   input->push(msg);
-  //printf("push message\n");
+  //theLog->info("push message\n");
   return 0;
 }
 
@@ -82,7 +85,7 @@ class InfoLoggerDispatchOnlineBrowserImpl {
 };
 
 
-InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser() {
+InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser(SimpleLog *log): InfoLoggerDispatch(log) {
   dPtr=std::make_unique<InfoLoggerDispatchOnlineBrowserImpl>();
   
   for (int i=0;i<DISPATCH_MAX_CLIENTS;i++) {
@@ -114,18 +117,18 @@ InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser() {
 
   // bind socket
   if (bind(dPtr->listen_sock, (struct sockaddr *) &srv_addr, sizeof(srv_addr)) < 0) {
-    //printf("bind port %d - error %d = %s",DISPATCH_SERVER_PORT,errno,strerror(errno));
+    theLog->error("bind port %d - error %d = %s",DISPATCH_SERVER_PORT,errno,strerror(errno));
     close(dPtr->listen_sock);
     throw __LINE__;
   }
 
   // queue length for incoming connections
   if (listen(dPtr->listen_sock, DISPATCH_MAX_CLIENTS) < 0) {
+    theLog->error("listen - error %d = %s",errno,strerror(errno));
     close(dPtr->listen_sock);
     throw __LINE__;
-    // "listen - error %d",errno    
   }
-  //printf("%s() success\n",__FUNCTION__);
+  //theLog.info("%s() success\n",__FUNCTION__);
 }
 InfoLoggerDispatchOnlineBrowser::~InfoLoggerDispatchOnlineBrowser() {
   // close sockets
@@ -148,7 +151,7 @@ int InfoLoggerDispatchOnlineBrowser::customMessageProcess(std::shared_ptr<InfoLo
   int highest_sock;
   struct timeval tv;
   int result;
-  //printf("dispatching a message\n");
+  //theLog->info("dispatching a message\n");
   
    for (lmsg=msg->msg;lmsg!=NULL;lmsg=lmsg->next){
      if (infoLog_msg_encode(lmsg, onlineMsg, MAX_MSG_LENGTH, -1)==0) {
@@ -156,7 +159,7 @@ int InfoLoggerDispatchOnlineBrowser::customMessageProcess(std::shared_ptr<InfoLo
           for(int i=0;i<DISPATCH_MAX_CLIENTS;i++){
             if (dPtr->clients[i]==-1) continue;
             
-            printf("dispatch msg to client %d\n%s\n",i,onlineMsg);
+            //theLog->info("dispatch msg to client %d\n%s\n",i,onlineMsg);
             
             /* check that the client is writable */
             FD_ZERO(&select_write);
@@ -167,7 +170,7 @@ int InfoLoggerDispatchOnlineBrowser::customMessageProcess(std::shared_ptr<InfoLo
             tv.tv_usec = 0;
             result=select(highest_sock+1,NULL,&select_write, NULL, &tv);
             if (result<=0) {
-              printf("Message dispatch timeout, connection %d closed",i+1);
+              theLog->info("Message dispatch timeout, connection %d closed",i+1);
               close(dPtr->clients[i]);
               dPtr->clients[i]=-1;
               continue;
@@ -180,7 +183,7 @@ int InfoLoggerDispatchOnlineBrowser::customMessageProcess(std::shared_ptr<InfoLo
               writeok=1;
             }
             if (!writeok) {
-              printf("Write failed - connection %d closed",i+1);
+              theLog->info("Write failed - connection %d closed",i+1);
               close(dPtr->clients[i]);
               dPtr->clients[i]=-1;
             }
@@ -205,14 +208,12 @@ int InfoLoggerDispatchOnlineBrowser::customLoop() {
   int                 i;                                  /* counter */
 
   fd_set select_read;   /* List of sockets to select */
-  fd_set select_write;  /* List of sockets to select */  
   int highest_sock;
   struct timeval tv;
   int result;
   int new_cl_sock;                  /* socket address for new client */
   struct sockaddr_in new_cl_addr;   /* address of new client */
   socklen_t cl_addr_len;            /* address length */
-  int want_delay;                /* set to one if nothing to do */
 
 
   // create a 'select' list, with listening socket (we don't care what clients send) */
@@ -237,12 +238,9 @@ int InfoLoggerDispatchOnlineBrowser::customLoop() {
 
   if (result<0) {
       // an error occurred
-      printf("select - error %d",errno);
+      theLog->info("select - error %d = %s",errno,strerror(errno));
     } else if (result>0) {
 
-      // some sockets are ready
-      want_delay=0;
-      
       // read from clients
       for(i=0;i<DISPATCH_MAX_CLIENTS;i++) {
         if (dPtr->clients[i]!=-1) {
@@ -252,16 +250,16 @@ int InfoLoggerDispatchOnlineBrowser::customLoop() {
               /* success */
               /* we don't use the input */
               buffer[result]=0;
-              printf("buffer: %s\n",buffer);
+              //theLog->info("connected client: init buffer: %s\n",buffer);
             }
             /* error reading socket ? */
             if (result<0) {
-              printf("read - error %d",errno);
+              theLog->info("read - error %d",errno);
               result=0;
             }
             /* close connection on EOF / error */
             if (result==0) {
-              printf("Connection %d closed",i+1);
+              theLog->info("Connection %d closed",i+1);
               close(dPtr->clients[i]);
               dPtr->clients[i]=-1;
             }	        
@@ -274,29 +272,29 @@ int InfoLoggerDispatchOnlineBrowser::customLoop() {
         cl_addr_len=sizeof(new_cl_addr);
         new_cl_sock = accept(dPtr->listen_sock, (struct sockaddr *) &new_cl_addr, &cl_addr_len);
         if (new_cl_sock < 0) {
-          printf("accept - error %d",errno);
+          theLog->info("accept - error %d",errno);
         } else {
-          printf("%s connected on port %d",inet_ntoa(new_cl_addr.sin_addr),new_cl_addr.sin_port);        
+          theLog->info("%s connected on port %d",inet_ntoa(new_cl_addr.sin_addr),new_cl_addr.sin_port);        
           for(i=0;i<DISPATCH_MAX_CLIENTS;i++) {
             if (dPtr->clients[i]==-1) break;
           }
           if (i==DISPATCH_MAX_CLIENTS) {
-            printf("Too many online (e.g. infoBrowser) connections, max=%d - closing",DISPATCH_MAX_CLIENTS);
+            theLog->info("Too many online (e.g. infoBrowser) connections, max=%d - closing",DISPATCH_MAX_CLIENTS);
             close(new_cl_sock);
           } else {
             /* Non blocking connection */
             int opts;
             opts = fcntl(new_cl_sock,F_GETFL);
             if (opts == -1){
-              printf("fcntl - F_GETFL");
+              theLog->error("fcntl - F_GETFL");
               close(new_cl_sock);
             } else {
               opts = (opts | O_NONBLOCK);
               if (fcntl(new_cl_sock,F_SETFL,opts) == -1){
-                printf("fcntl - F_SETFL");
+                theLog->error("fcntl - F_SETFL");
                 close(new_cl_sock);
               } else {
-                printf("Assigned connection %d",i+1);
+                theLog->info("Assigned connection %d",i+1);
                 dPtr->clients[i]=new_cl_sock;
               }
             }

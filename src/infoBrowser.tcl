@@ -15,6 +15,7 @@
 #
 # 12/05/2017  SC  - Import infoBrowser from DATE 7.108 to O2 FLP prototype
 #                   Protocol v1.4
+#                   Updated default configuration settings to split from DATE
 ################################################################
 
 # check Tcl/Tk version, it would be nice to find 8.4 or higher

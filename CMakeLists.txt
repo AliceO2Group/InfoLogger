@@ -81,7 +81,13 @@ set(SRCS
   src/simplelog.c
   src/transport_proxy.c
   src/permanentFIFO.c
-)
+  src/infoLoggerMessageDecode.c
+  src/InfoLoggerDispatch.cxx
+  src/InfoLoggerMessageList.cxx
+  )
+
+# this one is included in other files
+list(REMOVE_ITEM SRCS src/infoLoggerMessage.c)
 
 # Produce the final Version.h using template Version.h.in and substituting variables.
 # We don't want to polute our source tree with it, thus putting it in binary tree.

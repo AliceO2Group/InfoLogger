@@ -154,7 +154,7 @@ int slog_format(char *buffer, size_t size, slog_Severity severity, const char *m
 
 /** Log a message.
 */
-void slog(slog_Severity severity, char *message, ...){
+void slog(slog_Severity severity, const char *message, ...){
 
   va_list     ap;                           /* list of additionnal params */
   char        buffer[SLOG_MAX_SIZE];        /* buffer to format message */

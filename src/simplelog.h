@@ -40,7 +40,7 @@ typedef enum {
   * @param    message      Null-terminated message, printf-like formatted (%%s, %%d ... possible).
   * @param    ...          Optionnal arguments used in message formatting.
 */
-void slog(slog_Severity severity, char *message, ...)  __attribute__ ((format (printf, 2,3))); /* printf-like format parameters */
+void slog(slog_Severity severity, const char *message, ...)  __attribute__ ((format (printf, 2,3))); /* printf-like format parameters */
 
 
 /** Turns on logging of debugging messages. */

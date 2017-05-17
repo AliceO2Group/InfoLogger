@@ -46,8 +46,9 @@ class InfoLoggerDispatchPrint: public InfoLoggerDispatch{
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
 };
 
-class InfoLoggerDispatchOnlineBrowserImpl;
 
+// a class to dispatch online messages to infoBrowser
+class InfoLoggerDispatchOnlineBrowserImpl;
 class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
   public:
   InfoLoggerDispatchOnlineBrowser(SimpleLog *theLog);
@@ -57,4 +58,20 @@ class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
   private:
     std::unique_ptr<InfoLoggerDispatchOnlineBrowserImpl> dPtr;
 };
+
+
+// a class to dispatch online messages to SQL database
+class InfoLoggerDispatchSQLImpl;
+class InfoLoggerDispatchSQL: public InfoLoggerDispatch {
+  public:
+  InfoLoggerDispatchSQL(SimpleLog *theLog);
+  ~InfoLoggerDispatchSQL();
+  int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
+  int customLoop();
+  private:
+    std::unique_ptr<InfoLoggerDispatchSQLImpl> dPtr;
+};
+
+
+
 #endif

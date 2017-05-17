@@ -86,6 +86,12 @@ set(SRCS
   src/InfoLoggerMessageList.cxx
   )
 
+
+if(MYSQL_FOUND)
+    list(APPEND SRCS src/InfoLoggerDispatchSQL.cxx)
+endif()
+
+
 # this one is included in other files
 list(REMOVE_ITEM SRCS src/infoLoggerMessage.c)
 

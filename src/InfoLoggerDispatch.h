@@ -10,6 +10,7 @@
 #include <Common/Fifo.h>
 #include <Common/Thread.h>
 #include <Common/SimpleLog.h>
+#include <Common/Configuration.h>
 #include <memory>
 
 using namespace AliceO2::Common;
@@ -17,7 +18,7 @@ using namespace AliceO2::Common;
 class InfoLoggerDispatch {
 
   public:
-    InfoLoggerDispatch(SimpleLog  *theLog=NULL);
+    InfoLoggerDispatch(ConfigFile *theConfig=NULL, SimpleLog  *theLog=NULL);
     virtual ~InfoLoggerDispatch();
   
     // todo: define settings: non-blocking, etc
@@ -39,6 +40,7 @@ class InfoLoggerDispatch {
     SimpleLog *theLog;
     SimpleLog defaultLog;
     
+    ConfigFile *theConfig;
 };
 
 
@@ -51,7 +53,7 @@ class InfoLoggerDispatchPrint: public InfoLoggerDispatch{
 class InfoLoggerDispatchOnlineBrowserImpl;
 class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
   public:
-  InfoLoggerDispatchOnlineBrowser(SimpleLog *theLog);
+  InfoLoggerDispatchOnlineBrowser(ConfigFile *theConfig, SimpleLog *theLog);
   ~InfoLoggerDispatchOnlineBrowser();
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
   int customLoop();
@@ -64,7 +66,7 @@ class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
 class InfoLoggerDispatchSQLImpl;
 class InfoLoggerDispatchSQL: public InfoLoggerDispatch {
   public:
-  InfoLoggerDispatchSQL(SimpleLog *theLog);
+  InfoLoggerDispatchSQL(ConfigFile *theConfig, SimpleLog *theLog);
   ~InfoLoggerDispatchSQL();
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
   int customLoop();

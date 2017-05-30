@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 
-InfoLoggerDispatch::InfoLoggerDispatch(SimpleLog *vLog) {
+InfoLoggerDispatch::InfoLoggerDispatch(ConfigFile *vConfig, SimpleLog *vLog) {
   dispatchThread=std::make_unique<Thread>(InfoLoggerDispatch::threadCallback,this);
   input=std::make_unique<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>>(1000);
   dispatchThread->start();  
@@ -19,6 +19,7 @@ InfoLoggerDispatch::InfoLoggerDispatch(SimpleLog *vLog) {
   } else {
     theLog=&defaultLog;
   }
+  theConfig=vConfig;
 }
 
 
@@ -85,7 +86,7 @@ class InfoLoggerDispatchOnlineBrowserImpl {
 };
 
 
-InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser(SimpleLog *log): InfoLoggerDispatch(log) {
+InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser(ConfigFile *config, SimpleLog *log): InfoLoggerDispatch(config,log) {
   dPtr=std::make_unique<InfoLoggerDispatchOnlineBrowserImpl>();
   
   for (int i=0;i<DISPATCH_MAX_CLIENTS;i++) {

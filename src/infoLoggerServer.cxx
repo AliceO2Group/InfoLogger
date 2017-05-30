@@ -106,8 +106,8 @@ InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
       // create dispatch engines
       try {
         //dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchPrint>(&log));
-        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&log));
-        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchSQL>(&log));
+        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&config,&log));
+        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchSQL>(&config,&log));
       } catch (int err) {
         printf("Failed to initialize dispatch engines: error %d\n",err);
       }

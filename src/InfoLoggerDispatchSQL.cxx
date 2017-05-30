@@ -14,7 +14,8 @@
 class InfoLoggerDispatchSQLImpl {
   public:
     
-    SimpleLog *theLog; // handle for logging
+  SimpleLog *theLog; // handle for logging
+  ConfigFile *theConfig; // handle to get config parameters
 
   void  start();
   void stop();
@@ -87,9 +88,10 @@ void InfoLoggerDispatchSQLImpl::start() {
 
 }
 
-InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(SimpleLog *log): InfoLoggerDispatch(log) {
+InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigFile *config, SimpleLog *log): InfoLoggerDispatch(config,log) {
   dPtr=std::make_unique<InfoLoggerDispatchSQLImpl>();
   dPtr->theLog=theLog;
+  dPtr->theConfig=theConfig;
   dPtr->start();
 }
 void InfoLoggerDispatchSQLImpl::stop() {

@@ -135,6 +135,14 @@ O2_GENERATE_EXECUTABLE(
         BUCKET_NAME ${BUCKET_NAME}
 )
 
+O2_GENERATE_EXECUTABLE(
+        EXE_NAME infoLoggerAdminDB
+        SOURCES src/infoLoggerAdminDB.cxx
+        MODULE_LIBRARY_NAME ${LIBRARY_NAME}
+        BUCKET_NAME ${BUCKET_NAME}
+)
+
+
 set(TEST_SRCS
   test/testInfoLogger.cxx
 )

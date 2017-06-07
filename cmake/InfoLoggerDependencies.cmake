@@ -18,9 +18,11 @@ o2_define_bucket(
   pthread
   Common
   ${MYSQL_LIBRARY}
+  ${MYSQL_LIBRARIES}
 
   SYSTEMINCLUDE_DIRECTORIES
   ${Boost_INCLUDE_DIRS}
+  ${MYSQL_INCLUDE_DIR}
   ${MYSQL_INCLUDE_DIRS}
 )
 

@@ -13,12 +13,14 @@
 #include <Common/Configuration.h>
 #include <memory>
 
+#include "ConfigInfoLoggerServer.h"
+
 using namespace AliceO2::Common;
 
 class InfoLoggerDispatch {
 
   public:
-    InfoLoggerDispatch(ConfigFile *theConfig=NULL, SimpleLog  *theLog=NULL);
+    InfoLoggerDispatch(ConfigInfoLoggerServer *theConfig=NULL, SimpleLog  *theLog=NULL);
     virtual ~InfoLoggerDispatch();
   
     // todo: define settings: non-blocking, etc
@@ -40,7 +42,7 @@ class InfoLoggerDispatch {
     SimpleLog *theLog;
     SimpleLog defaultLog;
     
-    ConfigFile *theConfig;
+    ConfigInfoLoggerServer *theConfig;
 };
 
 
@@ -53,7 +55,7 @@ class InfoLoggerDispatchPrint: public InfoLoggerDispatch{
 class InfoLoggerDispatchOnlineBrowserImpl;
 class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
   public:
-  InfoLoggerDispatchOnlineBrowser(ConfigFile *theConfig, SimpleLog *theLog);
+  InfoLoggerDispatchOnlineBrowser(ConfigInfoLoggerServer *theConfig, SimpleLog *theLog);
   ~InfoLoggerDispatchOnlineBrowser();
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
   int customLoop();
@@ -66,7 +68,7 @@ class InfoLoggerDispatchOnlineBrowser: public InfoLoggerDispatch{
 class InfoLoggerDispatchSQLImpl;
 class InfoLoggerDispatchSQL: public InfoLoggerDispatch {
   public:
-  InfoLoggerDispatchSQL(ConfigFile *theConfig, SimpleLog *theLog);
+  InfoLoggerDispatchSQL(ConfigInfoLoggerServer *theConfig, SimpleLog *theLog);
   ~InfoLoggerDispatchSQL();
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
   int customLoop();

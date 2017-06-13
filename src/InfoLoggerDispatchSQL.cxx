@@ -6,16 +6,16 @@
 #include <string.h>
 
 
-
 // some constants
 #define SQL_RETRY_CONNECT 3     // base retry time, will be sleeping up to 10x this value
+
 
 
 class InfoLoggerDispatchSQLImpl {
   public:
     
   SimpleLog *theLog; // handle for logging
-  ConfigFile *theConfig; // handle to get config parameters
+  ConfigInfoLoggerServer *theConfig;   // struct with config parameters
 
   void  start();
   void stop();
@@ -25,8 +25,8 @@ class InfoLoggerDispatchSQLImpl {
   
   private:
   MYSQL db;   // handle to mysql db
-  MYSQL_STMT      *stmt=NULL;                 /* prepared insertion query */
-  MYSQL_BIND      bind[INFOLOG_FIELDS_MAX];   /* parameters bound to variables */
+  MYSQL_STMT      *stmt=NULL;                 // prepared insertion query
+  MYSQL_BIND      bind[INFOLOG_FIELDS_MAX];   // parameters bound to variables
 
   int nFields=0;
 
@@ -34,11 +34,6 @@ class InfoLoggerDispatchSQLImpl {
   int dbLastConnectTry=0; // time of last connect attempt
   int dbConnectTrials=0;  // number of connection attempts since last success
   
-  const char *db_host="localhost";    /* MySQL server host */
-  const char *db_user="o2";    /* MySQL user */
-  const char *db_pwd="o2";     /* MySQL password */
-  const char *db_dbname="INFOLOGGER";  /* MySQL infologger db */
-
   std::string sql_insert;
   
 };
@@ -67,10 +62,10 @@ void InfoLoggerDispatchSQLImpl::start() {
     nFields++;
   }
   if (nFields==INFOLOG_FIELDS_MAX) {
-    errLine=__LINE__;      /* INFOLOG_FIELDS_MAX is too small, increase it */
+    errLine=__LINE__;      // INFOLOG_FIELDS_MAX is too small, increase it
   }
   if (nFields==0) {
-    errLine=__LINE__;      /* protocol is empty ! */
+    errLine=__LINE__;      // protocol is empty !
   }
   sql_insert+=") VALUES(";
   for(int i=nFields;i>0;i--) {
@@ -88,12 +83,13 @@ void InfoLoggerDispatchSQLImpl::start() {
 
 }
 
-InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigFile *config, SimpleLog *log): InfoLoggerDispatch(config,log) {
+InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer *config, SimpleLog *log): InfoLoggerDispatch(config,log) {
   dPtr=std::make_unique<InfoLoggerDispatchSQLImpl>();
-  dPtr->theLog=theLog;
-  dPtr->theConfig=theConfig;
+  dPtr->theLog=log;
+  dPtr->theConfig=config; 
   dPtr->start();
 }
+
 void InfoLoggerDispatchSQLImpl::stop() {
   if (dbIsConnected) {
     mysql_stmt_close(stmt);
@@ -128,7 +124,7 @@ int InfoLoggerDispatchSQLImpl::customLoop() {
         return 0;
       }
       dbLastConnectTry=now;
-      if (mysql_real_connect(&db,db_host,db_user,db_pwd,db_dbname,0,NULL,0)) {
+      if (mysql_real_connect(&db,theConfig->dbHost.c_str(),theConfig->dbUser.c_str(),theConfig->dbPassword.c_str(),theConfig->dbName.c_str(),0,NULL,0)) {
         theLog->info("DB connected");
         dbIsConnected=1;
         dbConnectTrials=0;
@@ -140,7 +136,7 @@ int InfoLoggerDispatchSQLImpl::customLoop() {
         return 0;
       }
       
-      /* create prepared insert statement */
+      // create prepared insert statement
       stmt=mysql_stmt_init(&db);
       if (stmt==NULL) {
         theLog->error("mysql_stmt_init() failed: %s",mysql_error(&db));
@@ -152,7 +148,7 @@ int InfoLoggerDispatchSQLImpl::customLoop() {
         return -1;
       }
 
-      /* bind variables depending on type */
+      // bind variables depending on type
       memset(bind, 0, sizeof(bind));
       int errline=0;
       for(int i=0;i<nFields;i++) {
@@ -186,10 +182,10 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
  // todo: keep message in queue on error!
 
    infoLog_msg_t *m;
-   my_bool param_isnull=1; /* boolean telling if a parameter is NULL */
-   my_bool param_isNOTnull=0; /* boolean telling if a parameter is not NULL */
+   my_bool param_isnull=1; // boolean telling if a parameter is NULL
+   my_bool param_isNOTnull=0; // boolean telling if a parameter is not NULL
    char *msg;
-   char *nl;    /* variables used to reformat multiple-line messages */
+   char *nl;    // variables used to reformat multiple-line messages
 
    for (m=lmsg->msg;m!=NULL;m=m->next){  
 
@@ -217,7 +213,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
           }
         }
  
-        /* re-format message with multiple line - assumes it is the LAST field in the protocol */
+        // re-format message with multiple line - assumes it is the LAST field in the protocol
         for(msg=(char *)m->values[nFields-1].value.vString;msg!=NULL;msg=nl) {
           nl=strchr(msg,'\f');
           if (nl!=NULL) {
@@ -225,10 +221,10 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
             nl++;
           }
 
-          /* copy msg line */
+          // copy msg line
           bind[nFields-1].buffer = msg;
 
-          /* update bind variables */
+          // update bind variables
           if (mysql_stmt_bind_param(stmt,bind)) {
             theLog->error("mysql_stmt_bind() failed: %s\n",mysql_error(&db));
             mysql_stmt_close(stmt);
@@ -237,13 +233,13 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
             return -1;
           }
 
-          /* Do the insertion */
+          // Do the insertion
           if (mysql_stmt_execute(stmt)) {
             theLog->error("mysql_stmt_exec() failed: %s\n",mysql_error(&db));
             mysql_stmt_close(stmt);
             mysql_close(&db);
             theLog->info("DB disconnected");
-            /* retry with new connection - usually it means server was down */
+            // retry with new connection - usually it means server was down
             dbIsConnected=0;
             break;
           }

@@ -216,7 +216,7 @@ int main(int argc, char * argv[]) {
     auto tm = *std::localtime(&t);
     std::ostringstream now;
     now << std::put_time(&tm, "%Y_%m_%d__%H_%M_%S");
-    std::string sqlTableNameArchive=INFOLOGGER_TABLE_MESSAGES "_" + now.str();
+    std::string sqlTableNameArchive=INFOLOGGER_TABLE_MESSAGES "__" + now.str();
     
     std::string sqlQuery;
     sqlQuery="drop table if exists `new`";

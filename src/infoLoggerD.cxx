@@ -3,6 +3,7 @@
 ///
 /// This is the implementation for infoLoggerD, the local daemon collecting log messages
 /// (replacement for old "infoLoggerReader")
+//  It acts as a bridge between local clients and server, and provides persistent buffer capabilities.
 ///
 /// \author Sylvain Chapeland, CERN
 
@@ -35,6 +36,7 @@
 #include "transport_client.h"
 
 #include "simplelog.h"
+#include "infoLoggerDefaults.h"
 
 
 //////////////////////////////////////////////////////
@@ -44,53 +46,56 @@
 
 class ConfigInfoLoggerD {
   public:
-  ConfigInfoLoggerD(const char*configPath=nullptr);
+  ConfigInfoLoggerD();
   ~ConfigInfoLoggerD();
 
-  void resetConfig(); // set default configuration parameters
+  void readFromConfigFile(ConfigFile &cfg);         // load settings from ConfigFile object
 
-
-  std::string *userName;           // user name under which the process shall run
-  std::string *logFile;            // local log file for infoLoggerD output
-  std::string *localLogDirectory;  // local directory to be used for log storage, whenever necessary
+  // assign default values to all config parameters
   
-  bool isInteractive;              // 1 if process should be run interactively, 0 to run as daemon
+  // settings for local incoming messages
+  std::string localLogDirectory="/tmp/infoLoggerD";       // local directory to be used for log storage, whenever necessary 
+  std::string rxSocketPath=INFOLOGGER_DEFAULT_LOCAL_SOCKET;                 // name of socket used to receive log messages from clients
+  int         rxSocketInBufferSize=-1;                    // size of socket receiving buffer. -1 will leave to sys default.
+  int         rxMaxConnections=1024;                      // maximum number of incoming connections
   
-  std::string *rxSocketPath;       // name of socket used to receive log messages from clients
-  int rxSocketInBufferSize;        // size of socket receiving buffer. -1 will leave to sys default.
-  int rxMaxConnections;            // maximum number of incoming connections
+  // settings for remote infoLoggerServer access
+  std::string serverName = "localhost";                      // IP name to connect infoLoggerServer
+  int         serverPort = INFOLOGGER_DEFAULT_SERVER_RX_PORT;   // IP port number to connect infoLoggerServer
+  int         msgQueueLength = 1000;                  // transmission queue size
+  std::string msgQueuePath = "/tmp/infoLoggerD.queue";// path to temp file storing messages
+  std::string clientName = "infoLoggerD";             // name identifying client to infoLoggerServer
+  int         isProxy = 0;                            // flag set to allow infoLoggerD to be a transport proxy to infoLoggerServer
 };
 
-ConfigInfoLoggerD::ConfigInfoLoggerD(const char*configPath) {
-  // setup default configuration
-  resetConfig();
-  // load configuration, if defined
-  if (configPath!=nullptr) {
-  }
+ConfigInfoLoggerD::ConfigInfoLoggerD() {
 }
 
 ConfigInfoLoggerD::~ConfigInfoLoggerD(){
-  // release resources
- delete userName;
- delete logFile;
- delete localLogDirectory;
- delete rxSocketPath;
 }
 
-void ConfigInfoLoggerD::resetConfig() {
-  // assign default values to all config parameters
-  userName=nullptr;
-  logFile=new std::string("/tmp/infoLoggerD.log");
-  localLogDirectory=new std::string("/tmp/infoLoggerD");  
-  isInteractive=1;
-  rxSocketPath=new std::string("infoLoggerD");
-  rxSocketInBufferSize=-1;
-  rxMaxConnections=1024;
+void ConfigInfoLoggerD::readFromConfigFile(ConfigFile &config) {
+
+  std::string cfgEntryPoint="infoLoggerD";  // this is the name of the section under which to find parameters
+  
+  config.getOptionalValue<std::string>(cfgEntryPoint + ".localLogDirectory", localLogDirectory);
+  config.getOptionalValue<std::string>(cfgEntryPoint + ".rxSocketPath", rxSocketPath);
+  config.getOptionalValue<int>(cfgEntryPoint + ".rxSocketInBufferSize", rxSocketInBufferSize);
+  config.getOptionalValue<int>(cfgEntryPoint + ".rxMaxConnections", rxMaxConnections);
+
+  config.getOptionalValue<std::string>(cfgEntryPoint + ".serverName", serverName);
+  config.getOptionalValue<int>(cfgEntryPoint + ".serverPort", serverPort);
+  config.getOptionalValue<int>(cfgEntryPoint + ".msgQueueLength", msgQueueLength);
+  config.getOptionalValue<std::string>(cfgEntryPoint + ".msgQueuePath", msgQueuePath);
+  config.getOptionalValue<std::string>(cfgEntryPoint + ".clientName", clientName);
+  config.getOptionalValue<int>(cfgEntryPoint + ".isProxy", isProxy);
 }
 
 //////////////////////////////////////////////////////
 // end of class ConfigInfoLoggerD
 //////////////////////////////////////////////////////
+
+
 
 //////////////////////////////////////////////////////
 // checkDirAndCreate()
@@ -112,7 +117,6 @@ int checkDirAndCreate(const char *dir, SimpleLog *log=NULL) {
       return -1;
     }
   }
-
   
   if (stat(dir,&info)==0) {
     if (S_ISDIR(info.st_mode)) {
@@ -122,6 +126,7 @@ int checkDirAndCreate(const char *dir, SimpleLog *log=NULL) {
     // other file type
     return -1;
   }
+
   // check directory tree
   int i,j;
   for (i=strlen(dir);i>=0;i--) {
@@ -174,11 +179,9 @@ typedef struct {
 } t_clientConnection;
 
 
-
-
 class InfoLoggerD:public Daemon {
   public:
-  InfoLoggerD();
+  InfoLoggerD(int argc,char * argv[]);
   ~InfoLoggerD();
   Daemon::LoopStatus doLoop();
   
@@ -186,124 +189,125 @@ class InfoLoggerD:public Daemon {
   
   int isInitialized;
   
-  ConfigInfoLoggerD cfg;                 // object for configuration parameters
-  SimpleLog log;                         // object for daemon logging, as defined in config
-
+  ConfigInfoLoggerD configInfoLoggerD;   // object for configuration parameters
   int rxSocket;                          // socket for incoming messages
  
   unsigned long long numberOfMessagesReceived;
   std::list<t_clientConnection> clients;
   
   TR_client_configuration   cfgCx;  // config for transport
-  TR_client_handle          hCx;    // handle to server transport
-  
-  
+  TR_client_handle          hCx;    // handle to server transport 
 };
 
 
 
-InfoLoggerD::InfoLoggerD() {
+InfoLoggerD::InfoLoggerD(int argc,char * argv[]):Daemon(argc,argv) {
+  if (isOk()) { // proceed only if base daemon init was a success
 
-  isInitialized=0;
-  
-  try {
- 
-    numberOfMessagesReceived=0;
-    rxSocket=-1; 
-   
-    // redirect legacy simplelog interface to SimpleLog
-    setSimpleLog(&log);
-   
-    // check directory for local storage
-    log.info("Using directory %s for local storage",cfg.localLogDirectory->c_str());
-    if (checkDirAndCreate(cfg.localLogDirectory->c_str(),&log)) {
-      throw __LINE__;
-    }
-    // create receiving socket for incoming messages
-    log.info("Creating receiving socket on %s",cfg.rxSocketPath->c_str());
-    rxSocket=socket(PF_LOCAL,SOCK_STREAM,0);
-    if (rxSocket==-1) {
-      log.error("Could not create receiving socket: %s",strerror(errno));
-      throw __LINE__;
-    }
-    // configure socket mode
-    int socketMode=fcntl(rxSocket,F_GETFL);
-    if (socketMode==-1) {
-      log.error("fcntl(F_GETFL) failed: %s",strerror(errno));
-      throw __LINE__;
-    }
-    socketMode=(socketMode | SO_REUSEADDR | O_NONBLOCK); // quickly reusable address, non-blocking
-    if (fcntl(rxSocket,F_SETFL,socketMode) == -1) {
-      log.error("fcntl(F_SETFL) failed: %s",strerror(errno));
-      throw __LINE__;
-    }
-    // configure socket RX buffer size
-    if (cfg.rxSocketInBufferSize!=-1) {
-      int rxBufSize=cfg.rxSocketInBufferSize;
-      socklen_t optLen=sizeof(rxBufSize);
-      if (setsockopt(rxSocket,SOL_SOCKET,SO_RCVBUF,&rxBufSize,optLen)==-1) {
-        log.error("setsockopt() failed: %s",strerror(errno));
+    isInitialized=0;
+
+    try {
+
+      numberOfMessagesReceived=0;
+      rxSocket=-1; 
+
+      // redirect legacy simplelog interface to SimpleLog
+      setSimpleLog(&log);
+
+      // retrieve configuration parameters from config file
+      configInfoLoggerD.readFromConfigFile(config);
+
+      // check directory for local storage
+      log.info("Using directory %s for local storage",configInfoLoggerD.localLogDirectory.c_str());
+      if (checkDirAndCreate(configInfoLoggerD.localLogDirectory.c_str(),&log)) {
         throw __LINE__;
       }
-      if (getsockopt(rxSocket,SOL_SOCKET,SO_RCVBUF,&rxBufSize,&optLen)==-1) {
-        log.error("getsockopt() failed: %s",strerror(errno));
+      // create receiving socket for incoming messages
+      log.info("Creating receiving socket on %s",configInfoLoggerD.rxSocketPath.c_str());
+      rxSocket=socket(PF_LOCAL,SOCK_STREAM,0);
+      if (rxSocket==-1) {
+        log.error("Could not create receiving socket: %s",strerror(errno));
         throw __LINE__;
       }
-      if (rxBufSize!=cfg.rxSocketInBufferSize) {
-        log.warning("Could not set desired buffer size: got %d bytes instead of %d",rxBufSize,cfg.rxSocketInBufferSize);
+      // configure socket mode
+      int socketMode=fcntl(rxSocket,F_GETFL);
+      if (socketMode==-1) {
+        log.error("fcntl(F_GETFL) failed: %s",strerror(errno));
+        throw __LINE__;
       }
+      socketMode=(socketMode | SO_REUSEADDR | O_NONBLOCK); // quickly reusable address, non-blocking
+      if (fcntl(rxSocket,F_SETFL,socketMode) == -1) {
+        log.error("fcntl(F_SETFL) failed: %s",strerror(errno));
+        throw __LINE__;
+      }
+      // configure socket RX buffer size
+      if (configInfoLoggerD.rxSocketInBufferSize!=-1) {
+        int rxBufSize=configInfoLoggerD.rxSocketInBufferSize;
+        socklen_t optLen=sizeof(rxBufSize);
+        if (setsockopt(rxSocket,SOL_SOCKET,SO_RCVBUF,&rxBufSize,optLen)==-1) {
+          log.error("setsockopt() failed: %s",strerror(errno));
+          throw __LINE__;
+        }
+        if (getsockopt(rxSocket,SOL_SOCKET,SO_RCVBUF,&rxBufSize,&optLen)==-1) {
+          log.error("getsockopt() failed: %s",strerror(errno));
+          throw __LINE__;
+        }
+        if (rxBufSize!=configInfoLoggerD.rxSocketInBufferSize) {
+          log.warning("Could not set desired buffer size: got %d bytes instead of %d",rxBufSize,configInfoLoggerD.rxSocketInBufferSize);
+        }
+      }
+
+      // connect receiving socket (for local clients)
+      struct sockaddr_un socketAddress;
+      bzero(&socketAddress, sizeof(socketAddress));      
+      socketAddress.sun_family = PF_LOCAL;
+      if (configInfoLoggerD.rxSocketPath.length()>sizeof(socketAddress.sun_path)) {
+        log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddress.sun_path));
+        throw __LINE__;
+      }
+      // leave first char 0, to get abstract socket name - see man 7 unix
+      strncpy(&socketAddress.sun_path[1], configInfoLoggerD.rxSocketPath.c_str(), configInfoLoggerD.rxSocketPath.length());
+      if (bind(rxSocket, (struct sockaddr *)&socketAddress, sizeof(socketAddress))==-1) {
+        log.error("bind() failed: %s",strerror(errno));
+        throw __LINE__;
+      }
+      // listen to socket
+      if (listen(rxSocket,configInfoLoggerD.rxMaxConnections)==-1) {
+         log.error("listen() failed: %s",strerror(errno));
+         throw __LINE__;
+      }
+
+      // create transport handle (to central server)
+      cfgCx.server_name    = configInfoLoggerD.serverName.c_str();
+      cfgCx.server_port    = configInfoLoggerD.serverPort;
+      cfgCx.queue_length   = configInfoLoggerD.msgQueueLength;
+      cfgCx.msg_queue_path = configInfoLoggerD.msgQueuePath.c_str();
+      cfgCx.client_name    = configInfoLoggerD.clientName.c_str();
+      if (configInfoLoggerD.isProxy) {
+        cfgCx.proxy_state    = TR_PROXY_CAN_NOT_BE_PROXY;
+      } else {
+        cfgCx.proxy_state    = TR_PROXY_CAN_BE_PROXY;
+      }
+
+      hCx = TR_client_start(&cfgCx);
+      if (hCx==NULL) {
+        throw __LINE__;
+      }
+
+      isInitialized=1;
+      log.info("infoLoggerD started");
     }
 
-    // connect receiving socket (for local clients)
-    struct sockaddr_un socketAddress;
-    bzero(&socketAddress, sizeof(socketAddress));      
-    socketAddress.sun_family = PF_LOCAL;
-    if (cfg.rxSocketPath->length()>sizeof(socketAddress.sun_path)) {
-      log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddress.sun_path));
-      throw __LINE__;
+    catch (int errLine) {
+      log.error("InfoLoggerD can not start - error %d",errLine);
     }
-    // leave first char 0, to get abstract socket name - see man 7 unix
-    strncpy(&socketAddress.sun_path[1], cfg.rxSocketPath->c_str(), cfg.rxSocketPath->length());
-    if (bind(rxSocket, (struct sockaddr *)&socketAddress, sizeof(socketAddress))==-1) {
-      log.error("bind() failed: %s",strerror(errno));
-      throw __LINE__;
-    }
-    // listen to socket
-    if (listen(rxSocket,cfg.rxMaxConnections)==-1) {
-       log.error("listen() failed: %s",strerror(errno));
-       throw __LINE__;
-    }
-    
-    
-    // create transport handle (to central server)
-    cfgCx.server_name    = "localhost";
-    cfgCx.server_port    = 6006;
-    cfgCx.queue_length   = 1000;
-    cfgCx.client_name    = "infoLoggerD";
-    cfgCx.proxy_state    = TR_PROXY_CAN_NOT_BE_PROXY;
-    cfgCx.msg_queue_path = "/tmp/infoLoggerD.queue";
-
-    hCx = TR_client_start(&cfgCx);
-    if (hCx==NULL) {
-      throw __LINE__;
-    }
-
-    
-    
-    isInitialized=1;
-    log.info("Starting infoLoggerD");
-  }
-  
-  catch (int errLine) {
-    log.error("InfoLoggerD can not start - error %d",errLine);
-  }
-  
+  }  
 
 }
 
 
 InfoLoggerD::~InfoLoggerD() {
-  log.info("Received %lld messages",numberOfMessagesReceived);
+  log.info("Received %llu messages",numberOfMessagesReceived);
 
   if (rxSocket>=0) {
     close(rxSocket);    
@@ -311,8 +315,6 @@ InfoLoggerD::~InfoLoggerD() {
   for (auto c : clients) {
     close(c.socket);
   }
-
-  log.info("Exiting infoLoggerD");
 }
 
 
@@ -359,14 +361,13 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
               // push new data to buffer
               client.buffer.append(&newData[ix],nToPush);
               if (endOfLine) {
-                printf("received new message: %s\n",client.buffer.c_str());
+                //printf("received new message: %s\n",client.buffer.c_str());
                 numberOfMessagesReceived++;
-                if (numberOfMessagesReceived%100000==0) {
-                  printf("received %lld messages\n",numberOfMessagesReceived);
-                }
+                //if (numberOfMessagesReceived%100000==0) {
+                //  printf("received %lld messages\n",numberOfMessagesReceived);
+                //}
                 
-                TR_client_send_msg(hCx, client.buffer.c_str());
-                
+                TR_client_send_msg(hCx, client.buffer.c_str());                
                 client.buffer.clear();
               }
 
@@ -377,7 +378,7 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
         } else {
           int nDropped=client.buffer.length();
           if (nDropped) {
-            printf("partial data dropped:%s\n",client.buffer.c_str());
+            log.info("partial data dropped:%s\n",client.buffer.c_str());
           }
           close(client.socket);
           client.socket=-1;
@@ -388,7 +389,7 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
     // cleanup list: remove items with invalid socket
     if (cleanupNeeded) {
        clients.remove_if([](t_clientConnection &c){ return (c.socket==-1); });
-       log.info("%d clients disconnected, now having %d/%d",cleanupNeeded,(int)clients.size(),cfg.rxMaxConnections);
+       log.info("%d clients disconnected, now having %d/%d",cleanupNeeded,(int)clients.size(),configInfoLoggerD.rxMaxConnections);
     }
 
     // handle new connection requests
@@ -399,8 +400,8 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
       if(tmpSocket==-1) {
         log.error("accept() failed: %s",strerror(errno));
       } else {
-        if (((int)clients.size()>=cfg.rxMaxConnections)&&(cfg.rxMaxConnections>0)) {
-          log.warning("Closing new client, maximum number of connections reached (%d)", cfg.rxMaxConnections);
+        if (((int)clients.size()>=configInfoLoggerD.rxMaxConnections)&&(configInfoLoggerD.rxMaxConnections>0)) {
+          log.warning("Closing new client, maximum number of connections reached (%d)", configInfoLoggerD.rxMaxConnections);
           close(tmpSocket);
         } else {
           int socketMode=fcntl(rxSocket,F_GETFL);
@@ -411,7 +412,7 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
           newClient.socket=tmpSocket;
           newClient.buffer.clear();
           clients.push_back(newClient);
-          log.info("New client: %d/%d",(int)clients.size(),cfg.rxMaxConnections);
+          log.info("New client: %d/%d",(int)clients.size(),configInfoLoggerD.rxMaxConnections);
         }
       }
     }      
@@ -429,27 +430,13 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //todo: lineBuffer struct:
 // char array + isEmpty,truncated,etc
 
 
 
 
-int main() {
-  InfoLoggerD d;
+int main(int argc, char * argv[]) {
+  InfoLoggerD d(argc,argv);
   return d.run();
 }

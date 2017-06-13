@@ -66,6 +66,10 @@ class ConfigInfoLoggerD {
   std::string msgQueuePath = "/tmp/infoLoggerD.queue";// path to temp file storing messages
   std::string clientName = "infoLoggerD";             // name identifying client to infoLoggerServer
   int         isProxy = 0;                            // flag set to allow infoLoggerD to be a transport proxy to infoLoggerServer
+  
+  // settings for output
+  int outputToServer = 0;     // enable output to infoLoggerServer
+  int outputToLog = 1;        // enable output to log
 };
 
 ConfigInfoLoggerD::ConfigInfoLoggerD() {
@@ -76,19 +80,20 @@ ConfigInfoLoggerD::~ConfigInfoLoggerD(){
 
 void ConfigInfoLoggerD::readFromConfigFile(ConfigFile &config) {
 
-  std::string cfgEntryPoint="infoLoggerD";  // this is the name of the section under which to find parameters
-  
-  config.getOptionalValue<std::string>(cfgEntryPoint + ".localLogDirectory", localLogDirectory);
-  config.getOptionalValue<std::string>(cfgEntryPoint + ".rxSocketPath", rxSocketPath);
-  config.getOptionalValue<int>(cfgEntryPoint + ".rxSocketInBufferSize", rxSocketInBufferSize);
-  config.getOptionalValue<int>(cfgEntryPoint + ".rxMaxConnections", rxMaxConnections);
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".localLogDirectory", localLogDirectory);
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".rxSocketPath", rxSocketPath);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".rxSocketInBufferSize", rxSocketInBufferSize);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".rxMaxConnections", rxMaxConnections);
 
-  config.getOptionalValue<std::string>(cfgEntryPoint + ".serverName", serverName);
-  config.getOptionalValue<int>(cfgEntryPoint + ".serverPort", serverPort);
-  config.getOptionalValue<int>(cfgEntryPoint + ".msgQueueLength", msgQueueLength);
-  config.getOptionalValue<std::string>(cfgEntryPoint + ".msgQueuePath", msgQueuePath);
-  config.getOptionalValue<std::string>(cfgEntryPoint + ".clientName", clientName);
-  config.getOptionalValue<int>(cfgEntryPoint + ".isProxy", isProxy);
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".serverName", serverName);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".serverPort", serverPort);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueueLength", msgQueueLength);
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueuePath", msgQueuePath);
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".clientName", clientName);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".isProxy", isProxy);
+
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".outputToServer", outputToServer);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".outputToLog", outputToLog);
 }
 
 //////////////////////////////////////////////////////
@@ -197,6 +202,8 @@ class InfoLoggerD:public Daemon {
   
   TR_client_configuration   cfgCx;  // config for transport
   TR_client_handle          hCx;    // handle to server transport 
+  
+  FILE *logOutput=nullptr;  // handle to local log file where to copy incoming messages, if configured to do so
 };
 
 
@@ -277,21 +284,30 @@ InfoLoggerD::InfoLoggerD(int argc,char * argv[]):Daemon(argc,argv) {
          throw __LINE__;
       }
 
-      // create transport handle (to central server)
-      cfgCx.server_name    = configInfoLoggerD.serverName.c_str();
-      cfgCx.server_port    = configInfoLoggerD.serverPort;
-      cfgCx.queue_length   = configInfoLoggerD.msgQueueLength;
-      cfgCx.msg_queue_path = configInfoLoggerD.msgQueuePath.c_str();
-      cfgCx.client_name    = configInfoLoggerD.clientName.c_str();
-      if (configInfoLoggerD.isProxy) {
-        cfgCx.proxy_state    = TR_PROXY_CAN_NOT_BE_PROXY;
-      } else {
-        cfgCx.proxy_state    = TR_PROXY_CAN_BE_PROXY;
-      }
+      if (configInfoLoggerD.outputToServer) {
+        // create transport handle (to central server)
+        cfgCx.server_name    = configInfoLoggerD.serverName.c_str();
+        cfgCx.server_port    = configInfoLoggerD.serverPort;
+        cfgCx.queue_length   = configInfoLoggerD.msgQueueLength;
+        cfgCx.msg_queue_path = configInfoLoggerD.msgQueuePath.c_str();
+        cfgCx.client_name    = configInfoLoggerD.clientName.c_str();
+        if (configInfoLoggerD.isProxy) {
+          cfgCx.proxy_state    = TR_PROXY_CAN_NOT_BE_PROXY;
+        } else {
+          cfgCx.proxy_state    = TR_PROXY_CAN_BE_PROXY;
+        }
 
-      hCx = TR_client_start(&cfgCx);
-      if (hCx==NULL) {
-        throw __LINE__;
+        hCx = TR_client_start(&cfgCx);
+        if (hCx==NULL) {
+          throw __LINE__;
+        }
+      } else {
+        log.info("Output to infoLoggerServer disabled");
+      }
+      
+      if (configInfoLoggerD.outputToLog) {
+        log.info("Output to log file enabled");
+        // todo: open a log file!
       }
 
       isInitialized=1;
@@ -314,6 +330,9 @@ InfoLoggerD::~InfoLoggerD() {
   }
   for (auto c : clients) {
     close(c.socket);
+  }
+  if (configInfoLoggerD.outputToServer) {
+    TR_client_stop(hCx);
   }
 }
 
@@ -367,7 +386,17 @@ Daemon::LoopStatus InfoLoggerD::doLoop() {
                 //  printf("received %lld messages\n",numberOfMessagesReceived);
                 //}
                 
-                TR_client_send_msg(hCx, client.buffer.c_str());                
+                // todo: add mode "to file"
+                
+                if (configInfoLoggerD.outputToLog) {
+                  if (logOutput==nullptr) {
+                    printf("%s\n",client.buffer.c_str());
+                  }
+                }
+
+                if (configInfoLoggerD.outputToServer) {
+                  TR_client_send_msg(hCx, client.buffer.c_str());
+                }
                 client.buffer.clear();
               }
 

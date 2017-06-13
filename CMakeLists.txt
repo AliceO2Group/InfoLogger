@@ -83,7 +83,9 @@ set(SRCS
   src/permanentFIFO.c
   src/infoLoggerMessageDecode.c
   src/InfoLoggerDispatch.cxx
+  src/InfoLoggerDispatchBrowser.cxx
   src/InfoLoggerMessageList.cxx
+  src/ConfigInfoLoggerServer.cxx
   )
 
 
@@ -103,7 +105,7 @@ configure_file("include/${MODULE_NAME}/Version.h.in"
         )
 
 include_directories(
-        ${CMAKE_CURRENT_BINARY_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/include include
 )
 
 set(LIBRARY_NAME ${MODULE_NAME})
@@ -153,6 +155,91 @@ O2_GENERATE_TESTS(
  TEST_SRCS ${TEST_SRCS}
 )
 
+
+link_directories(
+     ${LIBRARY_OUTPUT_PATH}   
+)
+add_executable(
+        infoLoggerD-s
+        src/infoLoggerD.cxx
+        src/permanentFIFO.c
+        src/simplelog.c
+        src/transport_client.c
+        src/transport_files.c
+        src/transport_proxy.c
+        src/transport_server.c
+        src/utility.c
+)
+target_link_libraries(
+        infoLoggerD-s
+        CommonSimpleLog
+        CommonDaemon
+        CommonConfiguration
+        pthread
+)
+add_executable(
+        infoLoggerServer-s
+        src/infoLoggerServer.cxx
+        src/permanentFIFO.c
+        src/simplelog.c
+        src/InfoLoggerDispatch.cxx
+        src/ConfigInfoLoggerServer.cxx
+        src/InfoLoggerDispatchSQL.cxx
+        src/InfoLoggerDispatchBrowser.cxx
+        src/infoLoggerMessageDecode.c
+        src/InfoLoggerMessageHelper.cxx
+        src/InfoLoggerMessageList.cxx
+        src/transport_client.c
+        src/transport_files.c
+        src/transport_proxy.c
+        src/transport_server.c
+        src/utility.c
+)
+target_include_directories(
+        infoLoggerServer-s PUBLIC
+        ${MYSQL_INCLUDE_DIRS}
+)
+target_link_libraries(
+        infoLoggerServer-s
+        CommonSimpleLog
+        CommonDaemon
+        CommonConfiguration
+        CommonThread
+        pthread
+        ${MYSQL_LIBRARY}
+)
+add_executable(
+        infoLoggerAdminDB-s
+        src/infoLoggerAdminDB.cxx
+)
+target_include_directories(
+        infoLoggerAdminDB-s PUBLIC
+        ${MYSQL_INCLUDE_DIRS}
+)
+target_link_libraries(
+        infoLoggerAdminDB-s
+        CommonConfiguration
+        CommonSimpleLog
+        ${MYSQL_LIBRARY}
+)
+add_executable(
+        log-s
+        src/log.cxx
+        src/InfoLogger.cxx
+        src/InfoLoggerClient.cxx
+        src/infoLoggerMessageDecode.c
+        src/InfoLoggerMessageHelper.cxx
+        src/utility.c
+        src/simplelog.c
+)
+target_link_libraries(
+        log-s
+        CommonConfiguration
+        CommonSimpleLog
+        CommonLineBuffer
+)
+
+
 # TODO RECONSIDER THE THINGS BELOW AFTER EXTRACTION TO ITS OWN REPO
 # Make sure we tell the topdir CMakeLists that we exist (if build from topdir)
 get_directory_property(hasParent PARENT_DIRECTORY)
@@ -160,3 +247,4 @@ if(hasParent)
     set(PROJECT_${PROJECT_NAME} true PARENT_SCOPE)
 endif()
 include(PackageConfigurator)
+

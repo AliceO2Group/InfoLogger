@@ -85,12 +85,26 @@ set default_db_db ""
 set default_loghost "localhost"
 set default_logport "6102"
 
+set configFileSection "\[infoBrowser\]"
+set configFileSectionFound 0
 if {$configFile!=""} {
   set fd [open $configFile "r"]
   set keyfound {}
   while {1} {
     gets $fd line
     if {[eof $fd]} {break}
+    # remove leading/trailing blanks
+    set line [string trim $line]
+    if {$line==$configFileSection} {
+      # entering infoBrowser section
+      set configFileSectionFound 1
+    } elseif {[regexp {^\[.*\]} $line]} {
+      # entering another section
+      set configFileSectionFound 0
+    }
+    if {!$configFileSectionFound} {
+      continue
+    }
     set lv [split [string trim $line] "="]
     set lkey [lindex $lv 0]
     if {[string range $lkey 0 1]=="#"} {continue}
@@ -103,12 +117,12 @@ if {$configFile!=""} {
   
   set cfgok 1
   foreach {keyname isoptionnal varname defval} [list \
-    browserMysqlUser 0 db_user "$default_db_user" \
-    browserMysqlPwd 0 db_pwd "$default_db_pwd" \
-    browserMysqlHost 0 db_host "$default_db_host" \
-    browserMysqlDb 0 db_db "$default_db_db" \
-    serverHost 0 loghost "$default_loghost" \
-    serverPortTx 0 logport "$default_logport" \
+    dbUser 0 db_user "$default_db_user" \
+    dbPwd 0 db_pwd "$default_db_pwd" \
+    dbHost 0 db_host "$default_db_host" \
+    dbName 0 db_db "$default_db_db" \
+    serverHost 1 loghost "$default_loghost" \
+    serverPortTx 1 logport "$default_logport" \
     configName 1 configName "$configFile" \
   ] {
     set $varname $defval
@@ -118,7 +132,6 @@ if {$configFile!=""} {
         set cfgok 0
       }
     }
-    puts "$varname = $cfgvals($keyname)"   
   }  
   if {!$cfgok} {
     puts "Wrong configuration in $configFile, exiting"

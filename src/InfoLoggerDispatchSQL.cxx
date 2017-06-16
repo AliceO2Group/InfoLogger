@@ -36,6 +36,7 @@ class InfoLoggerDispatchSQLImpl {
   
   std::string sql_insert;
   
+  unsigned long long insertCount=0; // counter for number of queries executed
 };
 
 void InfoLoggerDispatchSQLImpl::start() {
@@ -96,6 +97,7 @@ void InfoLoggerDispatchSQLImpl::stop() {
     theLog->info("DB disconnected");    
   }
   mysql_close(&db);
+  theLog->info("DB thread insert count = %llu",insertCount);
 }
 
 
@@ -186,9 +188,9 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
    my_bool param_isNOTnull=0; // boolean telling if a parameter is not NULL
    char *msg;
    char *nl;    // variables used to reformat multiple-line messages
-
+   
    for (m=lmsg->msg;m!=NULL;m=m->next){  
-
+         
          for(int i=0;i<nFields;i++) {
           switch (protocols[0].fields[i].type) {
             case infoLog_msgField_def_t::ILOG_TYPE_STRING:
@@ -243,6 +245,13 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
             dbIsConnected=0;
             break;
           }
+          
+          insertCount++;
+/*          
+if (insertCount%1000==0) {
+            theLog->info("insert count = %llu",insertCount);
+          }
+          */
        }
     }
   return 0;

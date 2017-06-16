@@ -249,3 +249,10 @@ if(hasParent)
 endif()
 include(PackageConfigurator)
 
+# Install some extra files
+install(
+  FILES src/infoBrowser.tcl
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+  RENAME infoBrowser)
+
+

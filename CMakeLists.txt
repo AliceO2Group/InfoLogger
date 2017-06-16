@@ -147,6 +147,7 @@ O2_GENERATE_EXECUTABLE(
 
 set(TEST_SRCS
   test/testInfoLogger.cxx
+  test/testInfoLoggerPerf.cxx
 )
 
 O2_GENERATE_TESTS(

@@ -77,6 +77,11 @@ class InfoLoggerServer:public Daemon {
   int isInitialized;
   
   std::vector<std::unique_ptr<InfoLoggerDispatch>> dispatchEngines;
+
+  std::vector<std::unique_ptr<InfoLoggerDispatch>> dispatchEnginesDB;
+  unsigned int dbRoundRobinIx=0;
+  
+  unsigned long long msgCount=0;
 };
 
 InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
@@ -103,7 +108,14 @@ InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
       try {
         //dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchPrint>(&log));
         dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&configInfoLoggerServer,&log));
-        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer,&log));
+
+        if (configInfoLoggerServer.dbEnabled) {
+          for (int i=0;i<configInfoLoggerServer.dbNThreads;i++) {
+            dispatchEnginesDB.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer,&log));
+          }
+        } else {
+          log.info("DB disabled");
+        }
       } catch (int err) {
         printf("Failed to initialize dispatch engines: error %d\n",err);
       }
@@ -122,6 +134,8 @@ InfoLoggerServer::~InfoLoggerServer() {
     if (tcpServerHandle!=NULL) {
       TR_server_stop(tcpServerHandle);  
     }
+    
+    log.info("Received %llu messages",msgCount);
   }
 }
 
@@ -150,10 +164,45 @@ Daemon::LoopStatus InfoLoggerServer::doLoop() {
     if (msgList!=nullptr) {
       //printf("got message\n");
       
+      // base dispatch engines
       for(const auto &dispatch : dispatchEngines){
         dispatch->pushMessage(msgList);
       }
+      
+      // DB dispatch engine ... find one available, or wait
+      unsigned int nThreads=dispatchEnginesDB.size();
+      unsigned int nTry=1;
+      int pushOk=0;
+      for (;nTry<=nThreads*3;nTry++) {
+        int err=dispatchEnginesDB[dbRoundRobinIx]->pushMessage(msgList);
+        dbRoundRobinIx++;
+        if (dbRoundRobinIx>=nThreads) {
+          dbRoundRobinIx=0;
+        }
+        if (err==0) {
+          pushOk=1;
+          break;
+        }
+        if (nTry%nThreads==0) {
+          //log.warning("Warning, DB busy, waiting...");
+          usleep(10000);
+          // todo: keep newFile for next loop iteration, in order not to get stuck in sleep here
+        }
+      }
+      if (!pushOk) {
+        log.warning("Warning DB dispatch full, 1 message lost");
+      }      
+      
 
+       // count messages
+      for (infoLog_msg_t *m=msgList->msg;m!=nullptr;m=m->next) {
+        msgCount++;
+        /*
+        if (msgCount%1000==0) {
+          log.info("msg %llu",msgCount);
+        }
+        */
+      }
       // todo: online analysis of message: set extra field (e.g. partition based on detector name and run, etc)      
       // dispatch message to online clients           
       // dispatch message to database, etc.

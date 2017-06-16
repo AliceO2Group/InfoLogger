@@ -222,7 +222,9 @@ class InfoLogger::Impl {
         }
         printf("Logging to file %s\n",logFile);
         stdLog.setLogFile(logFile);
-      }
+      } else if (!strcmp(confEnv,"none")) {
+        currentMode=OutputMode::none; // useful for benchmarks
+      } 
     }
     client=nullptr;
     if (currentMode==OutputMode::infoLoggerD) {
@@ -244,7 +246,7 @@ class InfoLogger::Impl {
 
   friend class InfoLogger;  //< give access to this data from InfoLogger class
 
-  enum OutputMode {stdout, file, infoLoggerD};  // available options for output
+  enum OutputMode {stdout, file, infoLoggerD, none};  // available options for output
   OutputMode currentMode; // current option for output
   
   

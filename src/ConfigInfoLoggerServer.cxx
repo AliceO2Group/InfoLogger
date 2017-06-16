@@ -15,6 +15,9 @@ void ConfigInfoLoggerServer::readFromConfigFile(ConfigFile &config) {
   config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbUser", dbUser);
   config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbPassword", dbPassword);
   config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbName", dbName);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbEnabled", dbEnabled);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbNThreads", dbNThreads);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbDispatchQueueSize", dbDispatchQueueSize);
   
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".serverPortTx", serverPortTx);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".maxClientsTx", maxClientsTx);

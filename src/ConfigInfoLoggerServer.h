@@ -28,7 +28,10 @@ class ConfigInfoLoggerServer {
   std::string dbUser="o2";         // database user name
   std::string dbPassword="o2";     // database password
   std::string dbName="INFOLOGGER"; // database name 
-
+  int         dbEnabled=1;         // flag to enable/disable db
+  int         dbNThreads=1;        // number of insert threads
+  int         dbDispatchQueueSize=10000;  // max number of messages buffered in memory before DB insert
+  
   // settings for infoBrowser clients
   int         serverPortTx = INFOLOGGER_DEFAULT_SERVER_TX_PORT;
   int         maxClientsTx = 100;

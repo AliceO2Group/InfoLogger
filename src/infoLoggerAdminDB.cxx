@@ -203,7 +203,7 @@ int main(int argc, char * argv[]) {
     unsigned, username varchar(32), system varchar(32), facility varchar(32), detector varchar(32), `partition` varchar(32), run int unsigned, errcode int unsigned, \
     errline smallint unsigned, errsource varchar(32), message text, index ix_severity(severity), index ix_level(level), index ix_timestamp(timestamp), index \
     ix_hostname(hostname(14)), index ix_rolename(rolename(20)), index ix_system(system(3)), index ix_facility(facility(20)), index ix_detector(detector(8)), index \
-    ix_partition(`partition`(10)), index ix_run(run), index ix_errcode(errcode), index ix_errline(errline), index ix_errsource(errsource(20)))";
+    ix_partition(`partition`(10)), index ix_run(run), index ix_errcode(errcode), index ix_errline(errline), index ix_errsource(errsource(20))) ENGINE=MyISAM";
 
   if (optPartitioning) {
     log.info("Using partitioning");

@@ -104,7 +104,7 @@ int main(int argc, char * argv[]) {
   // load configuration file
   std::string dbHost,dbUser,dbPwd,dbName;
   config.getOptionalValue(INFOLOGGER_CONFIG_SECTION_NAME_ADMIN ".dbUser",dbUser);
-  config.getOptionalValue(INFOLOGGER_CONFIG_SECTION_NAME_ADMIN ".dbPwd",dbPwd);
+  config.getOptionalValue(INFOLOGGER_CONFIG_SECTION_NAME_ADMIN ".dbPassword",dbPwd);
   config.getOptionalValue(INFOLOGGER_CONFIG_SECTION_NAME_ADMIN ".dbHost",dbHost);
   config.getOptionalValue(INFOLOGGER_CONFIG_SECTION_NAME_ADMIN ".dbName",dbName);
   

@@ -1,11 +1,11 @@
 [Unit]
-Description=infoLoggerD, local logging agent
-After=network.target
+Description=infoLoggerServer, central logging server
+After=network.target mysql55.mysqld
 
 [service]
 Type=forking
 TimeoutSec=5
-ExecStart=/opt/o2-infoLogger/infoLoggerD
+ExecStart=/opt/o2-modules/bin/infoLoggerServer
 ExecStop=kill -9 $MAINPID
 GuessMainPID=1
 Restart=always

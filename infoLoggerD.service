@@ -5,7 +5,7 @@ After=network.target
 [service]
 Type=forking
 TimeoutSec=5
-ExecStart=/opt/o2-infoLogger/infoLoggerD
+ExecStart=/opt/o2-modules/bin/infoLoggerD
 ExecStop=kill -9 $MAINPID
 GuessMainPID=1
 Restart=always

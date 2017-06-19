@@ -2,11 +2,11 @@
 Description=infoLoggerD, local logging agent
 After=network.target
 
-[service]
+[Service]
 Type=forking
 TimeoutSec=5
-ExecStart=/opt/o2-modules/bin/infoLoggerD
-ExecStop=kill -9 $MAINPID
+ExecStart=/opt/o2-modules/bin/infoLoggerD -z file:/etc/infoLoggerD.cfg
+ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
 GuessMainPID=1
 Restart=always
 

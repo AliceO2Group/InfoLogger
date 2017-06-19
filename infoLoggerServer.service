@@ -1,13 +1,13 @@
 [Unit]
 Description=infoLoggerServer, central logging server
-After=network.target mysql55.mysqld
+Requires=mysql55-mysqld.service
+After=network.target mysql55-mysqld.service
 
-[service]
+
+[Service]
 Type=forking
 TimeoutSec=5
-ExecStart=/opt/o2-modules/bin/infoLoggerServer
-ExecStop=kill -9 $MAINPID
+ExecStart=/opt/o2-modules/bin/infoLoggerServer -z file:/etc/infoLoggerServer.cfg
+ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
 GuessMainPID=1
 Restart=always
-
-

@@ -118,7 +118,7 @@ if {$configFile!=""} {
   set cfgok 1
   foreach {keyname isoptionnal varname defval} [list \
     dbUser 0 db_user "$default_db_user" \
-    dbPwd 0 db_pwd "$default_db_pwd" \
+    dbPassword 0 db_pwd "$default_db_pwd" \
     dbHost 0 db_host "$default_db_host" \
     dbName 0 db_db "$default_db_db" \
     serverHost 1 loghost "$default_loghost" \

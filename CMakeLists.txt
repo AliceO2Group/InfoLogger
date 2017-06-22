@@ -208,6 +208,7 @@ target_link_libraries(
         CommonThread
         pthread
         ${MYSQL_LIBRARY}
+        ${MYSQL_LIBRARIES}
 )
 add_executable(
         infoLoggerAdminDB-s
@@ -222,6 +223,7 @@ target_link_libraries(
         CommonConfiguration
         CommonSimpleLog
         ${MYSQL_LIBRARY}
+        ${MYSQL_LIBRARIES}
 )
 add_executable(
         log-s

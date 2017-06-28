@@ -160,6 +160,7 @@ O2_GENERATE_TESTS(
 link_directories(
      ${LIBRARY_OUTPUT_PATH}   
 )
+
 add_executable(
         infoLoggerD-s
         src/infoLoggerD.cxx
@@ -242,6 +243,23 @@ target_link_libraries(
         CommonLineBuffer
 )
 
+
+set_target_properties( infoLoggerD-s infoLoggerServer-s infoLoggerAdminDB-s log-s
+    PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-static"
+)
+set_target_properties( infoLoggerD-s PROPERTIES
+    OUTPUT_NAME infoLoggerD
+)
+set_target_properties( infoLoggerServer-s PROPERTIES
+    OUTPUT_NAME infoLoggerServer
+)
+set_target_properties( log-s PROPERTIES
+    OUTPUT_NAME log
+)
+set_target_properties( infoLoggerAdminDB-s PROPERTIES
+    OUTPUT_NAME infoLoggerAdminDB
+)
 
 # TODO RECONSIDER THE THINGS BELOW AFTER EXTRACTION TO ITS OWN REPO
 # Make sure we tell the topdir CMakeLists that we exist (if build from topdir)

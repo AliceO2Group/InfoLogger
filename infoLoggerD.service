@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=forking
 TimeoutSec=5
-ExecStart=/opt/o2-modules/bin/infoLoggerD -z file:/etc/infoLoggerD.cfg
+ExecStart=/opt/o2-modules/bin/infoLoggerD -z file:/etc/infoLogger.cfg
 ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
 GuessMainPID=1
 Restart=always

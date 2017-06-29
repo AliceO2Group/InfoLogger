@@ -68,8 +68,8 @@ class ConfigInfoLoggerD {
   int         isProxy = 0;                            // flag set to allow infoLoggerD to be a transport proxy to infoLoggerServer
   
   // settings for output
-  int outputToServer = 0;     // enable output to infoLoggerServer
-  int outputToLog = 1;        // enable output to log
+  int outputToServer = 1;     // enable output to infoLoggerServer
+  int outputToLog = 0;        // enable output to log
 };
 
 ConfigInfoLoggerD::ConfigInfoLoggerD() {

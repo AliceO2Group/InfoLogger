@@ -161,12 +161,32 @@ link_directories(
      ${LIBRARY_OUTPUT_PATH}   
 )
 
-# Some extra targets to build executables not relying on other o2 shared libs in bin-static
-# This is added optionally with cmake -DBUILD_STATIC=1 ...
-if(BUILD_STATIC)
-  add_executable(
-          infoLoggerD-s
-          src/infoLoggerD.cxx
+# Some extra targets to build standalone executables not relying on other o2 shared libs in bin-standalone
+# This is added optionally with cmake -DBUILD_STANDALONE=1 ...
+if(BUILD_STANDALONE)
+  add_library (objInfoLoggerClient OBJECT
+      src/InfoLogger.cxx
+      src/InfoLoggerClient.cxx
+      src/infoLoggerMessageDecode.c
+      src/InfoLoggerMessageHelper.cxx
+      src/utility.c
+      src/simplelog.c  
+  )
+  set (INFOLOGGER_STANDALONE_OBJ
+      $<TARGET_OBJECTS:objCommonConfiguration>
+      $<TARGET_OBJECTS:objCommonSimpleLog>
+      $<TARGET_OBJECTS:objInfoLoggerClient>
+  )
+  add_library (InfoLogger-standalone SHARED
+    ${INFOLOGGER_STANDALONE_OBJ}
+  )
+  add_library (InfoLogger-standalone-static STATIC
+    ${INFOLOGGER_STANDALONE_OBJ}
+  )
+  set_target_properties( InfoLogger-standalone-static PROPERTIES
+      OUTPUT_NAME InfoLogger-standalone
+  )
+  add_library (objInfoLoggerTransport OBJECT
           src/permanentFIFO.c
           src/simplelog.c
           src/transport_client.c
@@ -175,18 +195,27 @@ if(BUILD_STATIC)
           src/transport_server.c
           src/utility.c
   )
+  
+  add_executable(
+          infoLoggerD-s
+          src/infoLoggerD.cxx
+          $<TARGET_OBJECTS:objInfoLoggerTransport>
+          $<TARGET_OBJECTS:objCommonConfiguration>
+          $<TARGET_OBJECTS:objCommonSimpleLog>
+          $<TARGET_OBJECTS:objCommonDaemon>
+  )
   target_link_libraries(
           infoLoggerD-s
-          CommonSimpleLog
-          CommonDaemon
-          CommonConfiguration
           pthread
   )
   add_executable(
           infoLoggerServer-s
           src/infoLoggerServer.cxx
-          src/permanentFIFO.c
-          src/simplelog.c
+          $<TARGET_OBJECTS:objInfoLoggerTransport>
+          $<TARGET_OBJECTS:objCommonConfiguration>
+          $<TARGET_OBJECTS:objCommonSimpleLog>
+          $<TARGET_OBJECTS:objCommonDaemon>
+          $<TARGET_OBJECTS:objCommonThread>
           src/InfoLoggerDispatch.cxx
           src/ConfigInfoLoggerServer.cxx
           src/InfoLoggerDispatchSQL.cxx
@@ -194,11 +223,6 @@ if(BUILD_STATIC)
           src/infoLoggerMessageDecode.c
           src/InfoLoggerMessageHelper.cxx
           src/InfoLoggerMessageList.cxx
-          src/transport_client.c
-          src/transport_files.c
-          src/transport_proxy.c
-          src/transport_server.c
-          src/utility.c
   )
   target_include_directories(
           infoLoggerServer-s PUBLIC
@@ -206,16 +230,13 @@ if(BUILD_STATIC)
   )
   target_link_libraries(
           infoLoggerServer-s
-          CommonSimpleLog
-          CommonDaemon
-          CommonConfiguration
-          CommonThread
           pthread
-          ${MYSQL_LIBRARY}
           ${MYSQL_LIBRARIES}
   )
   add_executable(
           infoLoggerAdminDB-s
+          $<TARGET_OBJECTS:objCommonConfiguration>
+          $<TARGET_OBJECTS:objCommonSimpleLog>
           src/infoLoggerAdminDB.cxx
   )
   target_include_directories(
@@ -224,30 +245,20 @@ if(BUILD_STATIC)
   )
   target_link_libraries(
           infoLoggerAdminDB-s
-          CommonConfiguration
-          CommonSimpleLog
-          ${MYSQL_LIBRARY}
           ${MYSQL_LIBRARIES}
   )
   add_executable(
           log-s
           src/log.cxx
-          src/InfoLogger.cxx
-          src/InfoLoggerClient.cxx
-          src/infoLoggerMessageDecode.c
-          src/InfoLoggerMessageHelper.cxx
-          src/utility.c
-          src/simplelog.c
+          $<TARGET_OBJECTS:objCommonLineBuffer>
   )
   target_link_libraries(
           log-s
-          CommonConfiguration
-          CommonSimpleLog
-          CommonLineBuffer
+          InfoLogger-standalone-static
   )
   set_target_properties( infoLoggerD-s infoLoggerServer-s infoLoggerAdminDB-s log-s
       PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-static"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-standalone"
   )
   set_target_properties( infoLoggerD-s PROPERTIES
       OUTPUT_NAME infoLoggerD
@@ -261,7 +272,7 @@ if(BUILD_STATIC)
   set_target_properties( infoLoggerAdminDB-s PROPERTIES
       OUTPUT_NAME infoLoggerAdminDB
   )
-endif(BUILD_STATIC)
+endif(BUILD_STANDALONE)
 
 
 

@@ -161,105 +161,110 @@ link_directories(
      ${LIBRARY_OUTPUT_PATH}   
 )
 
-add_executable(
-        infoLoggerD-s
-        src/infoLoggerD.cxx
-        src/permanentFIFO.c
-        src/simplelog.c
-        src/transport_client.c
-        src/transport_files.c
-        src/transport_proxy.c
-        src/transport_server.c
-        src/utility.c
-)
-target_link_libraries(
-        infoLoggerD-s
-        CommonSimpleLog
-        CommonDaemon
-        CommonConfiguration
-        pthread
-)
-add_executable(
-        infoLoggerServer-s
-        src/infoLoggerServer.cxx
-        src/permanentFIFO.c
-        src/simplelog.c
-        src/InfoLoggerDispatch.cxx
-        src/ConfigInfoLoggerServer.cxx
-        src/InfoLoggerDispatchSQL.cxx
-        src/InfoLoggerDispatchBrowser.cxx
-        src/infoLoggerMessageDecode.c
-        src/InfoLoggerMessageHelper.cxx
-        src/InfoLoggerMessageList.cxx
-        src/transport_client.c
-        src/transport_files.c
-        src/transport_proxy.c
-        src/transport_server.c
-        src/utility.c
-)
-target_include_directories(
-        infoLoggerServer-s PUBLIC
-        ${MYSQL_INCLUDE_DIRS}
-)
-target_link_libraries(
-        infoLoggerServer-s
-        CommonSimpleLog
-        CommonDaemon
-        CommonConfiguration
-        CommonThread
-        pthread
-        ${MYSQL_LIBRARY}
-        ${MYSQL_LIBRARIES}
-)
-add_executable(
-        infoLoggerAdminDB-s
-        src/infoLoggerAdminDB.cxx
-)
-target_include_directories(
-        infoLoggerAdminDB-s PUBLIC
-        ${MYSQL_INCLUDE_DIRS}
-)
-target_link_libraries(
-        infoLoggerAdminDB-s
-        CommonConfiguration
-        CommonSimpleLog
-        ${MYSQL_LIBRARY}
-        ${MYSQL_LIBRARIES}
-)
-add_executable(
-        log-s
-        src/log.cxx
-        src/InfoLogger.cxx
-        src/InfoLoggerClient.cxx
-        src/infoLoggerMessageDecode.c
-        src/InfoLoggerMessageHelper.cxx
-        src/utility.c
-        src/simplelog.c
-)
-target_link_libraries(
-        log-s
-        CommonConfiguration
-        CommonSimpleLog
-        CommonLineBuffer
-)
+# Some extra targets to build executables not relying on other o2 shared libs in bin-static
+# This is added optionally with cmake -DBUILD_STATIC=1 ...
+if(BUILD_STATIC)
+  add_executable(
+          infoLoggerD-s
+          src/infoLoggerD.cxx
+          src/permanentFIFO.c
+          src/simplelog.c
+          src/transport_client.c
+          src/transport_files.c
+          src/transport_proxy.c
+          src/transport_server.c
+          src/utility.c
+  )
+  target_link_libraries(
+          infoLoggerD-s
+          CommonSimpleLog
+          CommonDaemon
+          CommonConfiguration
+          pthread
+  )
+  add_executable(
+          infoLoggerServer-s
+          src/infoLoggerServer.cxx
+          src/permanentFIFO.c
+          src/simplelog.c
+          src/InfoLoggerDispatch.cxx
+          src/ConfigInfoLoggerServer.cxx
+          src/InfoLoggerDispatchSQL.cxx
+          src/InfoLoggerDispatchBrowser.cxx
+          src/infoLoggerMessageDecode.c
+          src/InfoLoggerMessageHelper.cxx
+          src/InfoLoggerMessageList.cxx
+          src/transport_client.c
+          src/transport_files.c
+          src/transport_proxy.c
+          src/transport_server.c
+          src/utility.c
+  )
+  target_include_directories(
+          infoLoggerServer-s PUBLIC
+          ${MYSQL_INCLUDE_DIRS}
+  )
+  target_link_libraries(
+          infoLoggerServer-s
+          CommonSimpleLog
+          CommonDaemon
+          CommonConfiguration
+          CommonThread
+          pthread
+          ${MYSQL_LIBRARY}
+          ${MYSQL_LIBRARIES}
+  )
+  add_executable(
+          infoLoggerAdminDB-s
+          src/infoLoggerAdminDB.cxx
+  )
+  target_include_directories(
+          infoLoggerAdminDB-s PUBLIC
+          ${MYSQL_INCLUDE_DIRS}
+  )
+  target_link_libraries(
+          infoLoggerAdminDB-s
+          CommonConfiguration
+          CommonSimpleLog
+          ${MYSQL_LIBRARY}
+          ${MYSQL_LIBRARIES}
+  )
+  add_executable(
+          log-s
+          src/log.cxx
+          src/InfoLogger.cxx
+          src/InfoLoggerClient.cxx
+          src/infoLoggerMessageDecode.c
+          src/InfoLoggerMessageHelper.cxx
+          src/utility.c
+          src/simplelog.c
+  )
+  target_link_libraries(
+          log-s
+          CommonConfiguration
+          CommonSimpleLog
+          CommonLineBuffer
+  )
+  set_target_properties( infoLoggerD-s infoLoggerServer-s infoLoggerAdminDB-s log-s
+      PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-static"
+  )
+  set_target_properties( infoLoggerD-s PROPERTIES
+      OUTPUT_NAME infoLoggerD
+  )
+  set_target_properties( infoLoggerServer-s PROPERTIES
+      OUTPUT_NAME infoLoggerServer
+  )
+  set_target_properties( log-s PROPERTIES
+      OUTPUT_NAME log
+  )
+  set_target_properties( infoLoggerAdminDB-s PROPERTIES
+      OUTPUT_NAME infoLoggerAdminDB
+  )
+endif(BUILD_STATIC)
 
 
-set_target_properties( infoLoggerD-s infoLoggerServer-s infoLoggerAdminDB-s log-s
-    PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-static"
-)
-set_target_properties( infoLoggerD-s PROPERTIES
-    OUTPUT_NAME infoLoggerD
-)
-set_target_properties( infoLoggerServer-s PROPERTIES
-    OUTPUT_NAME infoLoggerServer
-)
-set_target_properties( log-s PROPERTIES
-    OUTPUT_NAME log
-)
-set_target_properties( infoLoggerAdminDB-s PROPERTIES
-    OUTPUT_NAME infoLoggerAdminDB
-)
+
 
 # TODO RECONSIDER THE THINGS BELOW AFTER EXTRACTION TO ITS OWN REPO
 # Make sure we tell the topdir CMakeLists that we exist (if build from topdir)

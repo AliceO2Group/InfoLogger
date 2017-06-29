@@ -207,7 +207,7 @@ class InfoLogger::Impl {
       throw __LINE__;
     }
     refreshDefaultMsg();
-    currentMode=OutputMode::stdout;
+    currentMode=OutputMode::infoLoggerD;
         
     const char* confEnv=getenv("INFOLOGGER_MODE");  
     if (confEnv!=NULL) {
@@ -228,7 +228,12 @@ class InfoLogger::Impl {
     }
     client=nullptr;
     if (currentMode==OutputMode::infoLoggerD) {
-      client=new InfoLoggerClient;
+      client=new InfoLoggerClient;      
+      if ((client==nullptr)||(!client->isOk())) {
+        // fallback to stdout if infoLoggerD not available
+        printf("infoLoggerD not available, falling back to stdout logging\n");
+        currentMode=OutputMode::stdout;
+      }
     }
     // todo
     // switch mode based on configuration / environment

@@ -21,7 +21,9 @@ class InfoLoggerClient {
   InfoLoggerClient();
   ~InfoLoggerClient();
 
-  
+  // status on infoLoggerD connection
+  // returns 1 if client ok, 0 if not
+  int isOk();
   
   // sends (already encoded) message to infoLoggerD
   // returns 0 on success, an error code otherwise

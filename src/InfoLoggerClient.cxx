@@ -131,6 +131,9 @@ InfoLoggerClient::InfoLoggerClient() {
 
 }
 
+int InfoLoggerClient::isOk() {
+  return isInitialized;
+}
 
 InfoLoggerClient::~InfoLoggerClient() {
   if (txSocket>=0) {

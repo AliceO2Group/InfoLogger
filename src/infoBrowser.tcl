@@ -45,7 +45,7 @@ set onlineserver(timer) ""
 
 set maxmess 10000
 
-set configFile ""
+set configFile "/etc/infoLogger.cfg"
 
 catch {
   set configFile $env(INFOLOGGER_CONFIG)

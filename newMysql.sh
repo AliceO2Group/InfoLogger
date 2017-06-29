@@ -111,7 +111,7 @@ HERE=`hostname -f`
 for CONFIG in "${EXTRA_CONFIG[@]}"; do
   echo "[$CONFIG]"
   echo "dbUser=${EXTRA_USER[$CONFIG]}"
-  echo "dbPwd=${EXTRA_PWD[$CONFIG]}"
+  echo "dbPassword=${EXTRA_PWD[$CONFIG]}"
   echo "dbHost=$HERE"
   echo "dbName=$INFOLOGGER_MYSQL_DB"
   echo ""

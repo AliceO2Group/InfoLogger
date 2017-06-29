@@ -51,13 +51,14 @@ Installation described here is for standard CERN CentOS 7 (CC7) operating system
   Behavior of infoLogger library is configured with INFOLOGGER_MODE environment variable.
   This defines where to inject messages at runtime.
   Possible values are:
-  * infoLoggerD = inject messages to infoLogger system
+  * infoLoggerD = inject messages to infoLogger system, through infoLoggerD process
   * stdout = print messages to stdout/stderr (severity error and fatal)
   * file = print messages to a file. By default, "./log.txt". Specific file can be set with e.g. INFOLOGGER_MODE=file:/path/to/my/logfile.txt
   * none = messages are discarded
   
-  During initial development phase, this is by default "stdout", to allow using the infoLogger interface
-  and printing messages without infoLoggerD/infoLoggerServer. This will be changed at a later stage to infoLoggerD.
+  During development phase, it can be useful to set mode to "stdout", to allow using the infoLogger interface
+  and printing messages without infoLoggerD/infoLoggerServer.
+  When "infoLoggerD" mode is selected and no infoLoggerD connection can be established, the mode falls back to "stdout".
 
 * infoLoggerD
 

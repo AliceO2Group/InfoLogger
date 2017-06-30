@@ -23,12 +23,12 @@ void print_usage(){
   printf("  -s [severity]    Possible values: Info (default), Error, Fatal, Warning, Debug.\n");
   printf("  -x               If set, reads data coming on stdin line by line\n");
   printf("                   and transmit them as messages (1 line = 1 message).\n");
+  printf("  -h               This help.\n");
 }
 
 
 
 int main(int argc, char **argv){
-  InfoLogger theLog;
   
   int optFromStdin=0; // 1 if logging from stdin, 0 when taking input from command line
 
@@ -37,7 +37,7 @@ int main(int argc, char **argv){
   char option;
 
   /* read options */
-  while((option = getopt(argc, argv, "f:s:l:d:p:xc:o:z:")) != -1){
+  while((option = getopt(argc, argv, "s:xh")) != -1){
     switch(option){
 
       case 's':
@@ -97,11 +97,17 @@ int main(int argc, char **argv){
         break;
 */
           
+      case 'h':
+        print_usage();
+        return 0;
+          
       default:
         print_usage();
         return -1;
     }
   }
+
+  InfoLogger theLog;
 
    /* additionnal args = messages to send */
   int i;

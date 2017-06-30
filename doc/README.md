@@ -50,7 +50,7 @@ install, but other MySQL versions would work just as fine:
      ```
      
   * Create empty database and accounts for InfoLogger (interactive script, defaults should be fine):
-     `opt/o2-InfoLogger/bin/newMysql.sh`
+     `/opt/o2-InfoLogger/bin/newMysql.sh`
   * Create InfoLogger configuration, and fill with DB access parameters returned by previous script:
      `vi /etc/infoLogger.cfg`
 
@@ -111,12 +111,14 @@ collected centrally.
 
 * Log a test message from command line:
   `/opt/o2-InfoLogger/bin/log test`
-    * See command line options with `/opt/o2-InfoLogger/bin/log --help`
+    * See command line options with `/opt/o2-InfoLogger/bin/log -h`
     * It can be used to redirect output of a process to InfoLogger with e.g. `myProcess | /opt/o2-InfoLogger/bin/log -x`.
 
 * Archive table of messages and create fresh one:
   `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -c archive`
-    * See other administartive commands possible with `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -h`
+    * Archived messages can still be accessed from infoBrowser through the
+    Archive menu.
+    * See other administrative commands possible with `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -h`
 
 * Compile a sample program using InfoLogger library:
   * (C++ 14):
@@ -171,6 +173,7 @@ collected centrally.
   if not running locally.
 
 * Client library
+
   Behavior of infoLogger library can be configured with INFOLOGGER_MODE environment variable.
   This defines where to inject messages at runtime.
   Possible values are:

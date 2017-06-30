@@ -171,6 +171,16 @@ collected centrally.
 
 * On multiple-hosts systems, the serverHost configuration key should be set for infoLoggerD and infoBrowser, so that they are able to connect infoLoggerServer
   if not running locally.
+  
+* On the infoLoggerServer host, the firewall should allow incoming connections
+on ports 6006 (infoLoggerD), 6102 (infoBrowser) and 3306 (MySQL). It can be
+achieved on CentOS 7 with e.g.:
+  ```
+   firewall-cmd --permanent --zone=public --add-port=6006/tcp
+   firewall-cmd --permanent --zone=public --add-port=6102/tcp
+   firewall-cmd --permanent --zone=public --add-port=3306/tcp
+   firewall-cmd --reload
+   ```
 
 * Client library
 

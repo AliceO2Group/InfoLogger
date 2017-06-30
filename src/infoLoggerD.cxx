@@ -60,7 +60,7 @@ class ConfigInfoLoggerD {
   int         rxMaxConnections=1024;                      // maximum number of incoming connections
   
   // settings for remote infoLoggerServer access
-  std::string serverName = "localhost";                      // IP name to connect infoLoggerServer
+  std::string serverHost = "localhost";                      // IP name to connect infoLoggerServer
   int         serverPort = INFOLOGGER_DEFAULT_SERVER_RX_PORT;   // IP port number to connect infoLoggerServer
   int         msgQueueLength = 1000;                  // transmission queue size
   std::string msgQueuePath = "/tmp/infoLoggerD.queue";// path to temp file storing messages
@@ -85,7 +85,7 @@ void ConfigInfoLoggerD::readFromConfigFile(ConfigFile &config) {
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".rxSocketInBufferSize", rxSocketInBufferSize);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".rxMaxConnections", rxMaxConnections);
 
-  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".serverName", serverName);
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".serverHost", serverHost);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".serverPort", serverPort);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueueLength", msgQueueLength);
   config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueuePath", msgQueuePath);
@@ -286,7 +286,7 @@ InfoLoggerD::InfoLoggerD(int argc,char * argv[]):Daemon(argc,argv) {
 
       if (configInfoLoggerD.outputToServer) {
         // create transport handle (to central server)
-        cfgCx.server_name    = configInfoLoggerD.serverName.c_str();
+        cfgCx.server_name    = configInfoLoggerD.serverHost.c_str();
         cfgCx.server_port    = configInfoLoggerD.serverPort;
         cfgCx.queue_length   = configInfoLoggerD.msgQueueLength;
         cfgCx.msg_queue_path = configInfoLoggerD.msgQueuePath.c_str();

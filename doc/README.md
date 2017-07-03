@@ -32,8 +32,13 @@ Installation described here is for standard CERN CentOS 7 (CC7) operating system
 
 Infologger RPM packages can be installed through yum repository.
 At the moment, everything is bundled in a single RPM named o2-InfoLogger-standalone, containing all components described above.
+To quickly test the infoLogger API, the installation of this RPM is enough, the InfoLogger library will use stdout as fallback if
+the central services are not available, so one can play with basic functionality without setting up the full infoLoggerD/infoLoggerServer/database chain.
 
-Here is an example installation of a fully standalone setup, on a single node (commands executed as root).
+
+Here is the complete procedure of an example installation for a full-feature standalone setup,
+on a single node (commands executed as root).
+
 
 * Install InfoLogger RPM:
    * from a local RPM file: `yum install -y ./o2-InfoLogger-standalone*.rpm`      

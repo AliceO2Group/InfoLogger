@@ -137,12 +137,14 @@ O2_GENERATE_EXECUTABLE(
         BUCKET_NAME ${BUCKET_NAME}
 )
 
-O2_GENERATE_EXECUTABLE(
-        EXE_NAME infoLoggerAdminDB
-        SOURCES src/infoLoggerAdminDB.cxx
-        MODULE_LIBRARY_NAME ${LIBRARY_NAME}
-        BUCKET_NAME ${BUCKET_NAME}
-)
+if(MYSQL_FOUND)
+   O2_GENERATE_EXECUTABLE(
+           EXE_NAME infoLoggerAdminDB
+           SOURCES src/infoLoggerAdminDB.cxx
+           MODULE_LIBRARY_NAME ${LIBRARY_NAME}
+           BUCKET_NAME ${BUCKET_NAME}
+   )
+endif()
 
 
 set(TEST_SRCS

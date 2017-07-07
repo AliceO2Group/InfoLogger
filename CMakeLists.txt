@@ -110,7 +110,11 @@ include_directories(
 
 set(LIBRARY_NAME ${MODULE_NAME})
 
-set(BUCKET_NAME o2_infologger_bucket)
+if(MYSQL_FOUND)
+    set(BUCKET_NAME o2_infologger_bucket_with_mysql)
+else()
+    set(BUCKET_NAME o2_infologger_bucket)
+endif()
 
 O2_GENERATE_LIBRARY()
 
@@ -160,7 +164,7 @@ O2_GENERATE_TESTS(
 
 
 link_directories(
-     ${LIBRARY_OUTPUT_PATH}   
+     ${LIBRARY_OUTPUT_PATH}
 )
 
 # Some extra targets to build standalone executables not relying on other o2 shared libs in bin-standalone
@@ -172,7 +176,7 @@ if(BUILD_STANDALONE)
       src/infoLoggerMessageDecode.c
       src/InfoLoggerMessageHelper.cxx
       src/utility.c
-      src/simplelog.c  
+      src/simplelog.c
   )
   set (INFOLOGGER_STANDALONE_OBJ
       $<TARGET_OBJECTS:objCommonConfiguration>
@@ -197,7 +201,7 @@ if(BUILD_STANDALONE)
           src/transport_server.c
           src/utility.c
   )
-  
+
   add_executable(
           infoLoggerD-s
           src/infoLoggerD.cxx

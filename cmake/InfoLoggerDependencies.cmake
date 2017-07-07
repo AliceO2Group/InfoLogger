@@ -10,19 +10,29 @@ endif()
 
 
 o2_define_bucket(
-  NAME
-  o2_infologger_bucket
+        NAME
+        o2_infologger_bucket
 
-  DEPENDENCIES
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  pthread
-  Common
-  ${MYSQL_LIBRARY}
-  ${MYSQL_LIBRARIES}
+        DEPENDENCIES
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        pthread
+        Common
 
-  SYSTEMINCLUDE_DIRECTORIES
-  ${Boost_INCLUDE_DIRS}
-  ${MYSQL_INCLUDE_DIR}
-  ${MYSQL_INCLUDE_DIRS}
+        SYSTEMINCLUDE_DIRECTORIES
+        ${Boost_INCLUDE_DIRS}
+
 )
 
+o2_define_bucket(
+        NAME
+        o2_infologger_bucket_with_mysql
+
+        DEPENDENCIES
+        o2_infologger_bucket
+        ${MYSQL_LIBRARY}
+        ${MYSQL_LIBRARIES}
+
+        SYSTEMINCLUDE_DIRECTORIES
+        ${MYSQL_INCLUDE_DIR}
+        ${MYSQL_INCLUDE_DIRS}
+)

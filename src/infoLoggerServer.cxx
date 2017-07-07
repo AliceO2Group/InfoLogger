@@ -110,7 +110,7 @@ InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
         dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&configInfoLoggerServer,&log));
 
         if (configInfoLoggerServer.dbEnabled) {
-          #ifdef WITH_MYSQL
+          #ifdef _WITH_MYSQL
             log.info("SQL DB initialization");
             for (int i=0;i<configInfoLoggerServer.dbNThreads;i++) {
               dispatchEnginesDB.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer,&log));

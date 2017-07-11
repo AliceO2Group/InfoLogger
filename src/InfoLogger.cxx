@@ -191,7 +191,7 @@ void ProcessInfo::refresh() {
 
 
 
-
+int infoLoggerDWarningDone=0;
 
 // private class to isolate internal data from external interface
 class InfoLogger::Impl {
@@ -231,7 +231,10 @@ class InfoLogger::Impl {
       client=new InfoLoggerClient;      
       if ((client==nullptr)||(!client->isOk())) {
         // fallback to stdout if infoLoggerD not available
-        printf("infoLoggerD not available, falling back to stdout logging\n");
+        if (!infoLoggerDWarningDone) {
+   	  infoLoggerDWarningDone=1;
+  	  printf("infoLoggerD not available, falling back to stdout logging\n");
+	}
         currentMode=OutputMode::stdout;
       }
     }

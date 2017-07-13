@@ -27,8 +27,10 @@ the logging database content.
 
 ## Installation
 
-Installation described here is for standard CERN CentOS 7 (CC7) operating system
-(http://linux.web.cern.ch/linux/centos7/).
+Installation described here is for standard [CERN CentOS 7 (CC7)](http://linux.web.cern.ch/linux/centos7/) operating system.
+It was tested fine on machines installed with the default 'desktop recommended setup' selected during CERN PXE-boot setup phase.
+Some minor tweaks might be needed on different systems.
+
 
 Infologger RPM packages can be installed through yum repository.
 At the moment, everything is bundled in a single RPM named o2-InfoLogger-standalone, containing all components described above.
@@ -111,7 +113,7 @@ collected centrally.
   `/opt/o2-InfoLogger/bin/infoBrowser &`
     * When launched, it goes in "online" mode, i.e. it connects to the infoLoggerServer and displays messages in real time.
     * To browse previously stored messages, click the green "online" button (to exit online mode), fill-in selection filters, and push "query".
-    * Detailed usage of infoBrowser can be found in the historical ALICE DAQ documentation, e.g. at https://alice-daq.web.cern.ch/operations/infobrowser.
+    * Detailed usage of infoBrowser can be found in the historical [ALICE DAQ documentation](https://alice-daq.web.cern.ch/operations/infobrowser).
       The interface has not changed.
 
 * Log a test message from command line:
@@ -124,6 +126,11 @@ collected centrally.
     * Archived messages can still be accessed from infoBrowser through the
     Archive menu.
     * See other administrative commands possible with `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -h`
+
+
+## API for developers
+
+The InfoLogger library allows to inject messages directly from programs, as shown in the examples below.
 
 * Compile a sample program using InfoLogger library:
   * (C++ 14):
@@ -171,7 +178,7 @@ collected centrally.
 
 ## Configuration
 
-* Description and example of parameters for each InfoLogger component can be foud in /opt/o2-InfoLogger/etc/*.cfg.
+* Description and example of parameters for each InfoLogger component can be found in /opt/o2-InfoLogger/etc/*.cfg.
   The parameters can usually be mixed in a single configuration file, as they are grouped in sections ([infoLoggerServer], [infoLoggerD], [infoBrowser], ...).
 
 * On multiple-hosts systems, the serverHost configuration key should be set for infoLoggerD and infoBrowser, so that they are able to connect infoLoggerServer
@@ -179,7 +186,7 @@ collected centrally.
   
 * On the infoLoggerServer host, the firewall should allow incoming connections
 on ports 6006 (infoLoggerD), 6102 (infoBrowser) and 3306 (MySQL). It can be
-achieved on CentOS 7 with e.g.:
+achieved on CentOS 7 with e.g. (as root):
   ```
    firewall-cmd --permanent --zone=public --add-port=6006/tcp
    firewall-cmd --permanent --zone=public --add-port=6102/tcp

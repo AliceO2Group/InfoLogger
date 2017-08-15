@@ -1,6 +1,7 @@
 find_package(Boost COMPONENTS unit_test_framework program_options REQUIRED)
 find_package(Git QUIET)
 find_package(MySQL)
+find_package(Common REQUIRED)
 
 if(NOT MYSQL_FOUND)
     message(WARNING "MySQL not found, the corresponding classes won't be built.")
@@ -16,11 +17,11 @@ o2_define_bucket(
         DEPENDENCIES
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
         pthread
-        Common
+        ${Common_LIBRARIES}
 
         SYSTEMINCLUDE_DIRECTORIES
         ${Boost_INCLUDE_DIRS}
-
+        ${Common_INCLUDE_DIRS}
 )
 
 o2_define_bucket(

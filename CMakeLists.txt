@@ -60,7 +60,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -fPIC")
 # Module, library and executable definition
 ####################################
 
-link_o2_subproject(Common)
 set(MODULE_NAME "InfoLogger")
 
 O2_SETUP(NAME ${MODULE_NAME})

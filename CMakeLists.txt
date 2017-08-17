@@ -24,7 +24,6 @@ project(InfoLogger)
 # Load some basic macros which are needed later on
 include(O2Utils)
 include(InfoLoggerDependencies)
-include(O2)
 
 # Set the default build type to "RelWithDebInfo"
 if(NOT CMAKE_BUILD_TYPE)
@@ -149,6 +148,7 @@ if(MYSQL_FOUND)
    )
 endif()
 
+enable_testing()
 
 set(TEST_SRCS
   test/testInfoLogger.cxx
@@ -279,16 +279,6 @@ if(BUILD_STANDALONE)
   )
 endif(BUILD_STANDALONE)
 
-
-
-
-# TODO RECONSIDER THE THINGS BELOW AFTER EXTRACTION TO ITS OWN REPO
-# Make sure we tell the topdir CMakeLists that we exist (if build from topdir)
-get_directory_property(hasParent PARENT_DIRECTORY)
-if(hasParent)
-    set(PROJECT_${PROJECT_NAME} true PARENT_SCOPE)
-endif()
-include(PackageConfigurator)
 
 # Install some extra files
 install(

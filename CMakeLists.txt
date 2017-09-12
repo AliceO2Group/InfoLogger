@@ -84,6 +84,7 @@ set(SRCS
   src/InfoLoggerDispatchBrowser.cxx
   src/InfoLoggerMessageList.cxx
   src/ConfigInfoLoggerServer.cxx
+  src/InfoLoggerContext.cxx
   )
 
 
@@ -169,14 +170,49 @@ link_directories(
 # Some extra targets to build standalone executables not relying on other o2 shared libs in bin-standalone
 # This is added optionally with cmake -DBUILD_STANDALONE=1 ...
 if(BUILD_STANDALONE)
+  include(ExternalProject)
+  ExternalProject_Add (Common
+     GIT_REPOSITORY "https://github.com/AliceO2Group/Common.git"
+     GIT_TAG "master"
+     LOG_DOWNLOAD 1
+     UPDATE_COMMAND ""
+     PATCH_COMMAND ""
+     BUILD_COMMAND ""
+     CONFIGURE_COMMAND ""
+     TEST_COMMAND ""
+     INSTALL_COMMAND ""
+  )
+  add_dependencies(InfoLogger Common)
+
+  ExternalProject_Get_Property(Common source_dir)
+  include_directories(${source_dir}/include)
+
+  foreach (modul Configuration Daemon LineBuffer SimpleLog Thread Timer)
+      add_library(
+        objCommon${modul} OBJECT
+        ${source_dir}/src/${modul}.cxx
+      )
+      set_source_files_properties(${source_dir}/src/${modul}.cxx PROPERTIES GENERATED TRUE)
+      set_target_properties(objCommon${modul} PROPERTIES
+        POSITION_INDEPENDENT_CODE ON        
+      )
+      add_dependencies(objCommon${modul} Common)      
+  endforeach (modul)
+  
+
   add_library (objInfoLoggerClient OBJECT
       src/InfoLogger.cxx
+      src/InfoLoggerContext.cxx
       src/InfoLoggerClient.cxx
       src/infoLoggerMessageDecode.c
       src/InfoLoggerMessageHelper.cxx
       src/utility.c
       src/simplelog.c
   )
+  set_target_properties(objInfoLoggerClient PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+  )
+  
   set (INFOLOGGER_STANDALONE_OBJ
       $<TARGET_OBJECTS:objCommonConfiguration>
       $<TARGET_OBJECTS:objCommonSimpleLog>
@@ -185,12 +221,18 @@ if(BUILD_STANDALONE)
   add_library (InfoLogger-standalone SHARED
     ${INFOLOGGER_STANDALONE_OBJ}
   )
+  set_target_properties(InfoLogger-standalone PROPERTIES
+      POSITION_INDEPENDENT_CODE ON
+  )
+  
   add_library (InfoLogger-standalone-static STATIC
     ${INFOLOGGER_STANDALONE_OBJ}
   )
   set_target_properties( InfoLogger-standalone-static PROPERTIES
       OUTPUT_NAME InfoLogger-standalone
+      POSITION_INDEPENDENT_CODE ON
   )
+  
   add_library (objInfoLoggerTransport OBJECT
           src/permanentFIFO.c
           src/simplelog.c
@@ -199,6 +241,9 @@ if(BUILD_STANDALONE)
           src/transport_proxy.c
           src/transport_server.c
           src/utility.c
+  )
+  set_target_properties( objInfoLoggerTransport PROPERTIES
+      POSITION_INDEPENDENT_CODE ON
   )
 
   add_executable(

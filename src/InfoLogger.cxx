@@ -138,60 +138,10 @@ int infoLoggerLogDebug(InfoLoggerHandle handle, const char *message, ...) {
 namespace AliceO2 {
 namespace InfoLogger {
 
-class ProcessInfo {
-  public:
-  
-  int processId;
-  std::string hostName;
-  std::string userName;
-
-/*  std::string roleName;
-  std::string system;
-  std::string facility;
-  std::string detector;
-  std::string partition;
-  int runNumber;
-*/
-
-  ProcessInfo();
-  ~ProcessInfo();
-  void refresh();
-};
-
-
-ProcessInfo::ProcessInfo() {
-  refresh();
-}
-
-ProcessInfo::~ProcessInfo() {
-}
-
-void ProcessInfo::refresh() {
-  processId=-1;
-  processId=(int)getpid();
-
-  hostName.clear();
-  char hostNameTmp[256]="";
-  if (!gethostname(hostNameTmp,sizeof(hostNameTmp))) {
-    char * dotptr;
-    dotptr=strchr(hostNameTmp,'.');
-    if (dotptr!=NULL) *dotptr=0;
-    hostName=hostNameTmp;
-  }
-
-  userName.clear();
-  struct passwd *passent;
-  passent = getpwuid(getuid());
-  if(passent != NULL){
-    userName=passent->pw_name;
-  }
- 
-  // for the other fields, try to automatically extract from environment, e.g. O2_FIELDNAME
-}
-
-
 
 int infoLoggerDWarningDone=0;
+
+
 
 // private class to isolate internal data from external interface
 class InfoLogger::Impl {
@@ -201,7 +151,7 @@ class InfoLogger::Impl {
     magicTag = InfoLoggerMagicNumber;
     numberOfMessages = 0;
     currentStreamMessage.clear();
-    currentStreamSeverity=Severity::Info;
+    currentStreamOptions=undefinedMessageOption;
     
     if (infoLog_proto_init()) {
       throw __LINE__;
@@ -212,8 +162,9 @@ class InfoLogger::Impl {
     const char* confEnv=getenv("INFOLOGGER_MODE");  
     if (confEnv!=NULL) {
       if (!strcmp(confEnv,"stdout")) {
+        currentMode=OutputMode::stdout;
       } else if (!strcmp(confEnv,"infoLoggerD")) {
-        currentMode=OutputMode::infoLoggerD;      
+        currentMode=OutputMode::infoLoggerD;
       } else if (!strncmp(confEnv,"file",4)) {
         currentMode=OutputMode::file;
         const char *logFile="./log.txt";
@@ -222,6 +173,8 @@ class InfoLogger::Impl {
         }
         printf("Logging to file %s\n",logFile);
         stdLog.setLogFile(logFile);
+      } else if (!strcmp(confEnv,"raw")) {
+        currentMode=OutputMode::raw;
       } else if (!strcmp(confEnv,"none")) {
         currentMode=OutputMode::none; // useful for benchmarks
       } 
@@ -233,7 +186,7 @@ class InfoLogger::Impl {
         // fallback to stdout if infoLoggerD not available
         if (!infoLoggerDWarningDone) {
    	  infoLoggerDWarningDone=1;
-  	  printf("infoLoggerD not available, falling back to stdout logging\n");
+  	  fprintf(stderr,"infoLoggerD not available, falling back to stdout logging\n");
 	}
         currentMode=OutputMode::stdout;
       }
@@ -252,9 +205,18 @@ class InfoLogger::Impl {
 
   int pushMessage(InfoLogger::Severity severity, const char *msg); // todo: add extra "configurable" fields, e.g. line, etc
 
+  int pushMessage(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *msg);
+
   friend class InfoLogger;  //< give access to this data from InfoLogger class
 
-  enum OutputMode {stdout, file, infoLoggerD, none};  // available options for output
+  // available options for output
+  // stdout: write all messages to stdout (human-readable)
+  // file: write messages to a file (human-readable)
+  // infoLoggerD: write messages to infoLoggerD
+  // raw: write messages to stdout (encoded as for infoLoggerD)
+  // none: output disabled
+  enum OutputMode {stdout, file, infoLoggerD, raw, none};
+  
   OutputMode currentMode; // current option for output
   
   
@@ -266,13 +228,20 @@ class InfoLogger::Impl {
   int logV(InfoLogger::Severity severity, const char *message, va_list ap) __attribute__((format(printf, 3, 0)));
   
   
+    // extended log function, with all extra fields, including a specific context
+  /// \return         0 on success, an error code otherwise (but never throw exceptions)..
+  int logV(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, va_list ap) __attribute__((format(printf, 4,0)));
+
+
+  
   protected:
   int magicTag;                     //< A static tag used for handle validity cross-check
   int numberOfMessages;             //< number of messages received by this object
   std::string currentStreamMessage; //< temporary variable to store message when concatenating << operations, until "endm" is received
-  Severity currentStreamSeverity;  //< temporary variable to store message severity when concatenating << operations, until "endm" is received
+  InfoLoggerMessageOption currentStreamOptions; //< temporary variable to store message options when concatenating << operations, until "endm" is received
     
-  ProcessInfo processInfo;
+  InfoLoggerContext currentContext;
+    
   InfoLoggerMessageHelper msgHelper; 
   void refreshDefaultMsg();  
   infoLog_msg_t defaultMsg;         //< default log message (in particular, to complete optionnal fields)
@@ -284,8 +253,6 @@ class InfoLogger::Impl {
 
 
 void InfoLogger::Impl::refreshDefaultMsg() {
-  processInfo.refresh();
-
   int i;
   for (i=0;i<protocols[0].numberOfFields;i++) {
     defaultMsg.values[i].isUndefined=1;
@@ -298,16 +265,33 @@ void InfoLogger::Impl::refreshDefaultMsg() {
   defaultMsg.data=NULL;
 
   static char str_severity[2]={InfoLogger::Severity::Info,0};
-
   InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_severity,String,str_severity);
-  InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_hostname,String,processInfo.hostName.c_str());
-  InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_username,String,processInfo.userName.c_str());  
-  InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_pid,Int,processInfo.processId);  
+  
+  // apply non-empty strings from context
+  
+  if (currentContext.facility.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_facility,String,currentContext.facility.c_str()); }
+  if (currentContext.role.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_rolename,String,currentContext.role.c_str()); }
+  if (currentContext.system.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_system,String,currentContext.system.c_str()); }
+  if (currentContext.detector.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_detector,String,currentContext.detector.c_str()); }
+  if (currentContext.partition.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_partition,String,currentContext.partition.c_str()); }
+  if (currentContext.run!=-1) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_run,Int,currentContext.run); }
+  
+  if (currentContext.processId!=-1) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_pid,Int,currentContext.processId); }
+  if (currentContext.hostName.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_hostname,String,currentContext.hostName.c_str()); }
+  if (currentContext.userName.length()>0) { InfoLoggerMessageHelperSetValue(defaultMsg,msgHelper.ix_username,String,currentContext.userName.c_str());  }
+
 }
 
 #define LOG_MAX_SIZE 1024
 
 int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *messageBody) {
+  InfoLoggerMessageOption options=undefinedMessageOption;
+  options.severity=severity;
+  
+  return pushMessage(options, currentContext, messageBody);
+}
+
+int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *messageBody) {
   infoLog_msg_t msg=defaultMsg;
 
   struct timeval tv;
@@ -319,10 +303,40 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *mes
   if (messageBody!=NULL) {
     InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_message,String,messageBody);
   }
+
+  // update message from options
+  // todo: possibly add checks on parameters validity
   
-  char strSeverity[2]={(char)(severity),0};
-  InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_severity,String,strSeverity);
-   
+  // convert severity enum to a string
+  char strSeverity[2]={(char)(options.severity),0}; // if used, this variable shall live until msg variable not used any more
+  if (options.severity!=undefinedMessageOption.severity) {    
+    InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_severity,String,strSeverity);
+  }
+  if (options.level!=undefinedMessageOption.level) {
+    InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_level,Int,options.level);
+  }
+  if (options.errorCode!=undefinedMessageOption.errorCode) {
+    InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_errcode,Int,options.errorCode);
+  }
+  if (options.sourceFile!=undefinedMessageOption.sourceFile) {
+    InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_errsource,String,options.sourceFile);
+  }
+  if (options.sourceLine!=undefinedMessageOption.sourceLine) {
+    InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_errline,Int,options.sourceLine);
+  }
+  
+  // update message from context (set only non-empty fields - others left to what was set by default context)
+  if (context.facility.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_facility,String,context.facility.c_str()); }
+  if (context.role.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_rolename,String,context.role.c_str()); }
+  if (context.system.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_system,String,context.system.c_str()); }
+  if (context.detector.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_detector,String,context.detector.c_str()); }
+  if (context.partition.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_partition,String,context.partition.c_str()); }
+  if (context.run!=-1) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_run,Int,context.run); }  
+  if (context.processId!=-1) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_pid,Int,context.processId); }
+  if (context.hostName.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_hostname,String,context.hostName.c_str()); }
+  if (context.userName.length()>0) { InfoLoggerMessageHelperSetValue(msg,msgHelper.ix_username,String,context.userName.c_str());  }
+    
+  
 //  printf("%s\n",buffer);
 
   if (client!=nullptr) {
@@ -338,7 +352,7 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *mes
       char buffer[LOG_MAX_SIZE];
       msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Simple);
 
-    switch(severity) {
+    switch(options.severity) {
       case(InfoLogger::Severity::Fatal):
       case(InfoLogger::Severity::Error):
         stdLog.error("\033[1;31m%s\033[0m",buffer);
@@ -353,6 +367,14 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char *mes
         break;
     }
   }
+  
+  // raw output: infoLogger protocol to stdout
+  if (currentMode==OutputMode::raw) {
+    char buffer[LOG_MAX_SIZE];
+    msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Encoded);
+    printf(buffer);
+  }
+
   
   return 0;
 }
@@ -374,6 +396,25 @@ int InfoLogger::Impl::logV(InfoLogger::Severity severity, const char *message, v
   return 0;
 }
 
+
+
+
+int InfoLogger::Impl::logV(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, va_list ap)
+{
+
+  // make sure this function never throw c++ exceptions, as logV is called from the C API wrapper
+  try {
+    char buffer[1024] = "";
+    vsnprintf(buffer, sizeof(buffer), message, ap);
+    pushMessage(options,context,buffer);
+    numberOfMessages++;
+  }
+  catch(...) {
+    return __LINE__;
+  }
+
+  return 0;
+}
 
 
 
@@ -421,7 +462,82 @@ int InfoLogger::logV(Severity severity, const char *message, va_list ap) {
 }
 
 
-InfoLogger &InfoLogger::operator<<(const std::string message)
+/*
+int InfoLogger::log(Severity severity, int level, int errorCode, const char * sourceFile, int sourceLine, const char *message, ...)
+{
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = logV(severity,message, ap);
+  va_end(ap);
+  return err;
+}
+
+int InfoLogger::log(Severity severity, int level, int errorCode, const char * sourceFile, int sourceLine, const InfoLoggerContext& context, const char *message, ...)
+{
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = logV(severity,message, ap);
+  va_end(ap);
+  return err;
+}
+
+int InfoLogger::logV(Severity severity, int level, int errorCode, const char * sourceFile, int sourceLine, const InfoLoggerContext& context,  const char *message, va_list ap)
+{
+  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  return pImpl->logV(severity, message, ap);
+}
+*/
+
+int InfoLogger::setContext(const InfoLoggerContext &context)
+{
+  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  pImpl->currentContext=context;
+  pImpl->refreshDefaultMsg();
+  return 0;
+}
+
+int InfoLogger::unsetContext()
+{
+  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  pImpl->currentContext.reset();
+  pImpl->refreshDefaultMsg();
+  return 0;
+}
+
+
+
+
+int InfoLogger::log(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, ...) {
+  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = pImpl->logV(options, context, message, ap);
+  va_end(ap);
+  return err;
+}
+
+int InfoLogger::log(const InfoLoggerMessageOption &options, const char *message, ...) {
+  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = pImpl->logV(options, pImpl->currentContext, message, ap);
+  va_end(ap);
+  return err;
+}
+
+
+
+InfoLogger &InfoLogger::operator<<(const std::string &message)
 {
   // store data in internal variable
   pImpl->currentStreamMessage.append(message);
@@ -434,18 +550,25 @@ InfoLogger &InfoLogger::operator<<(InfoLogger::StreamOps op)
 
   // end of message: flush current buffer in a single message
   if (op == endm) {
-    log(pImpl->currentStreamSeverity,pImpl->currentStreamMessage.c_str());
+    log(pImpl->currentStreamOptions,pImpl->currentStreamMessage.c_str());
     pImpl->currentStreamMessage.clear();
-    pImpl->currentStreamSeverity=Severity::Info;
+    pImpl->currentStreamOptions=undefinedMessageOption;
   }
   return *this;
 }
 
 InfoLogger &InfoLogger::operator<<(const InfoLogger::Severity severity)
 {
-  pImpl->currentStreamSeverity=severity;
+  pImpl->currentStreamOptions.severity=severity;
   return *this;
 }
+
+InfoLogger &InfoLogger::operator<<(const InfoLogger::InfoLoggerMessageOption options)
+{
+  pImpl->currentStreamOptions=options;
+  return *this;
+}
+
 
 InfoLogger::Severity getSeverityFromString(const char *txt) {
   // permissive implementation

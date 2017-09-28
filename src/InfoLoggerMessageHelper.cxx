@@ -209,7 +209,31 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t *msg, char *buffer, int
 
     default:
       return __LINE__;
+  }
+  
+  /*
+  // debug: dump of msg fields  
+  for (int i=0;i<protocols[0].numberOfFields;i++) {
+    printf("Field %d (%s): undefined=%d value=",i,protocols[0].fields[i].name,msg->values[i].isUndefined);
+    if (!msg->values[i].isUndefined) {
+      switch (protocols[0].fields[i].type) {
+        case infoLog_msgField_def_t::ILOG_TYPE_STRING:
+          printf("%s",msg->values[i].value.vString);
+          break;
+        case infoLog_msgField_def_t::ILOG_TYPE_INT:
+          printf("%d",msg->values[i].value.vInt);
+          break;
+        case infoLog_msgField_def_t::ILOG_TYPE_DOUBLE:
+          printf("%lf",msg->values[i].value.vDouble);
+          break;
+        default:
+          break;
+       }
+    }
+    printf("\n");
   }  
+  printf("encoding=%s\n",buffer);
+  */
   
   return 0;
 }

@@ -1,0 +1,124 @@
+#include <sys/types.h>
+#include <pwd.h>
+
+#include <InfoLogger/InfoLogger.hxx>
+
+
+using namespace AliceO2::InfoLogger;
+
+InfoLoggerContext::InfoLoggerContext() { 
+  // initialize and update fields
+  reset();
+  refresh();
+}
+
+InfoLoggerContext::InfoLoggerContext(const std::list<std::pair<FieldName, const std::string &>> &listOfKeyValuePairs) : InfoLoggerContext() {
+  // members initialization has been delegated to InfoLoggerContext() in declaration
+  // now set fields provided as arguments
+  setField(listOfKeyValuePairs);
+}
+
+InfoLoggerContext::~InfoLoggerContext() {
+}
+
+
+void InfoLoggerContext::reset() {
+  facility.clear();
+  role.clear();
+  system.clear();
+  detector.clear();
+  partition.clear();
+  run=-1;  
+  
+  processId=-1;
+  hostName.clear();
+  userName.clear();
+}
+
+
+void InfoLoggerContext::refresh(){
+
+  // PID
+  processId=-1;
+  processId=(int)getpid();
+
+  // host name
+  hostName.clear();
+  char hostNameTmp[256]="";
+  if (!gethostname(hostNameTmp,sizeof(hostNameTmp))) {
+    // take short name only, not domain
+    char * dotptr;
+    dotptr=strchr(hostNameTmp,'.');
+    if (dotptr!=NULL) *dotptr=0;
+    hostName=hostNameTmp;
+  }
+
+  // user name
+  userName.clear();
+  struct passwd *passent;
+  passent = getpwuid(getuid());
+  if(passent != NULL){
+    userName=passent->pw_name;
+  }
+
+  // read from runtime environment other fields
+  // todo: or from other place...
+
+  const char* confEnv=nullptr;
+  confEnv=getenv("O2_ROLE");
+  if (confEnv!=NULL) {role=confEnv;}
+  confEnv=getenv("O2_SYSTEM");
+  if (confEnv!=NULL) {system=confEnv;}
+  confEnv=getenv("O2_DETECTOR");
+  if (confEnv!=NULL) {detector=confEnv;}
+  confEnv=getenv("O2_PARTITION");
+  if (confEnv!=NULL) {partition=confEnv;}
+  confEnv=getenv("O2_RUN");
+  if (confEnv!=NULL) {
+    run=atoi(confEnv);
+    if (run<=0) {
+      run=-1;
+    }
+  }  
+}
+
+
+int InfoLoggerContext::setField(FieldName key, const std::string &value){
+  if (key==FieldName::Facility) {
+    facility=value;
+  } else if (key==FieldName::Role) {
+    role=value;
+  } else if (key==FieldName::System) {
+    system=value;
+  } else if (key==FieldName::Detector) {
+    detector=value;
+  } else if (key==FieldName::Partition) {
+    partition=value;
+  } else if (key==FieldName::Run) {
+    run=-1;
+    // check input string is a valid run number
+    int v_run=atoi(value.c_str());
+    if (v_run<=0) {
+      return -1;
+    }
+    run=v_run;
+  } else {
+    return -1;
+  }
+  return 0;
+}
+  
+
+int InfoLoggerContext::setField(const std::list<std::pair<FieldName, const std::string&>> &listOfKeyValuePairs) {
+  int numberOfErrors=0;
+  
+  // iterate input list to set corresponding context fields
+  for(auto &kv : listOfKeyValuePairs) {
+    if (setField(kv.first, kv.second)) {
+      numberOfErrors++;
+    }
+  }
+
+  return numberOfErrors;
+}
+ 

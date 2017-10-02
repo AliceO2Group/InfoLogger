@@ -107,43 +107,6 @@ class InfoLoggerContext final
 
 
 
-/* InfoLoggerContext notes
-
- - constructor
- 
-  use variant, when using c++17
-  copy constructor or +=
-  constructor with all fields provided in function args? -> compare perf vs list of pairs
-
- - do we need distinction between blank field and field not set ?
-
-   /// Unset given field (sets it as undefined or blank).
-  /// \param key      The field name to be unset.
-  void unsetField(contextKey key);
-
-  // For each field, a bool defines if the field is set or not.
-  // A field set to an empty value is different than a field not set.
-  bool isSetFacility;
-  bool isSetRoleName;
-  bool isSetSystem;
-  bool isSetDetector;
-  bool isSetPartition;
-  bool isSetRunNumber; 
-
-*/
-  
-
-// other: severity, level, errcode, 
-// not-setable: timestamp
-
-// macros to include information about source code issuing the message: file name, line number
-// errline, errsource
-
-// todo: when using command line "log", optionnally use calling process pid or process ID at the other end of the pipe
-// functions to set explicit error code
-
-
-
 /// This class instanciates an infoLogger connection.
 class InfoLogger final
 {
@@ -218,10 +181,10 @@ class InfoLogger final
     int sourceLine;
   };
 
+
   // make sure options are a POD struct
   static_assert(std::is_pod<InfoLoggerMessageOption>::value,"struct InfoLoggerMessageOption is not POD");
 
-// see bring named parameters in modern c++
 
   /// Definition of a constant, to be used for corresponding fields when not defined
   static constexpr InfoLoggerMessageOption undefinedMessageOption = {
@@ -233,18 +196,15 @@ class InfoLogger final
   };
 
 
-  // extended log function, with all extra fields, including a specific context
+  /// extended log function, with all extra fields, including a specific context
   /// \return         0 on success, an error code otherwise (but never throw exceptions)..
   int log(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, ...) __attribute__((format(printf, 4,5)));
 
-  // extended log function, with all extra fields, including a specific context
+  /// extended log function, with all extra fields, using default context
   /// \return         0 on success, an error code otherwise (but never throw exceptions)..
   int log(const InfoLoggerMessageOption &options, const char *message, ...) __attribute__((format(printf, 3,4)));
-// todo: optimize this one so that currentcontext does not overwrite defaultmessage
 
-  // boost parameters
 
-// add one with std::string as input?
 
   //////////////////////////
   // iostream-like interface
@@ -271,7 +231,7 @@ class InfoLogger final
 
   /// Log a message using the << operator, like for std::cout.
   /// All messages must be ended with the InfoLogger::StreamOps::endm tag.
-  /// Severity can be set at any point in the stream (before endm). Set to Info by default.
+  /// Severity/options can be set at any point in the stream (before endm). Severity set to Info by default.
   template<typename T>
   InfoLogger &operator<<(const T &message)
   {

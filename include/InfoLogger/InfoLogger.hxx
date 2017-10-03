@@ -47,6 +47,11 @@ class InfoLoggerContext final
   /// Definition of field names (keys) which are available/settable in InfoLoggerContext
   enum class FieldName {Facility, Role, System, Detector, Partition, Run};
 
+  /// Function to parse input string and find matching FieldName.
+  /// On success, output variable is set accordingly.
+  /// \return         0 on success, -1 if no match found.
+  static int getFieldNameFromString(const std::string &input, FieldName &output);
+
   /// Create new context.
   /// The context is updated from available environment information, if any.
   InfoLoggerContext(); 
@@ -61,10 +66,18 @@ class InfoLoggerContext final
   /// All fields are cleared with default values.
   void reset();
     
-  /// Update context from current environment information.
+  /// Update context from current environment information (of current process).
   /// Fields previously set by user may be overwritten.
   void refresh();
-   
+
+
+  /// Update context from current environment information of a different process.
+  /// This is used internally by command line 'log' utility to tag messages issued by parent process
+  /// or on stdout by a program which output is piped to stdin of current process and injected in infologger.
+  /// Fields previously set by user may be overwritten.
+  void refresh(pid_t pid);
+
+
    /// Destroy context
   ~InfoLoggerContext();
     
@@ -84,8 +97,8 @@ class InfoLoggerContext final
   
   // todo ?
  //  int getField(FieldName key, std::string &value);
-
-
+  
+  
   private:
   // field undefined: empty string (for strings) or -1 (for integers)
   
@@ -101,6 +114,8 @@ class InfoLoggerContext final
   int         processId;      // PID of the message source process
   std::string hostName;       // name of host running the message source process
   std::string userName;       // user running the message source process 
+  
+  // ideas of other possible fields: thread id, exe name, ...
   
   friend class InfoLogger;
 };
@@ -196,6 +211,20 @@ class InfoLogger final
   };
 
 
+  /// Convert a string to an infologger severity
+  /// \param text  NUL-terminated word to convert to InfoLogger severity type. Current implementation is not exact-match, it takes closest based on first-letter value
+  /// \return      Corresponding severity (InfoLogger::Undefined if no match found)
+  static InfoLogger::Severity getSeverityFromString(const char *text);
+
+
+  /// Set a field in a message option struct based on its name.
+  /// If input fieldName valid, and input fieldValue can be parsed, ouput variable is modified accordingly.
+  /// \return         0 on success, an error code otherwise.
+  static int setMessageOption(const char *fieldName, const char *fieldValue, InfoLoggerMessageOption &output);
+  
+
+
+
   /// extended log function, with all extra fields, including a specific context
   /// \return         0 on success, an error code otherwise (but never throw exceptions)..
   int log(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, ...) __attribute__((format(printf, 4,5)));
@@ -240,6 +269,7 @@ class InfoLogger final
   }
 
 
+
   ///////////////////////
   /// internals
   ///////////////////////
@@ -249,12 +279,6 @@ class InfoLogger final
   std::unique_ptr<Impl> pImpl;      // handle to private class instance at runtime
 };
 
-
-
-/// Convert a string to an infologger severity
-/// \param text  NUL-terminated word to convert to InfoLogger severity type. Current implementation is not exact-match, it takes closest based on first-letter value
-/// \return      Corresponding severity (InfoLogger::Undefined if no match found)
-InfoLogger::Severity getSeverityFromString(const char *text);
 
 
 }

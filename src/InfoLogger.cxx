@@ -228,7 +228,7 @@ class InfoLogger::Impl {
   int logV(InfoLogger::Severity severity, const char *message, va_list ap) __attribute__((format(printf, 3, 0)));
   
   
-    // extended log function, with all extra fields, including a specific context
+  /// extended log function, with all extra fields, including a specific context
   /// \return         0 on success, an error code otherwise (but never throw exceptions)..
   int logV(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, va_list ap) __attribute__((format(printf, 4,0)));
 
@@ -570,7 +570,7 @@ InfoLogger &InfoLogger::operator<<(const InfoLogger::InfoLoggerMessageOption opt
 }
 
 
-InfoLogger::Severity getSeverityFromString(const char *txt) {
+InfoLogger::Severity InfoLogger::getSeverityFromString(const char *txt) {
   // permissive implementation
   switch (tolower(txt[0])) {
     case 'i':
@@ -605,6 +605,23 @@ InfoLogger::Severity getSeverityFromString(const char *txt) {
   return InfoLogger::Severity::Undefined;
 }
 
+
+int InfoLogger::setMessageOption(const char *fieldName, const char *fieldValue, InfoLoggerMessageOption &output) {
+  if (!strcmp(fieldName,"Severity")) {
+    output.severity=getSeverityFromString(fieldValue);
+  } else if (!strcmp(fieldName,"Level")) {
+    output.level=atoi(fieldValue);
+  } else if (!strcmp(fieldName,"ErrorCode")) {
+    output.errorCode=atoi(fieldValue);
+  } else if (!strcmp(fieldName,"SourceFile")) {
+    output.sourceFile=fieldValue;
+  } else if (!strcmp(fieldName,"SourceLine")) {
+    output.sourceLine=atoi(fieldValue);
+  } else {
+    return -1;
+  }
+  return 0;
+}
 
 
 // end of namespace

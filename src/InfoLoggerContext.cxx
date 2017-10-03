@@ -38,12 +38,13 @@ void InfoLoggerContext::reset() {
 
 void InfoLoggerContext::refresh(){
 
+  // clear existing info
+  reset();
+  
   // PID
-  processId=-1;
   processId=(int)getpid();
 
   // host name
-  hostName.clear();
   char hostNameTmp[256]="";
   if (!gethostname(hostNameTmp,sizeof(hostNameTmp))) {
     // take short name only, not domain
@@ -53,6 +54,61 @@ void InfoLoggerContext::refresh(){
     hostName=hostNameTmp;
   }
 
+  // user name
+  struct passwd *passent;
+  passent = getpwuid(getuid());
+  if(passent != NULL){
+    userName=passent->pw_name;
+  }
+
+  // read from runtime environment other fields
+  // todo: or from other place...
+
+  const char* confEnv=nullptr;
+  confEnv=getenv("O2_ROLE");
+  if (confEnv!=NULL) {role=confEnv;}
+  confEnv=getenv("O2_SYSTEM");
+  if (confEnv!=NULL) {system=confEnv;}
+  confEnv=getenv("O2_DETECTOR");
+  if (confEnv!=NULL) {detector=confEnv;}
+  confEnv=getenv("O2_PARTITION");
+  if (confEnv!=NULL) {partition=confEnv;}
+  confEnv=getenv("O2_RUN");
+  if (confEnv!=NULL) {
+    run=atoi(confEnv);
+    if (run<=0) {
+      run=-1;
+    }
+  }  
+}
+
+
+
+void InfoLoggerContext::refresh(pid_t pid){
+
+  // if zero, use current process info
+  if (pid==0) {
+    refresh();
+    return;
+  }
+
+  // clear existing info
+  reset();  
+
+  // PID
+  processId=(int)pid;
+
+  // host name - this is local
+  char hostNameTmp[256]="";
+  if (!gethostname(hostNameTmp,sizeof(hostNameTmp))) {
+    // take short name only, not domain
+    char * dotptr;
+    dotptr=strchr(hostNameTmp,'.');
+    if (dotptr!=NULL) *dotptr=0;
+    hostName=hostNameTmp;
+  }
+
+/*
   // user name
   userName.clear();
   struct passwd *passent;
@@ -80,7 +136,10 @@ void InfoLoggerContext::refresh(){
       run=-1;
     }
   }  
+  */
 }
+
+
 
 
 int InfoLoggerContext::setField(FieldName key, const std::string &value){
@@ -122,3 +181,25 @@ int InfoLoggerContext::setField(const std::list<std::pair<FieldName, const std::
   return numberOfErrors;
 }
  
+
+
+int InfoLoggerContext::getFieldNameFromString(const std::string &input, FieldName &output) {
+  const char *key=input.c_str();
+  
+  if        (!strcmp(key,"Facility")) {
+     output=InfoLoggerContext::FieldName::Facility;
+  } else if (!strcmp(key,"Role")) {
+     output=InfoLoggerContext::FieldName::Role;
+  } else if (!strcmp(key,"System")) {
+     output=InfoLoggerContext::FieldName::System;
+  } else if (!strcmp(key,"Detector")) {
+     output=InfoLoggerContext::FieldName::Detector;
+  } else if (!strcmp(key,"Partition")) {
+     output=InfoLoggerContext::FieldName::Partition;
+  } else if (!strcmp(key,"Run")) {
+     output=InfoLoggerContext::FieldName::Run;
+  } else {
+    return -1;
+  }
+  return 0;
+}

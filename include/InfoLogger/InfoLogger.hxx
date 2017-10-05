@@ -123,7 +123,7 @@ class InfoLoggerContext final
 
 
 /// This class instanciates an infoLogger connection.
-class InfoLogger final
+class InfoLogger
 {
 
   public:

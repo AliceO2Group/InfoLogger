@@ -150,6 +150,16 @@ class InfoLogger
   ///////////////////////
 
   /// Log a message. (severity set to info)
+  /// \param message  message to push to the log system.
+  /// \return         0 on success, an error code otherwise (but never throw exceptions)..
+  int logInfo(const std::string &message);
+
+  /// Log a message. (severity set to error)
+  /// \param message  message to push to the log system.
+  /// \return         0 on success, an error code otherwise (but never throw exceptions)..
+  int logError(const std::string &message);
+ 
+  /// Log a message. (severity set to info)
   /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
   /// \param ...      Extra optionnal parameters for formatting.
   /// \return         0 on success, an error code otherwise (but never throw exceptions)..

@@ -213,9 +213,25 @@ The InfoLogger library allows to inject messages directly from programs, as show
       
     Usually, one will only take care of defining the per-message messageOptions struct and a context with appropriate Facility field set, all other being set automatically.
    
+ * InfoLogger library is also available for: Tcl, Python.
+   It allows to log message from scripting languages. A simplified subset of the InfoLogger C++ API is made available through SWIG-generated modules.
+   Example usage is shown below, launching interactive interpreters from the command line.
    
-  
- 
+   * Python example:
+    ```
+      python
+      import infoLoggerForPython
+      logHandle=infoLoggerForPython.InfoLogger()
+      logHandle.logInfo("This is a test")
+      logHandle.logError("Something went wrong")
+    ```
+   * Tcl example:
+    ```
+      tclsh
+      load libinfoLoggerForTcl.so
+      $logHandle logInfo "This is a test"
+      $logHandle logError "Something went wrong"
+    ```      
 
 
 ## Configuration

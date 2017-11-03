@@ -2,6 +2,8 @@ find_package(Boost COMPONENTS unit_test_framework program_options REQUIRED)
 find_package(Git QUIET)
 find_package(MySQL)
 find_package(Common REQUIRED)
+find_package(PythonLibs)
+find_package(TCL)
 
 if(NOT MYSQL_FOUND)
     message(WARNING "MySQL not found, the corresponding classes won't be built.")

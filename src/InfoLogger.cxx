@@ -432,6 +432,15 @@ InfoLogger::~InfoLogger()
   // pImpl is automatically destroyed
 }
 
+int InfoLogger::logInfo(const std::string &message) {
+  return log(Severity::Info,"%s",message.c_str());
+}
+
+int InfoLogger::logError(const std::string &message) {
+  return log(Severity::Error,"%s",message.c_str());
+}
+ 
+
 int InfoLogger::log(const char *message, ...)
 {
   // forward variable list of arguments to logV method

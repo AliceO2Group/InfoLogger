@@ -284,7 +284,6 @@ if(BUILD_STANDALONE)
       infoLoggerForTcl PUBLIC
       ${TCL_INCLUDE_PATH}
     )
-    set_target_properties(infoLoggerForTcl PROPERTIES PREFIX "_")
   endif ()
  
   add_executable(

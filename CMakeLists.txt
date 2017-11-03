@@ -149,6 +149,8 @@ if(MYSQL_FOUND)
    )
 endif()
 
+
+
 enable_testing()
 
 set(TEST_SRCS
@@ -258,6 +260,33 @@ if(BUILD_STANDALONE)
           infoLoggerD-s
           pthread
   )
+  
+  # Library for Python
+  if (PYTHONLIBS_FOUND)
+    add_library (infoLoggerForPython SHARED
+      src/infoLoggerForPython_wrap.cxx
+      ${INFOLOGGER_STANDALONE_OBJ}
+    )
+    target_include_directories(
+      infoLoggerForPython PUBLIC
+      ${PYTHON_INCLUDE_PATH}
+    )
+    set_target_properties(infoLoggerForPython PROPERTIES PREFIX "_")
+  endif ()
+
+  # Library for Tcl
+  if (TCL_FOUND)
+    add_library (infoLoggerForTcl SHARED
+      src/infoLoggerForTcl_wrap.cxx
+      ${INFOLOGGER_STANDALONE_OBJ}
+    )
+    target_include_directories(
+      infoLoggerForTcl PUBLIC
+      ${TCL_INCLUDE_PATH}
+    )
+    set_target_properties(infoLoggerForTcl PROPERTIES PREFIX "_")
+  endif ()
+ 
   add_executable(
           infoLoggerServer-s
           src/infoLoggerServer.cxx

@@ -633,6 +633,10 @@ int InfoLogger::setMessageOption(const char *fieldName, const char *fieldValue, 
 }
 
 
+// required with some compilers to avoid linking errors
+constexpr InfoLogger::InfoLoggerMessageOption InfoLogger::undefinedMessageOption;
+
+
 // end of namespace
 }
 }

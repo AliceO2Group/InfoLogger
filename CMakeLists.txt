@@ -104,7 +104,7 @@ configure_file("include/${MODULE_NAME}/Version.h.in"
         )
 
 include_directories(
-        ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS} ${Common_INCLUDE_DIRS}
 )
 
 set(LIBRARY_NAME ${MODULE_NAME})

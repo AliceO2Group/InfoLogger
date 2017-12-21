@@ -237,7 +237,10 @@ The InfoLogger library allows to inject messages directly from programs, as show
 ## Configuration
 
 * Description and example of parameters for each InfoLogger component can be found in /opt/o2-InfoLogger/etc/*.cfg.
-  The parameters can usually be mixed in a single configuration file, as they are grouped in sections ([infoLoggerServer], [infoLoggerD], [infoBrowser], ...).
+  The parameters can usually be mixed in a single configuration file, as they are grouped in sections ([infoLoggerServer], [infoLoggerD], [infoBrowser], [client] ...).
+
+* Path to configuration file can be defined as startup parameter for the infoLoggerServer and infoLoggerD daemons. Processes using the client library can also be
+  configured by defining the INFOLOGGER_CONFIG environment variable, pointing to the selected config file. The path should be in the form: "file:/etc/infoLogger.cfg"
 
 * On multiple-hosts systems, the serverHost configuration key should be set for infoLoggerD and infoBrowser, so that they are able to connect infoLoggerServer
   if not running locally.
@@ -265,3 +268,12 @@ achieved on CentOS 7 with e.g. (as root):
   During development phase, it can be useful to set mode to "stdout", to allow using the infoLogger interface
   and printing messages without infoLoggerD/infoLoggerServer.
   When "infoLoggerD" mode is selected and no infoLoggerD connection can be established, the mode falls back to "stdout".
+
+* infoLoggerD local socket
+  
+  The connection between a client process using infoLogger API and the local infoLoggerD is done through a UNIX named socket.
+  By default, it uses a Linux abstract socket name.
+  On systems where such sockets are not available, one can configure it to a named socket associated with the filesystem.
+  This can be done by specifying in infoLoggerD configuration the rxSocketPath parameter, and name it with a path starting with '/', e.g. '/tmp/infoLoggerD.socket'.
+  The same value has to be set for the client configuration, in the txSocketPath key.
+  User is responsible to ensure that file access permissions are configured properly.

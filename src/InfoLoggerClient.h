@@ -11,8 +11,9 @@ class ConfigInfoLoggerClient {
 
   void resetConfig(); // set default configuration parameters
 
-  std::string *txSocketPath;       // name of socket used to receive log messages from clients
+  std::string txSocketPath;       // name of socket used to receive log messages from clients
   int txSocketOutBufferSize;
+  std::string logFile;  // log file for internal library logs
 };
 
 

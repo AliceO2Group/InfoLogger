@@ -18,8 +18,10 @@
 #include <string.h>
 
 #include <Common/SimpleLog.h>
+#include <Common/Configuration.h>
 
 #include "InfoLoggerClient.h"
+#include "infoLoggerDefaults.h"
 
 
 
@@ -32,19 +34,35 @@ ConfigInfoLoggerClient::ConfigInfoLoggerClient(const char*configPath) {
   // setup default configuration
   resetConfig();
   // load configuration, if defined
+  if (configPath==nullptr) {
+    // when not specified directly, check environment to get path to config file
+    configPath=getenv(INFOLOGGER_ENV_CONFIG_PATH);
+  }
   if (configPath!=nullptr) {
+    //printf("Using infoLogger configuration %s\n",configPath);
+    // get configuration information from file
+    ConfigFile config;
+    try {
+      config.load(configPath);
+    }
+    catch(std::string err) {
+      printf("Error reading configuration file %s : %s",configPath,err.c_str());
+      return;
+    }
+    config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_CLIENT ".txSocketPath", txSocketPath);
+    config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_CLIENT ".txSocketOutBufferSize", txSocketOutBufferSize);
+    config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_CLIENT ".logFile", logFile);
   }
 }
 
 ConfigInfoLoggerClient::~ConfigInfoLoggerClient(){
-  // release resources
- delete txSocketPath;
 }
 
 void ConfigInfoLoggerClient::resetConfig() {
   // assign default values to all config parameters
-  txSocketPath=new std::string("infoLoggerD");
+  txSocketPath=INFOLOGGER_DEFAULT_LOCAL_SOCKET;
   txSocketOutBufferSize=-1;
+  logFile="/dev/null";
 }
 
 //////////////////////////////////////////////////////
@@ -63,12 +81,12 @@ InfoLoggerClient::InfoLoggerClient() {
   txSocket=-1;
   
   isInitialized=0;
-  log.setLogFile("/dev/null");
+  log.setLogFile(cfg.logFile.c_str());
   
   try {
 
      // create receiving socket for incoming messages
-    log.info("Creating transmission socket named %s",cfg.txSocketPath->c_str());
+    log.info("Creating transmission socket named %s",cfg.txSocketPath.c_str());
     txSocket=socket(PF_LOCAL,SOCK_STREAM,0);
     if (txSocket==-1) {
       log.error("Could not create socket: %s",strerror(errno));
@@ -110,17 +128,17 @@ InfoLoggerClient::InfoLoggerClient() {
     struct sockaddr_un socketAddrr;
     bzero(&socketAddrr, sizeof(socketAddrr));      
     socketAddrr.sun_family = PF_LOCAL;
-    if (cfg.txSocketPath->length()+2>sizeof(socketAddrr.sun_path)) {
+    if (cfg.txSocketPath.length()+2>sizeof(socketAddrr.sun_path)) {
       log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddrr.sun_path)-2);
       throw __LINE__;
     }
     // if name starts with '/', use normal socket name. if not, use an abstract socket name
     // this is to allow non-abstract sockets on systems not supporting them.
-    if (cfg.txSocketPath->c_str()[0]=='/')  {
-      strncpy(&socketAddrr.sun_path[0], cfg.txSocketPath->c_str(), cfg.txSocketPath->length());
+    if (cfg.txSocketPath.c_str()[0]=='/')  {
+      strncpy(&socketAddrr.sun_path[0], cfg.txSocketPath.c_str(), cfg.txSocketPath.length());
     } else {
       // leave first char 0, to get abstract socket name - see man 7 unix
-      strncpy(&socketAddrr.sun_path[1], cfg.txSocketPath->c_str(), cfg.txSocketPath->length());
+      strncpy(&socketAddrr.sun_path[1], cfg.txSocketPath.c_str(), cfg.txSocketPath.length());
     }
     if (connect(txSocket, (struct sockaddr *)&socketAddrr, sizeof(socketAddrr))) {
       log.error("Failed to connect to infoLoggerD: %s",strerror(errno));

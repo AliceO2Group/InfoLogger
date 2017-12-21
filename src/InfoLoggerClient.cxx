@@ -110,12 +110,18 @@ InfoLoggerClient::InfoLoggerClient() {
     struct sockaddr_un socketAddrr;
     bzero(&socketAddrr, sizeof(socketAddrr));      
     socketAddrr.sun_family = PF_LOCAL;
-    if (cfg.txSocketPath->length()>sizeof(socketAddrr.sun_path)) {
-      log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddrr.sun_path));
+    if (cfg.txSocketPath->length()+2>sizeof(socketAddrr.sun_path)) {
+      log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddrr.sun_path)-2);
       throw __LINE__;
     }
-    // leave first char 0, to get abstract socket name - see man 7 unix
-    strncpy(&socketAddrr.sun_path[1], cfg.txSocketPath->c_str(), cfg.txSocketPath->length());
+    // if name starts with '/', use normal socket name. if not, use an abstract socket name
+    // this is to allow non-abstract sockets on systems not supporting them.
+    if (cfg.txSocketPath->c_str()[0]=='/')  {
+      strncpy(&socketAddrr.sun_path[0], cfg.txSocketPath->c_str(), cfg.txSocketPath->length());
+    } else {
+      // leave first char 0, to get abstract socket name - see man 7 unix
+      strncpy(&socketAddrr.sun_path[1], cfg.txSocketPath->c_str(), cfg.txSocketPath->length());
+    }
     if (connect(txSocket, (struct sockaddr *)&socketAddrr, sizeof(socketAddrr))) {
       log.error("Failed to connect to infoLoggerD: %s",strerror(errno));
       throw __LINE__;

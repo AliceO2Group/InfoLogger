@@ -268,12 +268,18 @@ InfoLoggerD::InfoLoggerD(int argc,char * argv[]):Daemon(argc,argv) {
       struct sockaddr_un socketAddress;
       bzero(&socketAddress, sizeof(socketAddress));      
       socketAddress.sun_family = PF_LOCAL;
-      if (configInfoLoggerD.rxSocketPath.length()>sizeof(socketAddress.sun_path)) {
-        log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddress.sun_path));
+      if (configInfoLoggerD.rxSocketPath.length()+2>sizeof(socketAddress.sun_path)) {
+        log.error("Socket name too long: max allowed is %d",(int)sizeof(socketAddress.sun_path)-2);
         throw __LINE__;
       }
-      // leave first char 0, to get abstract socket name - see man 7 unix
-      strncpy(&socketAddress.sun_path[1], configInfoLoggerD.rxSocketPath.c_str(), configInfoLoggerD.rxSocketPath.length());
+      // if name starts with '/', use normal socket name. if not, use an abstract socket name
+      // this is to allow non-abstract sockets on systems not supporting them.
+      if (configInfoLoggerD.rxSocketPath.c_str()[0]=='/')  {
+        strncpy(&socketAddress.sun_path[0], configInfoLoggerD.rxSocketPath.c_str(), configInfoLoggerD.rxSocketPath.length());
+      } else {
+        // leave first char 0, to get abstract socket name - see man 7 unix
+        strncpy(&socketAddress.sun_path[1], configInfoLoggerD.rxSocketPath.c_str(), configInfoLoggerD.rxSocketPath.length());
+      }
       if (bind(rxSocket, (struct sockaddr *)&socketAddress, sizeof(socketAddress))==-1) {
         log.error("bind() failed: %s",strerror(errno));
         throw __LINE__;

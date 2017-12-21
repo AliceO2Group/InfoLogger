@@ -192,16 +192,16 @@ class InfoLoggerD:public Daemon {
   
   private:
   
-  int isInitialized;
+  int isInitialized=0;
   
   ConfigInfoLoggerD configInfoLoggerD;   // object for configuration parameters
-  int rxSocket;                          // socket for incoming messages
+  int rxSocket=-1;                          // socket for incoming messages
  
-  unsigned long long numberOfMessagesReceived;
+  unsigned long long numberOfMessagesReceived=0;
   std::list<t_clientConnection> clients;
   
   TR_client_configuration   cfgCx;  // config for transport
-  TR_client_handle          hCx;    // handle to server transport 
+  TR_client_handle          hCx=nullptr;    // handle to server transport 
   
   FILE *logOutput=nullptr;  // handle to local log file where to copy incoming messages, if configured to do so
 };
@@ -298,7 +298,7 @@ InfoLoggerD::InfoLoggerD(int argc,char * argv[]):Daemon(argc,argv) {
         }
 
         hCx = TR_client_start(&cfgCx);
-        if (hCx==NULL) {
+        if (hCx==nullptr) {
           throw __LINE__;
         }
       } else {
@@ -323,7 +323,9 @@ InfoLoggerD::InfoLoggerD(int argc,char * argv[]):Daemon(argc,argv) {
 
 
 InfoLoggerD::~InfoLoggerD() {
-  log.info("Received %llu messages",numberOfMessagesReceived);
+  if (isInitialized) {
+    log.info("Received %llu messages",numberOfMessagesReceived);
+  }
 
   if (rxSocket>=0) {
     close(rxSocket);    
@@ -331,7 +333,7 @@ InfoLoggerD::~InfoLoggerD() {
   for (auto c : clients) {
     close(c.socket);
   }
-  if (configInfoLoggerD.outputToServer) {
+  if (hCx!=nullptr) {
     TR_client_stop(hCx);
   }
 }

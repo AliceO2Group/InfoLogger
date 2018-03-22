@@ -1,7 +1,8 @@
 find_package(Boost COMPONENTS unit_test_framework program_options REQUIRED)
 find_package(Git QUIET)
-find_package(MySQL)
 find_package(Common REQUIRED)
+
+find_package(MySQL)
 find_package(PythonLibs)
 find_package(TCL)
 
@@ -11,6 +12,18 @@ else()
     add_definitions(-D_WITH_MYSQL)
 endif()
 
+
+o2_define_bucket(
+        NAME
+        o2_libinfologger_bucket
+
+        DEPENDENCIES
+        ${Common_LIBRARIES}
+        
+        SYSTEMINCLUDE_DIRECTORIES
+        ${Boost_INCLUDE_DIRS}
+        ${Common_INCLUDE_DIRS}
+)
 
 o2_define_bucket(
         NAME

@@ -228,7 +228,8 @@ macro(O2_GENERATE_LIBRARY)
   else (HEADERS)
     file(GLOB_RECURSE HDRS *.h)
   endif (HEADERS)
-
+  message("Using headers: ${HDRS}")
+  
   # ???
   if (IWYU_FOUND)
     Set(_INCLUDE_DIRS ${INCLUDE_DIRECTORIES} ${SYSTEM_INCLUDE_DIRECTORIES})
@@ -287,10 +288,12 @@ macro(O2_GENERATE_LIBRARY)
 
   # Install all the public headers
   # TODO retrofit to O2
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/include/${MODULE_NAME})
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/${MODULE_NAME}
-            DESTINATION include)
-  endif()
+  #if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/include/${MODULE_NAME})
+  #  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/${MODULE_NAME}
+  #          DESTINATION include)
+    install(FILES ${HEADERS}
+            DESTINATION include/${MODULE_NAME})
+  #endif()
 
 endmacro(O2_GENERATE_LIBRARY)
 

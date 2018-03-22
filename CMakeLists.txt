@@ -31,7 +31,7 @@ if(INFOLOGGER_BUILD_LIB)
 endif()
 if(INFOLOGGER_BUILD_ALL)
   message("Enabling all InfoLogger modules.")
-  set(INFOLOGGER_BUILD_LIB 1)
+  set(INFOLOGGER_BUILD_LIB 0)
 endif()
 
 

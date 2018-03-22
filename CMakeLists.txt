@@ -21,6 +21,21 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 project(InfoLogger)
 
+# Definition of modules to be built
+# by default, build all
+# if some specific modules are specified, build only these ones
+set(INFOLOGGER_BUILD_ALL 1)
+if(INFOLOGGER_BUILD_LIB) 
+  set(INFOLOGGER_BUILD_ALL 0)
+  message("Enabling libInfologger.") 
+endif()
+if(INFOLOGGER_BUILD_ALL)
+  message("Enabling all InfoLogger modules.")
+  set(INFOLOGGER_BUILD_LIB 1)
+endif()
+
+
+
 # Load some basic macros which are needed later on
 include(O2Utils)
 include(InfoLoggerDependencies)
@@ -34,9 +49,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # Set the version number of your project here (format is MAJOR.MINOR.PATCHLEVEL - e.g. 1.0.0)
-set(VERSION_MAJOR "0")
+set(VERSION_MAJOR "1")
 set(VERSION_MINOR "0")
-set(VERSION_PATCH "0")
+set(VERSION_PATCH "4")
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 # C++14
@@ -55,12 +70,14 @@ ENDIF ()
 # Add compiler flags for warnings and (more importantly) fPIC and debug symbols
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -fPIC")
 
+
+if(INFOLOGGER_BUILD_ALL)
+
 ####################################
 # Module, library and executable definition
 ####################################
 
 set(MODULE_NAME "InfoLogger")
-
 O2_SETUP(NAME ${MODULE_NAME})
 
 set_source_files_properties(src/simplelog.c PROPERTIES LANGUAGE CXX )
@@ -168,6 +185,8 @@ O2_GENERATE_TESTS(
 link_directories(
      ${LIBRARY_OUTPUT_PATH}
 )
+
+
 
 # Some extra targets to build standalone executables not relying on other o2 shared libs in bin-standalone
 # This is added optionally with cmake -DBUILD_STANDALONE=1 ...
@@ -361,3 +380,75 @@ install(
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 
+endif()
+
+
+if(INFOLOGGER_BUILD_LIB)
+
+  message("Generating makefile for libInfologger") 
+  set(MODULE_NAME "InfoLogger")
+  O2_SETUP(NAME ${MODULE_NAME})
+
+  set_source_files_properties(src/simplelog.c PROPERTIES LANGUAGE CXX )
+
+  set(SRCS
+      src/InfoLogger.cxx
+      src/InfoLoggerContext.cxx
+      src/InfoLoggerClient.cxx
+      src/infoLoggerMessageDecode.c
+      src/InfoLoggerMessageHelper.cxx
+      src/utility.c
+      src/simplelog.c
+  )
+
+  # Produce the final Version.h using template Version.h.in and substituting variables.
+  # We don't want to polute our source tree with it, thus putting it in binary tree.
+  configure_file("include/${MODULE_NAME}/Version.h.in"
+          "${CMAKE_CURRENT_BINARY_DIR}/include/${MODULE_NAME}/Version.h"
+          @ONLY
+          )
+
+  set(HEADERS
+    ${CMAKE_CURRENT_BINARY_DIR}/include/${MODULE_NAME}/Version.h
+    include/${MODULE_NAME}/InfoLogger.hxx
+  )
+  
+  include_directories(
+          ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS} ${Common_INCLUDE_DIRS}
+  )
+
+  set(LIBRARY_NAME ${MODULE_NAME})
+  set(BUCKET_NAME o2_libinfologger_bucket)
+
+  O2_GENERATE_LIBRARY()  
+
+  add_subdirectory(doc)
+
+  set(BUCKET_NAME o2_infologger_bucket)
+  O2_GENERATE_EXECUTABLE(
+          EXE_NAME log
+          SOURCES src/log.cxx
+          MODULE_LIBRARY_NAME ${LIBRARY_NAME}
+          BUCKET_NAME ${BUCKET_NAME}
+  )
+
+  enable_testing()
+
+  set(TEST_SRCS
+    test/testInfoLogger.cxx
+    test/testInfoLoggerPerf.cxx
+  )
+
+  O2_GENERATE_TESTS(
+   MODULE_LIBRARY_NAME ${LIBRARY_NAME}
+   BUCKET_NAME ${BUCKET_NAME}
+   TEST_SRCS ${TEST_SRCS}
+  )
+
+
+  link_directories(
+       ${LIBRARY_OUTPUT_PATH}
+  )
+  
+  message("Completed - Generating makefile for libInfologger")
+endif()

@@ -7,7 +7,7 @@
 
 
 // some constants
-#define SQL_RETRY_CONNECT 3     // base retry time, will be sleeping up to 10x this value
+#define SQL_RETRY_CONNECT 1     // base retry time, will be sleeping up to 10x this value
 
 
 
@@ -37,9 +37,15 @@ class InfoLoggerDispatchSQLImpl {
   std::string sql_insert;
   
   unsigned long long insertCount=0; // counter for number of queries executed
+  unsigned long long msgDroppedCount=0; // counter for number of messages dropped (DB unavailable, etc)
+    
+  int connectDB(); // function to connect to database
 };
 
 void InfoLoggerDispatchSQLImpl::start() {
+
+  // log DB params
+  theLog->info("Using DB %s@%s:%s",theConfig->dbUser.c_str(),theConfig->dbHost.c_str(),theConfig->dbName.c_str());
 
   // init mysql lib
   if (mysql_init(&db)==NULL) {
@@ -82,6 +88,16 @@ void InfoLoggerDispatchSQLImpl::start() {
     theLog->error("Failed to initialize db query: error %d",errLine);
   }
 
+  // try to connect DB
+  int maxRetry=10;
+  for (int n=0;n<maxRetry;n++) {
+    InfoLoggerDispatchSQLImpl::connectDB();
+    if (dbIsConnected) {
+      break;
+    }
+    sleep(SQL_RETRY_CONNECT);
+  }
+
 }
 
 InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer *config, SimpleLog *log): InfoLoggerDispatch(config,log) {
@@ -97,7 +113,8 @@ void InfoLoggerDispatchSQLImpl::stop() {
     theLog->info("DB disconnected");    
   }
   mysql_close(&db);
-  theLog->info("DB thread insert count = %llu",insertCount);
+  theLog->info("DB thread insert count = %llu, dropped msg count = %llu",insertCount,msgDroppedCount);
+  
 }
 
 
@@ -116,73 +133,81 @@ int InfoLoggerDispatchSQL::customLoop() {
 }
 
 
+int InfoLoggerDispatchSQLImpl::connectDB() {
+  if (!dbIsConnected) {
+    time_t now=time(NULL);
+    if (now<dbLastConnectTry+SQL_RETRY_CONNECT) {
+      // wait before reconnecting
+      return 0;
+    }
+    dbLastConnectTry=now;
+    if (mysql_real_connect(&db,theConfig->dbHost.c_str(),theConfig->dbUser.c_str(),theConfig->dbPassword.c_str(),theConfig->dbName.c_str(),0,NULL,0)) {
+      theLog->info("DB connected");
+      dbIsConnected=1;
+      dbConnectTrials=0;
+    } else {
+      if (dbConnectTrials==1) { // the first attempt always fails, hide it
+        theLog->error("DB connection failed: %s",mysql_error(&db));
+      }
+      dbConnectTrials++;
+      return 0;
+    }
+
+    // create prepared insert statement
+    stmt=mysql_stmt_init(&db);
+    if (stmt==NULL) {
+      theLog->error("mysql_stmt_init() failed: %s",mysql_error(&db));
+      return -1;
+    }
+
+    if (mysql_stmt_prepare(stmt,sql_insert.c_str(),sql_insert.length())) {
+      theLog->error("mysql_stmt_prepare() failed: %s\n",mysql_error(&db));
+      return -1;
+    }
+
+    // bind variables depending on type
+    memset(bind, 0, sizeof(bind));
+    int errline=0;
+    for(int i=0;i<nFields;i++) {
+      switch (protocols[0].fields[i].type) {
+        case infoLog_msgField_def_t::ILOG_TYPE_STRING:
+          bind[i].buffer_type=MYSQL_TYPE_STRING;
+          break;
+        case infoLog_msgField_def_t::ILOG_TYPE_INT:
+          bind[i].buffer_type=MYSQL_TYPE_LONG;
+          break;
+        case infoLog_msgField_def_t::ILOG_TYPE_DOUBLE:
+          bind[i].buffer_type=MYSQL_TYPE_DOUBLE;
+          break;
+        default:
+          theLog->error("undefined field type %d",protocols[0].fields[i].type);
+          errline=__LINE__;
+          break;
+      }
+    }
+    if (errline) {      
+      return -1;
+    }
+  }
+    
+  return 0;
+}
+
 
 int InfoLoggerDispatchSQLImpl::customLoop() {
 
-    if (!dbIsConnected) {
-      time_t now=time(NULL);
-      if (now<dbLastConnectTry+SQL_RETRY_CONNECT) {
-        // wait before reconnecting
-        return 0;
-      }
-      dbLastConnectTry=now;
-      if (mysql_real_connect(&db,theConfig->dbHost.c_str(),theConfig->dbUser.c_str(),theConfig->dbPassword.c_str(),theConfig->dbName.c_str(),0,NULL,0)) {
-        theLog->info("DB connected");
-        dbIsConnected=1;
-        dbConnectTrials=0;
-      } else {
-        if (dbConnectTrials==1) {
-          theLog->error("DB connection Failed");
-        }
-        dbConnectTrials++;
-        return 0;
-      }
-      
-      // create prepared insert statement
-      stmt=mysql_stmt_init(&db);
-      if (stmt==NULL) {
-        theLog->error("mysql_stmt_init() failed: %s",mysql_error(&db));
-        return -1;
-      }
-
-      if (mysql_stmt_prepare(stmt,sql_insert.c_str(),sql_insert.length())) {
-        theLog->error("mysql_stmt_prepare() failed: %s\n",mysql_error(&db));
-        return -1;
-      }
-
-      // bind variables depending on type
-      memset(bind, 0, sizeof(bind));
-      int errline=0;
-      for(int i=0;i<nFields;i++) {
-        switch (protocols[0].fields[i].type) {
-          case infoLog_msgField_def_t::ILOG_TYPE_STRING:
-            bind[i].buffer_type=MYSQL_TYPE_STRING;
-            break;
-          case infoLog_msgField_def_t::ILOG_TYPE_INT:
-            bind[i].buffer_type=MYSQL_TYPE_LONG;
-            break;
-          case infoLog_msgField_def_t::ILOG_TYPE_DOUBLE:
-            bind[i].buffer_type=MYSQL_TYPE_DOUBLE;
-            break;
-          default:
-            theLog->error("undefined field type %d",protocols[0].fields[i].type);
-            errline=__LINE__;
-            break;
-        }
-      }
-      if (errline) {      
-        return -1;
-      }
-    }
-
-
-  return 0;
+  return connectDB();
 }
 
 
 int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMessageList> lmsg) {
  // todo: keep message in queue on error!
 
+   if (!dbIsConnected) {
+     msgDroppedCount++;
+     return -1;
+    }
+  
    infoLog_msg_t *m;
    my_bool param_isnull=1; // boolean telling if a parameter is NULL
    my_bool param_isNOTnull=0; // boolean telling if a parameter is not NULL
@@ -232,6 +257,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
             mysql_stmt_close(stmt);
             mysql_close(&db);
             theLog->info("DB disconnected");
+            msgDroppedCount++;
             return -1;
           }
 
@@ -243,6 +269,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
             theLog->info("DB disconnected");
             // retry with new connection - usually it means server was down
             dbIsConnected=0;
+            msgDroppedCount++;
             break;
           }
           

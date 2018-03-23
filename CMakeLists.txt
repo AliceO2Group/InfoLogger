@@ -51,7 +51,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 # Set the version number of your project here (format is MAJOR.MINOR.PATCHLEVEL - e.g. 1.0.0)
 set(VERSION_MAJOR "1")
 set(VERSION_MINOR "0")
-set(VERSION_PATCH "4")
+set(VERSION_PATCH "5")
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 # C++14
@@ -122,6 +122,13 @@ configure_file("include/${MODULE_NAME}/Version.h.in"
 
 include_directories(
         ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS} ${Common_INCLUDE_DIRS}
+)
+
+set(HEADERS
+  ${CMAKE_CURRENT_BINARY_DIR}/include/${MODULE_NAME}/Version.h
+  include/${MODULE_NAME}/InfoLogger.hxx
+  include/${MODULE_NAME}/InfoLoggerFMQ.hxx
+  include/${MODULE_NAME}/InfoLogger.h
 )
 
 set(LIBRARY_NAME ${MODULE_NAME})
@@ -411,6 +418,7 @@ if(INFOLOGGER_BUILD_LIB)
   set(HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/include/${MODULE_NAME}/Version.h
     include/${MODULE_NAME}/InfoLogger.hxx
+    include/${MODULE_NAME}/InfoLoggerFMQ.hxx
   )
   
   include_directories(

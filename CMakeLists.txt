@@ -433,12 +433,6 @@ if(INFOLOGGER_BUILD_LIB)
   add_subdirectory(doc)
 
   set(BUCKET_NAME o2_infologger_bucket)
-  O2_GENERATE_EXECUTABLE(
-          EXE_NAME log
-          SOURCES src/log.cxx
-          MODULE_LIBRARY_NAME ${LIBRARY_NAME}
-          BUCKET_NAME ${BUCKET_NAME}
-  )
 
   enable_testing()
 

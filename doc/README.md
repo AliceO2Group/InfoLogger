@@ -47,7 +47,10 @@ on a single node (commands executed as root).
    * or from a remote YUM repo: `yum install -y o2-InfoLogger-standalone`
 
 * Install a MySQL database. Here we use mariadb, as it's the standard one available in base CC7
-install, but other MySQL versions would work just as fine:
+install, but other MySQL versions would work just as fine (just make sure to replace mariadb by
+mysql in the infoLoggerServer.service file, the default one being located in
+/usr/lib/systemd/system/)
+
   * Setup package:
      `yum install -y mariadb-server`
   * Configure service (start now and at boot time):

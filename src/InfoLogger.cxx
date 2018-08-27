@@ -372,7 +372,7 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption &options, const 
   if (currentMode==OutputMode::raw) {
     char buffer[LOG_MAX_SIZE];
     msgHelper.MessageToText(&msg,buffer,sizeof(buffer),InfoLoggerMessageHelper::Format::Encoded);
-    printf(buffer);
+    puts(buffer);
   }
 
   
@@ -559,7 +559,7 @@ InfoLogger &InfoLogger::operator<<(InfoLogger::StreamOps op)
 
   // end of message: flush current buffer in a single message
   if (op == endm) {
-    log(pImpl->currentStreamOptions,pImpl->currentStreamMessage.c_str());
+    log(pImpl->currentStreamOptions, "%s", pImpl->currentStreamMessage.c_str());
     pImpl->currentStreamMessage.clear();
     pImpl->currentStreamOptions=undefinedMessageOption;
   }

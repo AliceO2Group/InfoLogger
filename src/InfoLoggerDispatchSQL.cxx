@@ -1,10 +1,14 @@
 #include "InfoLoggerDispatch.h"
 #include <mysql.h>
+#include <mysql_version.h>
 #include "utility.h"
 #include "infoLoggerMessage.h"
 #include <unistd.h>
 #include <string.h>
 
+#if LIBMYSQL_VERSION_ID >= 80000
+typedef bool my_bool;
+#endif
 
 // some constants
 #define SQL_RETRY_CONNECT 1     // base retry time, will be sleeping up to 10x this value

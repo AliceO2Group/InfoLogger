@@ -1,6 +1,6 @@
 find_package(Boost COMPONENTS unit_test_framework program_options REQUIRED)
 find_package(Git QUIET)
-find_package(Common REQUIRED)
+find_package(CommonO2 CONFIG REQUIRED)
 
 find_package(MySQL)
 find_package(PythonLibs)
@@ -18,11 +18,10 @@ o2_define_bucket(
         o2_libinfologger_bucket
 
         DEPENDENCIES
-        ${Common_LIBRARIES}
-        
+        CommonO2::Common
+
         SYSTEMINCLUDE_DIRECTORIES
         ${Boost_INCLUDE_DIRS}
-        ${Common_INCLUDE_DIRS}
 )
 
 o2_define_bucket(
@@ -32,11 +31,10 @@ o2_define_bucket(
         DEPENDENCIES
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
         pthread
-        ${Common_LIBRARIES}
+        CommonO2::Common
 
         SYSTEMINCLUDE_DIRECTORIES
         ${Boost_INCLUDE_DIRS}
-        ${Common_INCLUDE_DIRS}
 )
 
 o2_define_bucket(

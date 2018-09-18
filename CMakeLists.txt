@@ -121,7 +121,7 @@ configure_file("include/${MODULE_NAME}/Version.h.in"
         )
 
 include_directories(
-        ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS} ${Common_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS}
 )
 
 set(HEADERS
@@ -425,15 +425,15 @@ if(INFOLOGGER_BUILD_LIB)
     include/${MODULE_NAME}/InfoLogger.hxx
     include/${MODULE_NAME}/InfoLoggerFMQ.hxx
   )
-  
-  include_directories(
-          ${CMAKE_CURRENT_BINARY_DIR}/include include ${Boost_INCLUDE_DIRS} ${Common_INCLUDE_DIRS}
-  )
+
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/include
+                      include
+                      ${Boost_INCLUDE_DIRS})
 
   set(LIBRARY_NAME ${MODULE_NAME})
   set(BUCKET_NAME o2_libinfologger_bucket)
 
-  O2_GENERATE_LIBRARY()  
+  O2_GENERATE_LIBRARY()
 
   add_subdirectory(doc)
 

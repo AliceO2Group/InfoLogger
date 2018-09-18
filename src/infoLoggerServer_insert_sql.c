@@ -21,12 +21,17 @@
 #include <unistd.h>
 
 #include <mysql.h>
+#include <mysql_version.h>
 #include <sys/time.h>
 
 #define SQL_RETRY_CONNECT 10     /* base retry time, will be sleeping up to 10x this value */
 
 #include "infoLoggerMessage.h"
 #include "infoLoggerConfig.h"
+
+#if LIBMYSQL_VERSION_ID >= 80000
+typedef bool my_bool;
+#endif
 
 extern void infoLog_msg_destroy(infoLog_msg_t *m);
 extern t_infoLoggerConfig cfg;              /* infoLoggerServer configuration */

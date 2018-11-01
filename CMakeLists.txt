@@ -1,11 +1,19 @@
 cmake_minimum_required(VERSION 3.5.2 FATAL_ERROR)
 project(InfoLogger VERSION 1.0.5 LANGUAGES C CXX)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(Common REQUIRED)
 find_package(MySQL)
 find_package(PythonLibs)
+get_property(Common_PATH TARGET AliceO2::Common PROPERTY LOCATION)
+message(${CMAKE_MODULE_PATH})
+
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+set(INCLUDE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+set(CMAKE_INSTALL_LIBDIR lib)
 
 if(NOT MYSQL_FOUND)
   message(WARNING "MySQL not found, the corresponding classes won't be built.")

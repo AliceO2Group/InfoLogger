@@ -25,9 +25,9 @@ target_include_directories(InfoLogger PUBLIC
     $<INSTALL_INTERFACE:include>)
 if(MYSQL_FOUND)
   target_sources(InfoLogger PRIVATE src/InfoLoggerDispatchSQL.cxx)
-  target_link_libraries(InfoLogger PUBLIC Common::Common mysql::client)
+  target_link_libraries(InfoLogger PUBLIC AliceO2::Common mysql::client)
 else()
-  target_link_libraries(InfoLogger PUBLIC Common::Common)
+  target_link_libraries(InfoLogger PUBLIC AliceO2::Common)
 endif()
 
 configure_file("include/InfoLogger/Version.h.in"

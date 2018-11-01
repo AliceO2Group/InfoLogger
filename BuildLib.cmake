@@ -8,7 +8,7 @@ add_library(InfoLogger SHARED
             src/InfoLoggerMessageHelper.cxx
             src/utility.c
             src/simplelog.c)
-target_link_libraries(InfoLogger PUBLIC Common::Common)
+target_link_libraries(InfoLogger PUBLIC AliceO2::Common)
 target_include_directories(InfoLogger PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)

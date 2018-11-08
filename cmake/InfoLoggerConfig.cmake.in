@@ -1,16 +1,12 @@
 @PACKAGE_INIT@
-
 get_filename_component(InfoLogger_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
-list(APPEND CMAKE_MODULE_PATH ${InfoLogger_CMAKE_DIR})
-
-find_dependency(Common HINTS /Users/awegrzyn/Common_install)
-
-list(REMOVE_AT CMAKE_MODULE_PATH -1)
+set(Common_CMAKE_DIR @Common_DIR@)
+find_dependency(Common CONFIG REQUIRED HINTS ${Common_CMAKE_DIR})
 
 if(NOT TARGET AliceO2::InfoLogger)
   include("${InfoLogger_CMAKE_DIR}/InfoLoggerTargets.cmake")
 endif()
 
-set(InfoLogger_LIBRARIES AliceO2::InfoLogger)
+message(STATUS "InfoLogger ${InfoLogger_VERSION} found")

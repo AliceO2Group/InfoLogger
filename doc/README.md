@@ -231,7 +231,8 @@ The InfoLogger library allows to inject messages directly from programs, as show
    * Tcl example:
     ```
       tclsh
-      load libinfoLoggerForTcl.so
+      load infoLoggerForTcl.so
+      set logHandle [InfoLogger]
       $logHandle logInfo "This is a test"
       $logHandle logError "Something went wrong"
     ```      

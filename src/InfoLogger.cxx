@@ -186,7 +186,7 @@ class InfoLogger::Impl {
         // fallback to stdout if infoLoggerD not available
         if (!infoLoggerDWarningDone) {
    	  infoLoggerDWarningDone=1;
-  	  fprintf(stderr,"infoLoggerD not available, falling back to stdout logging\n");
+  	  //fprintf(stderr,"infoLoggerD not available, falling back to stdout logging\n");
 	}
         currentMode=OutputMode::stdout;
       }

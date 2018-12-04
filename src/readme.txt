@@ -56,7 +56,7 @@ utility.c
 transport_client.h
 transport_client.c
 simplelog.h                           Logging function - remapped to SimpleLog.h
-simplelog.c                           Replacement for original simplelog.c, using SimpleLog.h interface
+simplelog.cxx                         Replacement for original simplelog.c, using SimpleLog.h interface
 permanentFIFO.h
 permanentFIFO.c
 infoLoggerServer_insert.h

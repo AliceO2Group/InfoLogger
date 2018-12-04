@@ -32,10 +32,12 @@ add_subdirectory(doc)
 # dependencies to build the InfoLogger components
 # NB: cmake/InfoLoggerConfig.cmake defines dependencies for clients using the library
 #find_package(Common REQUIRED)
+find_package(Boost REQUIRED)
 find_package(MySQL)
 find_package(SWIG)
 
 # flag to build only client library
+#set(INFOLOGGER_BUILD_LIBONLY 1)
 if(INFOLOGGER_BUILD_LIBONLY) 
   message("Enabling libInfologger only.") 
 else()
@@ -123,7 +125,8 @@ set_target_properties(InfoLogger PROPERTIES
 )
 target_include_directories(InfoLogger
   INTERFACE
-  ${INFOLOGGER_INCLUDE_DIRS_PUBLIC}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${INFOLOGGER_INCLUDE_DIRS_PUBLIC}>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(InfoLogger
   PUBLIC
@@ -142,6 +145,8 @@ install(EXPORT InfoLoggerTargets
 )
 install(FILES cmake/InfoLoggerConfig.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/InfoLogger)
 
+# install include files
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/InfoLogger DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 
 ##########################################
@@ -366,7 +371,6 @@ foreach (t ${INSTALL_TARGETS})
   endif()
 endforeach()
 
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/InfoLogger DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(PROGRAMS src/infoBrowser.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME infoBrowser)
 install(PROGRAMS newMysql.sh DESTINATION ${CMAKE_INSTALL_BINDIR})
 

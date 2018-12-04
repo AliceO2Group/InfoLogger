@@ -3,10 +3,9 @@ get_filename_component(INFOLOGGER_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 message(STATUS "InfoLogger found - using cmake targets in ${INFOLOGGER_CMAKE_DIR}")
 
 # dependencies for clients using the library
-# we now package a standalone version of libInfoLogger
-# so the lines below are not needed - kept for reference
-# include(CMakeFindDependencyMacro)
+include(CMakeFindDependencyMacro)
 # find_dependency(Common REQUIRED)
+find_dependency(Boost REQUIRED)
 
 # declare InfoLogger target
 if(NOT TARGET AliceO2::InfoLogger)

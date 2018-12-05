@@ -65,7 +65,7 @@ externalproject_add (Common-standalone
 )
 externalproject_get_property(Common-standalone source_dir)
 set(COMMON_STANDALONE_SRC_DIR ${source_dir})
-set(COMMON_STANDALONE_INCLUDE_DIR ${COMMON_STANDALONE_SRC_DIR}/include)
+set(COMMON_STANDALONE_INCLUDE_DIRS ${COMMON_STANDALONE_SRC_DIR}/include ${Boost_INCLUDE_DIRS})
 foreach (modul Configuration Daemon LineBuffer SimpleLog Thread Timer)
   add_library(
     objCommon${modul} OBJECT
@@ -73,7 +73,7 @@ foreach (modul Configuration Daemon LineBuffer SimpleLog Thread Timer)
   )
   set_source_files_properties(${COMMON_STANDALONE_SRC_DIR}/src/${modul}.cxx PROPERTIES GENERATED TRUE)
   target_include_directories(objCommon${modul}
-    PRIVATE ${COMMON_STANDALONE_INCLUDE_DIR}
+    PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS}
   )
   add_dependencies(objCommon${modul} Common-standalone)   
 endforeach (modul)
@@ -83,7 +83,7 @@ endforeach (modul)
 # define include dirs
 #get_target_property(COMMON_INCLUDE_DIRS AliceO2::Common INTERFACE_INCLUDE_DIRECTORIES)
 if(NOT COMMON_INCLUDE_DIRS)
-  set(COMMON_INCLUDE_DIRS ${COMMON_STANDALONE_INCLUDE_DIR})
+  set(COMMON_INCLUDE_DIRS ${COMMON_STANDALONE_INCLUDE_DIRS})
 endif()
 set(INFOLOGGER_INCLUDE_DIRS_PUBLIC include)
 set(INFOLOGGER_INCLUDE_DIRS_PRIVATE ${COMMON_INCLUDE_DIRS})
@@ -105,8 +105,9 @@ add_library (objInfoLoggerClient OBJECT
   src/simplelog.cxx
 )
 target_include_directories(objInfoLoggerClient
-  PRIVATE ${INFOLOGGER_INCLUDE_DIRS}
+  PRIVATE ${INFOLOGGER_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
 )
+add_dependencies(objInfoLoggerClient Common-standalone)
 
 # list of object files for the library
 set(INFOLOGGER_LIB_OBJECTS
@@ -131,6 +132,7 @@ target_include_directories(InfoLogger
 target_link_libraries(InfoLogger
   PUBLIC
 #  AliceO2::Common
+  Boost::boost
 )
 install(TARGETS InfoLogger
   EXPORT InfoLoggerTargets
@@ -168,7 +170,7 @@ add_library (objInfoLoggerTransport OBJECT
 target_include_directories(objInfoLoggerTransport
   PRIVATE ${INFOLOGGER_INCLUDE_DIRS}
 )
-
+add_dependencies(objInfoLoggerTransport Common-standalone)
 
 # static library
 add_library (libInfoLogger-static STATIC
@@ -197,7 +199,7 @@ target_link_libraries(
 target_include_directories(
   log
   PRIVATE
-  ${COMMON_STANDALONE_INCLUDE_DIR}
+  ${COMMON_STANDALONE_INCLUDE_DIRS}
 )
 
 
@@ -217,7 +219,7 @@ target_link_libraries(
 target_include_directories(
   infoLoggerD
   PRIVATE
-  ${COMMON_STANDALONE_INCLUDE_DIR}
+  ${COMMON_STANDALONE_INCLUDE_DIRS}
 )
 
 
@@ -245,7 +247,7 @@ target_include_directories(
   infoLoggerServer
   PRIVATE
   ${INFOLOGGER_INCLUDE_DIRS_PUBLIC}
-  ${COMMON_STANDALONE_INCLUDE_DIR}
+  ${COMMON_STANDALONE_INCLUDE_DIRS}
   ${MYSQL_INCLUDE_DIRS}
 )
 target_link_libraries(
@@ -265,7 +267,7 @@ add_executable(
 target_include_directories(
         infoLoggerAdminDB
         PRIVATE
-        ${COMMON_STANDALONE_INCLUDE_DIR}
+        ${COMMON_STANDALONE_INCLUDE_DIRS}
         ${MYSQL_INCLUDE_DIRS}
 )
 target_link_libraries(
@@ -347,7 +349,7 @@ foreach (f ${TEST_SRCS})
   message ("${exe}")
   add_executable(${exe} ${f} ${INFOLOGGER_LIB_OBJECTS} $<TARGET_OBJECTS:objCommonTimer>)
   target_link_libraries(${exe} InfoLogger)
-  target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIR})
+  target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS})
 endforeach()
 
 

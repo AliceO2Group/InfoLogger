@@ -19,7 +19,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# define installation directories
+# define directories
+# build-time binaries
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+# installation
 include(GNUInstallDirs)
 set(CMAKE_INSTALL_LIBDIR lib)
 
@@ -225,7 +228,7 @@ target_include_directories(
 
 # executable: infoLoggerServer
 if(MYSQL_FOUND)
-  list(APPEND INFOLOGGERSERVER_SRC_EXTRA src/InfoLoggerDispatchSQL.cxx)
+  add_definitions(-DWITH_MYSQL)
 endif()
 add_executable(
   infoLoggerServer
@@ -241,7 +244,7 @@ add_executable(
   src/infoLoggerMessageDecode.c
   src/InfoLoggerMessageHelper.cxx
   src/InfoLoggerMessageList.cxx
-  ${INFOLOGGERSERVER_SRC_EXTRA}
+  $<$<BOOL:${MYSQL_FOUND}>:src/InfoLoggerDispatchSQL.cxx>
 )
 target_include_directories(
   infoLoggerServer
@@ -334,7 +337,6 @@ endif()
 
 
 # test programs
-# these are not unit tests, but interactive tools to help testing functionalities
 message("Generating test executables")
 enable_testing()
 set(TEST_SRCS
@@ -350,6 +352,7 @@ foreach (f ${TEST_SRCS})
   add_executable(${exe} ${f} ${INFOLOGGER_LIB_OBJECTS} $<TARGET_OBJECTS:objCommonTimer>)
   target_link_libraries(${exe} InfoLogger)
   target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS})
+  add_test(NAME ${test_name} COMMAND ${exe})
 endforeach()
 
 

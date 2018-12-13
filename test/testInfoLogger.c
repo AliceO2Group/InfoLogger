@@ -3,7 +3,7 @@
 ///
 /// \author Sylvain Chapeland, CERN
 
-#include "InfoLogger/InfoLogger.h"
+#include <InfoLogger/InfoLogger.h>
 
 #define _BSD_SOURCE 
 

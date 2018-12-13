@@ -3,7 +3,7 @@
 ///
 /// \author Sylvain Chapeland, CERN
 
-#include "InfoLogger/InfoLogger.hxx"
+#include <InfoLogger/InfoLogger.hxx>
 #include <Common/Timer.h>
 
 using namespace AliceO2::InfoLogger;

@@ -1,9 +1,7 @@
 /* 
-  infoLogger SWIG interface wrapper
-  
-  swig -c++ -python -module infoLoggerForPython -o infoLoggerForPython_wrap.cxx infoLogger.i 
-  swig -c++ -tcl -module infoLoggerForTcl -o infoLoggerForTcl_wrap.cxx infoLogger.i
- */
+  infoLogger SWIG interface wrapper  
+  See doc/README.md for SWIG generated libraries usage.
+*/
 
 %module infoLogger
 

@@ -13,6 +13,13 @@
 %}
 
 
+#ifdef SWIG_JAVASCRIPT_V8
+%inline %{
+  #include <node.h>
+%}
+#endif
+
+
 %include <exception.i>
 %exception {
   try {

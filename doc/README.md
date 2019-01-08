@@ -216,7 +216,7 @@ The InfoLogger library allows to inject messages directly from programs, as show
       
     Usually, one will only take care of defining the per-message messageOptions struct and a context with appropriate Facility field set, all other being set automatically.
    
- * InfoLogger library is also available for: Tcl, Python, Go.
+ * InfoLogger library is also available for: Tcl, Python, Go, Node.js.
    It allows to log message from scripting languages. A simplified subset of the InfoLogger C++ API is made available through SWIG-generated modules.
    Example usage is shown below. Files listed there are available from the infoLogger library installation directory. 
    
@@ -253,6 +253,17 @@ The InfoLogger library allows to inject messages directly from programs, as show
         logHandle.LogError("Something went wrong")
       }
     ```
+   * Node.js
+     ** Library files: infoLogger.node
+     ** Code example: (interactive interpreter from the command line)
+    ```
+      node
+      var infoLoggerModule=require("infoLogger");
+      var logHandle=new infoLoggerModule.InfoLogger();
+      logHandle.logInfo("This is a test");
+      logHandle.logError("Something went wrong");
+    ```          
+    
 
 
 ## Configuration

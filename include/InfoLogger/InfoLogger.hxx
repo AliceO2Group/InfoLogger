@@ -1,5 +1,5 @@
 /// \file InfoLogger.hxx
-/// \brief C++ interface for the InfoLogger logging interface.
+/// \brief C++ interface for the InfoLogger logging library.
 ///
 ///  See inline documentation, and testInfoLogger.cxx for example usage.
 ///
@@ -94,9 +94,14 @@ class InfoLoggerContext final
 
   // this simplifies interface to have a single type
   // some fields (e.g. run, pid) are stored as integers, but conversion is done by setField
+  // A field with a blank value (zero-length string) is undefined.
+
+  /// Set given field (provided field name and value are strings)
+  /// \param key      The field name to be set. Valid field names are the strings corresponding to what is defined in the FieldName enum: Facility, Role, System, Detector, Partition, Run
+  /// \param value    The value of the field, as a string. This function can be called for any field (string or integer). Conversion will be done whenever needed (string->int).
+  /// \return         0 on success, an error code otherwise (but never throw exceptions).
+  int setField(const std::string &key, const std::string &value);
   
-  // todo ?
- //  int getField(FieldName key, std::string &value);
   
   
   private:
@@ -229,6 +234,7 @@ class InfoLogger
 
   /// Set a field in a message option struct based on its name.
   /// If input fieldName valid, and input fieldValue can be parsed, ouput variable is modified accordingly.
+  /// List of valid field names are the strings (1st letter capitalized) corresponding to what is defined in the InfoLoggerMessageOption struct: Severity, Level, ErrorCode, SourceFile, SourceLine
   /// \return         0 on success, an error code otherwise.
   static int setMessageOption(const char *fieldName, const char *fieldValue, InfoLoggerMessageOption &output);
   

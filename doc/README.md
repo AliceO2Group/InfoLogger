@@ -218,42 +218,8 @@ The InfoLogger library allows to inject messages directly from programs, as show
    
  * InfoLogger library is also available for: Tcl, Python, Go.
    It allows to log message from scripting languages. A simplified subset of the InfoLogger C++ API is made available through SWIG-generated modules.
-   Example usage is shown below. Files listed there are available from the infoLogger library installation directory. 
+   Details of the functions accessible from the scripting interface are provided in [a separate document](scriptingAPI.md).
    
-   * Tcl
-     ** Library files: infoLoggerForTcl.so
-     ** Code example: (interactive interpreter from the command line)
-    ```
-      tclsh
-      load infoLoggerForTcl.so
-      set logHandle [InfoLogger]
-      $logHandle logInfo "This is a test"
-      $logHandle logError "Something went wrong"
-    ```      
-   * Python
-     ** Library files: _infoLoggerForPython.so and infoLoggerForPython.py 
-     ** Code example: (interactive interpreter from the command line)
-    ```
-      python
-      import infoLoggerForPython
-      logHandle=infoLoggerForPython.InfoLogger()
-      logHandle.logInfo("This is a test")
-      logHandle.logError("Something went wrong")
-    ```
-   * Go
-     ** Library files: infoLoggerForGo.a and infoLoggerForGo.go (to be copied to ${GOPATH}/src/infoLoggerForGo)
-     ** Build: CGO_LDFLAGS="${GOPATH}/src/infoLoggerForGo/infoLoggerForGo.a -lstdc++" go build
-     ** Code example: 
-    ```
-      package main
-      import "infoLoggerForGo"
-      func main() {
-        var logHandle=infoLoggerForGo.NewInfoLogger()
-        logHandle.LogInfo("This is a test")
-        logHandle.LogError("Something went wrong")
-      }
-    ```
-
 
 ## Configuration
 

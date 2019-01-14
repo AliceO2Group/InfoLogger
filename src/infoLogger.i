@@ -40,14 +40,14 @@ class InfoLogger {
     InfoLogger();
     ~InfoLogger();
 
-    void logInfo(const std::string &message);
-    void logError(const std::string &message);
-    void logWarning(const std::string &message);
-    void logFatal(const std::string &message);
-    void logDebug(const std::string &message);
+    int logInfo(const std::string &message);
+    int logError(const std::string &message);
+    int logWarning(const std::string &message);
+    int logFatal(const std::string &message);
+    int logDebug(const std::string &message);
 
-    void log(const std::string &message);
-    void log(const InfoLoggerMetadata &metadata, const std::string &message);
+    int log(const std::string &message);
+    int log(const InfoLoggerMetadata &metadata, const std::string &message);
 
     int setDefaultMetadata(const InfoLoggerMetadata &);
     int unsetDefaultMetadata();

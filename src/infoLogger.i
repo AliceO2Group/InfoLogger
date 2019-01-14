@@ -8,8 +8,8 @@
 %{
   #define SWIG_FILE_WITH_INIT
 
-  #include <InfoLogger/InfoLogger.hxx>
-  using namespace AliceO2::InfoLogger;
+  #include <InfoLoggerScripting.hxx>
+  using namespace AliceO2::InfoLogger::Scripting;
 %}
 
 
@@ -23,11 +23,32 @@
 }
 
 %include <std_string.i>
+
+
+class InfoLoggerMetadata {
+  public:
+  InfoLoggerMetadata();
+  InfoLoggerMetadata(const InfoLoggerMetadata &);
+  ~InfoLoggerMetadata();
+  
+  int setField(const std::string &key, const std::string &value);
+};
+
+
 class InfoLogger {
   public:
     InfoLogger();
     ~InfoLogger();
-    
+
     void logInfo(const std::string &message);
     void logError(const std::string &message);
+    void logWarning(const std::string &message);
+    void logFatal(const std::string &message);
+    void logDebug(const std::string &message);
+
+    void log(const std::string &message);
+    void log(const InfoLoggerMetadata &metadata, const std::string &message);
+
+    int setDefaultMetadata(const InfoLoggerMetadata &);
+    int unsetDefaultMetadata();
 };

@@ -216,10 +216,11 @@ The InfoLogger library allows to inject messages directly from programs, as show
       
     Usually, one will only take care of defining the per-message messageOptions struct and a context with appropriate Facility field set, all other being set automatically.
    
- * InfoLogger library is also available for: Tcl, Python, Go.
+ * InfoLogger library is also available for: Tcl, Python, Go, Node.js.
    It allows to log message from scripting languages. A simplified subset of the InfoLogger C++ API is made available through SWIG-generated modules.
    Details of the functions accessible from the scripting interface are provided in [a separate document](scriptingAPI.md).
    
+
 
 ## Configuration
 

@@ -87,5 +87,18 @@ Example usage is shown below. Library files listed there are available from the 
       }
     ```
 
+* **Node.js**
+  * Library files: `infoLogger.node`
+  * Code example: (interactive interpreter from the command line)
+	```
+	  node
+	  var infoLoggerModule=require("infoLogger");
+	  var logHandle=new infoLoggerModule.InfoLogger();
+	  logHandle.logInfo("This is a test");
+	  logHandle.logError("Something went wrong");
+	```          
+    
+
+
 ## Tips
 Don't forget to delete the objects if necessary!

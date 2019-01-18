@@ -1,5 +1,5 @@
 /// \file InfoLogger.hxx
-/// \brief C++ interface for the InfoLogger logging interface.
+/// \brief C++ interface for the InfoLogger logging library.
 ///
 ///  See inline documentation, and testInfoLogger.cxx for example usage.
 ///
@@ -74,7 +74,7 @@ class InfoLoggerContext final
   /// Update context from current environment information of a different process.
   /// This is used internally by command line 'log' utility to tag messages issued by parent process
   /// or on stdout by a program which output is piped to stdin of current process and injected in infologger.
-  /// Fields previously set by user may be overwritten.
+  /// Fields previously set by user are overwritten.
   void refresh(pid_t pid);
 
 
@@ -94,9 +94,7 @@ class InfoLoggerContext final
 
   // this simplifies interface to have a single type
   // some fields (e.g. run, pid) are stored as integers, but conversion is done by setField
-  
-  // todo ?
- //  int getField(FieldName key, std::string &value);
+  // A field with a blank value (zero-length string) is undefined.
   
   
   private:
@@ -229,6 +227,8 @@ class InfoLogger
 
   /// Set a field in a message option struct based on its name.
   /// If input fieldName valid, and input fieldValue can be parsed, ouput variable is modified accordingly.
+  /// If fieldValue is blank (zero-length string), the default value is used for the corresponding field.
+  /// List of valid field names are the strings (1st letter capitalized) corresponding to what is defined in the InfoLoggerMessageOption struct: Severity, Level, ErrorCode, SourceFile, SourceLine
   /// \return         0 on success, an error code otherwise.
   static int setMessageOption(const char *fieldName, const char *fieldValue, InfoLoggerMessageOption &output);
   

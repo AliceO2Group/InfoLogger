@@ -155,6 +155,10 @@ int InfoLoggerContext::setField(FieldName key, const std::string &value){
     partition=value;
   } else if (key==FieldName::Run) {
     run=-1;
+    if (value.length()==0) {
+      // blank value is valid -> leave field unset
+      return 0;
+    }
     // check input string is a valid run number
     int v_run=atoi(value.c_str());
     if (v_run<=0) {

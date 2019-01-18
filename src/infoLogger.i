@@ -8,9 +8,16 @@
 %{
   #define SWIG_FILE_WITH_INIT
 
-  #include <InfoLogger/InfoLogger.hxx>
-  using namespace AliceO2::InfoLogger;
+  #include <InfoLoggerScripting.hxx>
+  using namespace AliceO2::InfoLogger::Scripting;
 %}
+
+
+#ifdef SWIG_JAVASCRIPT_V8
+%inline %{
+  #include <node.h>
+%}
+#endif
 
 
 %include <exception.i>
@@ -23,11 +30,32 @@
 }
 
 %include <std_string.i>
+
+
+class InfoLoggerMetadata {
+  public:
+  InfoLoggerMetadata();
+  InfoLoggerMetadata(const InfoLoggerMetadata &);
+  ~InfoLoggerMetadata();
+  
+  int setField(const std::string &key, const std::string &value);
+};
+
+
 class InfoLogger {
   public:
     InfoLogger();
     ~InfoLogger();
-    
-    void logInfo(const std::string &message);
-    void logError(const std::string &message);
+
+    int logInfo(const std::string &message);
+    int logError(const std::string &message);
+    int logWarning(const std::string &message);
+    int logFatal(const std::string &message);
+    int logDebug(const std::string &message);
+
+    int log(const std::string &message);
+    int log(const InfoLoggerMetadata &metadata, const std::string &message);
+
+    int setDefaultMetadata(const InfoLoggerMetadata &);
+    int unsetDefaultMetadata();
 };

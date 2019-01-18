@@ -616,16 +616,45 @@ InfoLogger::Severity InfoLogger::getSeverityFromString(const char *txt) {
 
 
 int InfoLogger::setMessageOption(const char *fieldName, const char *fieldValue, InfoLoggerMessageOption &output) {
+  if (fieldName==NULL) {return -1;}
+  if (fieldValue==NULL) {return -1;}
+
+  // in case of blank string, use default value
+  bool useDefault=false;
+  if (strlen(fieldValue)==0) {
+    useDefault=true;
+  }
+  
   if (!strcmp(fieldName,"Severity")) {
-    output.severity=getSeverityFromString(fieldValue);
+    if (useDefault) {
+      output.severity=undefinedMessageOption.severity;
+    } else {
+      output.severity=getSeverityFromString(fieldValue);
+    }
   } else if (!strcmp(fieldName,"Level")) {
-    output.level=atoi(fieldValue);
+    if (useDefault) {
+      output.level=undefinedMessageOption.level;
+    } else {
+      output.level=atoi(fieldValue);
+    }
   } else if (!strcmp(fieldName,"ErrorCode")) {
-    output.errorCode=atoi(fieldValue);
+    if (useDefault) {
+      output.errorCode=undefinedMessageOption.errorCode;
+    } else {
+      output.errorCode=atoi(fieldValue);
+    }
   } else if (!strcmp(fieldName,"SourceFile")) {
-    output.sourceFile=fieldValue;
+    if (useDefault) {
+      output.sourceFile=undefinedMessageOption.sourceFile;
+    } else {
+      output.sourceFile=fieldValue;
+    }
   } else if (!strcmp(fieldName,"SourceLine")) {
-    output.sourceLine=atoi(fieldValue);
+    if (useDefault) {
+      output.sourceLine=undefinedMessageOption.sourceLine;
+    } else {
+      output.sourceLine=atoi(fieldValue);
+    }
   } else {
     return -1;
   }

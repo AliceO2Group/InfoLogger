@@ -89,7 +89,7 @@ if(NOT COMMON_INCLUDE_DIRS)
   set(COMMON_INCLUDE_DIRS ${COMMON_STANDALONE_INCLUDE_DIRS})
 endif()
 set(INFOLOGGER_INCLUDE_DIRS_PUBLIC include)
-set(INFOLOGGER_INCLUDE_DIRS_PRIVATE ${COMMON_INCLUDE_DIRS})
+set(INFOLOGGER_INCLUDE_DIRS_PRIVATE ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(INFOLOGGER_INCLUDE_DIRS ${INFOLOGGER_INCLUDE_DIRS_PUBLIC} ${INFOLOGGER_INCLUDE_DIRS_PRIVATE})
 
 
@@ -100,6 +100,7 @@ set(INFOLOGGER_INCLUDE_DIRS ${INFOLOGGER_INCLUDE_DIRS_PUBLIC} ${INFOLOGGER_INCLU
 # object file: client (to infoLoggerD)
 add_library (objInfoLoggerClient OBJECT
   src/InfoLogger.cxx
+  src/InfoLoggerScripting.cxx
   src/InfoLoggerContext.cxx
   src/InfoLoggerClient.cxx
   src/infoLoggerMessageDecode.c
@@ -333,6 +334,29 @@ if(SWIG_FOUND)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/infoLoggerForGo.go DESTINATION ${CMAKE_INSTALL_LIBDIR})
   endif()  
 
+  #library for Javascript / node.js
+  find_program(NODE_EXECUTABLE node)
+  get_filename_component(NODE_DIR ${NODE_EXECUTABLE} DIRECTORY)
+  find_path(NODEJS_INCLUDE_DIRS NAMES node.h PATHS ${Nodejs_ROOT} ${Nodejs_ROOT}/include ${NODE_DIR}/../include/node)
+  if (NODEJS_INCLUDE_DIRS)
+    message("Bindings for node.js will be generated")
+    message("Using NODEJS_INCLUDE_DIRS=${NODEJS_INCLUDE_DIRS}")
+    if (${SWIG_VERSION} VERSION_LESS "4.0.0")
+      message("SWIG>=4.0.0 needed to generate node.js wrapper, reusing cached one")
+      set(SWIG_MODULE_infoLoggerForNodejs_REAL_NAME infoLoggerForNodejs)
+      add_library (infoLoggerForNodejs SHARED src/infoLoggerJAVASCRIPT_wrap.cxx ${INFOLOGGER_LIB_OBJECTS})
+      target_include_directories(${SWIG_MODULE_infoLoggerForNodejs_REAL_NAME} PRIVATE ${INFOLOGGER_INCLUDE_DIRS} ${NODEJS_INCLUDE_DIRS})      
+      set_target_properties(${SWIG_MODULE_infoLoggerForNodejs_REAL_NAME} PROPERTIES PREFIX "")
+    else()
+      set(CMAKE_SWIG_FLAGS -module infoLoggerForNodejs -v8)
+      swig_add_library(infoLoggerForNodejs LANGUAGE javascript SOURCES src/infoLogger.i  ${INFOLOGGER_LIB_OBJECTS})
+    endif()
+    target_include_directories(${SWIG_MODULE_infoLoggerForNodejs_REAL_NAME} PRIVATE ${INFOLOGGER_INCLUDE_DIRS} ${NODEJS_INCLUDE_DIRS})
+    target_compile_definitions(${SWIG_MODULE_infoLoggerForNodejs_REAL_NAME} PRIVATE -DBUILDING_NODE_EXTENSION)
+    set_target_properties(${SWIG_MODULE_infoLoggerForNodejs_REAL_NAME} PROPERTIES OUTPUT_NAME infoLogger SUFFIX ".node")
+    install(TARGETS ${SWIG_MODULE_infoLoggerForNodejs_REAL_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  endif()
+  
 endif()
 
 

@@ -422,14 +422,14 @@ int InfoLogger::Impl::logV(const InfoLoggerMessageOption &options, const InfoLog
 
 InfoLogger::InfoLogger()
 {
-  pImpl=std::make_unique<InfoLogger::Impl>();
-  if (pImpl==NULL) { throw __LINE__; }
+  mPimpl=std::make_unique<InfoLogger::Impl>();
+  if (mPimpl==NULL) { throw __LINE__; }
 }
 
 
 InfoLogger::~InfoLogger()
 {
-  // pImpl is automatically destroyed
+  // mPimpl is automatically destroyed
 }
 
 int InfoLogger::logInfo(const std::string &message) {
@@ -466,8 +466,8 @@ int InfoLogger::log(Severity severity, const char *message, ...)
 
 
 int InfoLogger::logV(Severity severity, const char *message, va_list ap) {
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
-  return pImpl->logV(severity, message, ap);
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  return mPimpl->logV(severity, message, ap);
 }
 
 
@@ -496,24 +496,24 @@ int InfoLogger::log(Severity severity, int level, int errorCode, const char * so
 
 int InfoLogger::logV(Severity severity, int level, int errorCode, const char * sourceFile, int sourceLine, const InfoLoggerContext& context,  const char *message, va_list ap)
 {
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
-  return pImpl->logV(severity, message, ap);
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  return mPimpl->logV(severity, message, ap);
 }
 */
 
 int InfoLogger::setContext(const InfoLoggerContext &context)
 {
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
-  pImpl->currentContext=context;
-  pImpl->refreshDefaultMsg();
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  mPimpl->currentContext=context;
+  mPimpl->refreshDefaultMsg();
   return 0;
 }
 
 int InfoLogger::unsetContext()
 {
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
-  pImpl->currentContext.reset();
-  pImpl->refreshDefaultMsg();
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  mPimpl->currentContext.reset();
+  mPimpl->refreshDefaultMsg();
   return 0;
 }
 
@@ -521,25 +521,25 @@ int InfoLogger::unsetContext()
 
 
 int InfoLogger::log(const InfoLoggerMessageOption &options, const InfoLoggerContext& context, const char *message, ...) {
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
   
   // forward variable list of arguments to logV method
   int err;
   va_list ap;
   va_start(ap, message);
-  err = pImpl->logV(options, context, message, ap);
+  err = mPimpl->logV(options, context, message, ap);
   va_end(ap);
   return err;
 }
 
 int InfoLogger::log(const InfoLoggerMessageOption &options, const char *message, ...) {
-  if (pImpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) { return __LINE__; }
   
   // forward variable list of arguments to logV method
   int err;
   va_list ap;
   va_start(ap, message);
-  err = pImpl->logV(options, pImpl->currentContext, message, ap);
+  err = mPimpl->logV(options, mPimpl->currentContext, message, ap);
   va_end(ap);
   return err;
 }
@@ -549,7 +549,7 @@ int InfoLogger::log(const InfoLoggerMessageOption &options, const char *message,
 InfoLogger &InfoLogger::operator<<(const std::string &message)
 {
   // store data in internal variable
-  pImpl->currentStreamMessage.append(message);
+  mPimpl->currentStreamMessage.append(message);
   return *this;
 }
 
@@ -559,22 +559,22 @@ InfoLogger &InfoLogger::operator<<(InfoLogger::StreamOps op)
 
   // end of message: flush current buffer in a single message
   if (op == endm) {
-    log(pImpl->currentStreamOptions, "%s", pImpl->currentStreamMessage.c_str());
-    pImpl->currentStreamMessage.clear();
-    pImpl->currentStreamOptions=undefinedMessageOption;
+    log(mPimpl->currentStreamOptions, "%s", mPimpl->currentStreamMessage.c_str());
+    mPimpl->currentStreamMessage.clear();
+    mPimpl->currentStreamOptions=undefinedMessageOption;
   }
   return *this;
 }
 
 InfoLogger &InfoLogger::operator<<(const InfoLogger::Severity severity)
 {
-  pImpl->currentStreamOptions.severity=severity;
+  mPimpl->currentStreamOptions.severity=severity;
   return *this;
 }
 
 InfoLogger &InfoLogger::operator<<(const InfoLogger::InfoLoggerMessageOption options)
 {
-  pImpl->currentStreamOptions=options;
+  mPimpl->currentStreamOptions=options;
   return *this;
 }
 

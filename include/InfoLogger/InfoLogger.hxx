@@ -286,7 +286,7 @@ class InfoLogger
   
   private:
   class Impl;                       // private class for implementation
-  std::unique_ptr<Impl> pImpl;      // handle to private class instance at runtime
+  std::unique_ptr<Impl> mPimpl;     // handle to private class instance at runtime
 };
 
 

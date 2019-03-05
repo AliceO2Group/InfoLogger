@@ -37,7 +37,7 @@ add_subdirectory(doc)
 #find_package(Common REQUIRED)
 find_package(Boost REQUIRED)
 find_package(MySQL)
-find_package(SWIG)
+find_package(SWIG 3.0.12)
 
 # flag to build only client library
 #set(INFOLOGGER_BUILD_LIBONLY 1)

@@ -84,6 +84,14 @@ namespace Scripting {
     // set / unset metadata to be used for each message, if none is specified
     int setDefaultMetadata(const InfoLoggerMetadata &);
     int unsetDefaultMetadata();
+        
+    // aliases for the log(...) functions, for those languages unfriendly with overloading   
+    int logS(const std::string &message) {
+      return log(message);
+    }
+    int logM(const InfoLoggerMetadata &metadata, const std::string &message) {
+      return log(metadata, message);
+    }
     
     private:
     std::unique_ptr<baseInfoClass> logHandle;   

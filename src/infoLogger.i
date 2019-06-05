@@ -56,6 +56,9 @@ class InfoLogger {
     int log(const std::string &message);
     int log(const InfoLoggerMetadata &metadata, const std::string &message);
 
+    int logS(const std::string &message);
+    int logM(const InfoLoggerMetadata &metadata, const std::string &message);
+
     int setDefaultMetadata(const InfoLoggerMetadata &);
     int unsetDefaultMetadata();
 };

@@ -31,11 +31,11 @@ Default constructor and destructor are not shown here.
   * `logDebug(string message)`
     Sends a message with severity Debug.
   * `log(message)`
-    Sends a message with default severity and metadata.
+    Sends a message with default severity and metadata. Alias: `logS()`.
   * `log(InfoLoggerMetadata metadata, string message)`
     Send a message with specific metadata (instead of the default, if one defined). Alias: `logM()`.
   * `setDefaultMetadata(InfoLoggerMetadata metadata)`
-    Define some metadata to be used by default for all messages. Alias: `logS()`.
+    Define some metadata to be used by default for all messages.
   * `unsetDefaultMetadata()`
     Reset the default metadata.
 

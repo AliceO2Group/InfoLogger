@@ -178,10 +178,10 @@ The InfoLogger library allows to inject messages directly from programs, as show
  
  * Some example calls are available in [the source code](/test/testInfoLogger.cxx)
  
- * The tags associated to a message consist of the following fields:
+ * The tags associated to a message consist of the following fields (which may be left undefined):
    * Severity: the kind of message, one of: Info (default), Error, Fatal, Warning, Debug
    * Level: the relative visibility of the message and associated target audience to whom is addressed the message: from 1 (important, visible to all) to 99 (low-level debug message, for experts only).
-      For ALICE Run 2, the following ranges were used to categorize messages in DAQ/ECS: operations (1-5) support (6-10) developer (11-20) debug (21-99) 
+      For ALICE Run 2, the following ranges were used to categorize messages in DAQ/ECS: operations (1-5) support (6-10) developer (11-20) debug (21-99).
    * Timestamp: time at which message was injected (Unix time in seconds since 1.1.1970). Precision goes to the microsecond.
    * Hostname: the name of the machine where the message is issued. For concision, the domain name is excluded from this tag, only the base IP host name is kept.
    * Rolename: the role name associated to the entity running the process. The same host might run several different roles. Example role name: FLP-TPC-1, EPN-223.
@@ -198,7 +198,7 @@ The InfoLogger library allows to inject messages directly from programs, as show
    * ErrorLine: the source line number from which message is injected. Useful to trace back low-level debug messages.
    * Message: the message content itself. Free text. Multiple-line messages are split at each end-of-line. Some characters are not allowed and replaced (\* and \#).
    
-   It is important to set the fields as precisely as possible, so that messages can be searched and filtered efficiently.   
+   It is important to set the fields as precisely as possible, so that messages can be searched and filtered efficiently.
    The initial list of fields has been taken from the Run 2 vocabulary. It may be adapted, in particular depending on the implementation and naming conventions of the control system.
    
    The fields are grouped in different categories.
@@ -215,6 +215,11 @@ The InfoLogger library allows to inject messages directly from programs, as show
      defined.
       
     Usually, one will only take care of defining the per-message messageOptions struct and a context with appropriate Facility field set, all other being set automatically.
+ 
+ * On the server side, messages are stored in a database, consisting of a single "messages" table (and possibly some archived versions of this table).
+   The reference for the data structure is the table description itself, with one column per message tag, trivially matching the list of tags described above.
+   Fields which are undefined appear as NULL (unless the library automatically sets a value for them).
+   String fields usually have a maximum size (and are truncated if exceeding this limit, typically 32 characters).
    
  * InfoLogger library is also available for: Tcl, Python, Go, Node.js.
    It allows to log message from scripting languages. A simplified subset of the InfoLogger C++ API is made available through SWIG-generated modules.

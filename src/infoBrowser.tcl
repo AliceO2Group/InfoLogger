@@ -229,7 +229,7 @@ label .select.level.l -text "Level" -font timefont
 label .select.level.lnone -text "" -font timefont
 menubutton .select.level.v -menu .select.level.v.menu -relief raised -width 10 -font timefont
 menu .select.level.v.menu -tearoff 0
-set llevel { "shifter" 1 "oncall" 6 "devel" 11 "debug" 21 "any" -1 "custom" -1}
+set llevel { "shifter" 5 "oncall" 10 "devel" 20 "debug" 99 "any" -1 "custom" -1}
 foreach {slimit ilimit} $llevel {
   if {$slimit!="custom"} {
     set lcmd ".select.level.v configure -text \"$slimit\"; global vfilter_level; set vfilter_level $ilimit"

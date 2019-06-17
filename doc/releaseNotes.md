@@ -8,3 +8,7 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.1 - 14/06/2019
 - Fix in infoBrowser level filtering to match documentation.
 - Added documentation on the database structure.
+
+## v1.3.2 - 17/06/2019
+- Added systemd install target for infoLogger services, to start them at boot time.
+

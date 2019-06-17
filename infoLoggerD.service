@@ -10,4 +10,5 @@ ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
 GuessMainPID=1
 Restart=always
 
-
+[Install]
+WantedBy=multi-user.target

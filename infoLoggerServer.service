@@ -10,3 +10,6 @@ ExecStart=/opt/o2-modules/bin/infoLoggerServer -z file:/etc/infoLogger.cfg
 ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
 GuessMainPID=1
 Restart=always
+
+[Install]
+WantedBy=multi-user.target

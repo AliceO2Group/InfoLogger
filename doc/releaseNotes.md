@@ -12,3 +12,5 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.2 - 17/06/2019
 - Added systemd install target for infoLogger services, to start them at boot time.
 
+## v1.3.3 - 26/06/2019
+- Disable the javascript binding on Mac because it does not compile. 

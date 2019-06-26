@@ -279,7 +279,6 @@ target_link_libraries(
         ${MYSQL_LIBRARIES}
 )
 
-message ("ASDF")
 # generate libraries for other languages with SWIG
 if(SWIG_FOUND)
   include(${SWIG_USE_FILE})

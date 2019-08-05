@@ -1,3 +1,13 @@
+// Copyright CERN and copyright holders of ALICE O2. This software is
+// distributed under the terms of the GNU General Public License v3 (GPL
+// Version 3), copied verbatim in the file "COPYING".
+//
+// See http://alice-o2.web.cern.ch/license for full licensing information.
+//
+// In applying this license CERN does not waive the privileges and immunities
+// granted to it by virtue of its status as an Intergovernmental Organization
+// or submit itself to any jurisdiction.
+
 /**
  * This is the definition of a 'file' class (with methods) to store
  * data to be transmitted.
@@ -16,58 +26,47 @@
 extern "C" {
 #endif
 
-
 /** File identifier structure definition. 
   * A major and a minor number are used.
 */
 typedef struct {
-  char*  source;         /**< where does the file come from? (originally) 
+  char* source; /**< where does the file come from? (originally) 
                               should be allocated with checked_malloc() or checked_strdup() */
-                        
-  int    majId;          /**< major id */
-  int    minId;          /**< minor id */
-  
-  int    sender;         /**< reserved for server use (to know from where the files comes from) */
-  void*  sender_magic;   /**< reserved for server use (fast access to sender) */
+
+  int majId; /**< major id */
+  int minId; /**< minor id */
+
+  int sender;         /**< reserved for server use (to know from where the files comes from) */
+  void* sender_magic; /**< reserved for server use (fast access to sender) */
 } TR_file_id;
 
-
-
 /** The base data structure is a blob. It is part of a list */
-typedef struct _TR_blob{
-  void    *value;               /**< data value*/
-  int     size;                 /**< data size */
-  struct  _TR_blob *next;       /**< next in the list */
+typedef struct _TR_blob {
+  void* value;           /**< data value*/
+  int size;              /**< data size */
+  struct _TR_blob* next; /**< next in the list */
 } TR_blob;
-
-
-
 
 #define TR_FILE_STATUS_NONE 0
 #define TR_FILE_STATUS_TRANSMITTED 1
 
-
 /** A file is a succession of blobs */
 typedef struct {
   TR_file_id id;
-  
-  /* the list of blobs must be allocated with checked_malloc() */
-  struct _TR_blob *first;  
-  struct _TR_blob *last;
-  int size;                     /** Total data size */
 
+  /* the list of blobs must be allocated with checked_malloc() */
+  struct _TR_blob* first;
+  struct _TR_blob* last;
+  int size; /** Total data size */
 
   /* internal vars */
-  char *  path;           /** Path to the directory where it is stored. NULL if not on disk 
+  char* path;            /** Path to the directory where it is stored. NULL if not on disk 
                             should be allocated with checked_malloc() or checked_strdup() */
-  int     clock;          /** A user time */  
-  int     n_user;         /** The number of users of this file */
-  pthread_mutex_t mutex;  /**< Mutex */
-  
+  int clock;             /** A user time */
+  int n_user;            /** The number of users of this file */
+  pthread_mutex_t mutex; /**< Mutex */
+
 } TR_file;
-
-
-
 
 /** File id comparison function.
   *
@@ -75,40 +74,33 @@ typedef struct {
   */
 int TR_file_id_compare(TR_file_id f1, TR_file_id f2);
 
-
-
 /** Create a new TR_file structure.
   * Uses checked_malloc().
   * @return : an initialized TR_file. NULL if failure.
 */
 TR_file* TR_file_new();
 
-
 /** Destroy a TR_file structure.
   * Resources (including list of TR_blobs) are deallocated with checked_free().
   * @return : nothing.
 */
-void TR_file_destroy(TR_file *f);
-
+void TR_file_destroy(TR_file* f);
 
 /** Increment the counter of users for the file.
 */
-void TR_file_inc_usage(TR_file *f);
+void TR_file_inc_usage(TR_file* f);
 /** Decrement the counter of users for the file.
   * When it reaches 0, the file is destroyed.
   * It is usefull to free automatically resources used for this shared structure.
 */
-void TR_file_dec_usage(TR_file *f);
-
+void TR_file_dec_usage(TR_file* f);
 
 /** Log information about the file */
-void TR_file_dump(TR_file *f);
-
+void TR_file_dump(TR_file* f);
 
 #ifdef __cplusplus
 }
 #endif
-
 
 /* END #ifndef transport_files_h */
 #endif

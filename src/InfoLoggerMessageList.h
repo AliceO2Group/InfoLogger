@@ -14,12 +14,12 @@
 #include "transport_files.h"
 #include "infoLoggerMessage.h"
 
-
-class InfoLoggerMessageList {
-  public:
-  InfoLoggerMessageList(TR_file *rawMessageList);
+class InfoLoggerMessageList
+{
+ public:
+  InfoLoggerMessageList(TR_file* rawMessageList);
   ~InfoLoggerMessageList();
-  infoLog_msg_t *msg;
+  infoLog_msg_t* msg;
 };
 
 // _INFOLOGGER_MESSAGE_LIST_H

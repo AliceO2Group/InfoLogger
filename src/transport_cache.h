@@ -37,7 +37,6 @@
 extern "C" {
 #endif
 
-
 /* all functions return 0 on success, -1 on error */
 
 /* defines a handle to a cache */
@@ -45,16 +44,16 @@ typedef void* TR_cache_handle;
 
 /* open the cache using given directory to store persistent files.
    Cache handle is stored in the 1st argument. */
-int TR_cache_open(TR_cache_handle *h, char *directory);
+int TR_cache_open(TR_cache_handle* h, char* directory);
 
 /* close the cache */
-int TR_cache_close(TR_cache_handle *h);
+int TR_cache_close(TR_cache_handle* h);
 
 /* add a file to the fifo */
-int TR_cache_insert(TR_cache_handle h, TR_file *f);
+int TR_cache_insert(TR_cache_handle h, TR_file* f);
 
 /* get next file */
-int TR_cache_get_next(TR_cache_handle h, TR_file **f);
+int TR_cache_get_next(TR_cache_handle h, TR_file** f);
 
 /* delete files with id lesser or equal than given file id */
 int TR_cache_delete(TR_cache_handle h, TR_file_id fid);

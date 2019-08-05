@@ -15,7 +15,7 @@
 
 #include <InfoLogger/InfoLogger.h>
 
-#define _BSD_SOURCE 
+#define _BSD_SOURCE
 
 #include <stdio.h>
 #include <unistd.h>
@@ -27,7 +27,7 @@ int main()
   int err;
   err = infoLoggerOpen(&logH);
   printf("infoLoggerOpen() = %d\n", err);
-  for (int i=0;i<3;i++) {
+  for (int i = 0; i < 3; i++) {
     err = infoLoggerLog(logH, "infoLogger message test");
     usleep(100000);
   }

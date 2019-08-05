@@ -19,7 +19,6 @@
 
 #include "ConfigInfoLoggerServer.h"
 
-
 /*
 
 // todo:
@@ -67,36 +66,33 @@ class InfoLoggerTransportServer {
 simplelog: default log
 */
 
-
-
-
-
-class InfoLoggerServer:public Daemon {
-  public:
-  InfoLoggerServer(int argc,char * argv[]);
+class InfoLoggerServer : public Daemon
+{
+ public:
+  InfoLoggerServer(int argc, char* argv[]);
   ~InfoLoggerServer();
   Daemon::LoopStatus doLoop();
-  
-  private:
-  
-  ConfigInfoLoggerServer configInfoLoggerServer;   // object for configuration parameters
 
-  TR_server_configuration tcpServerConfig;  
-  TR_server_handle tcpServerHandle=nullptr;
-  
+ private:
+  ConfigInfoLoggerServer configInfoLoggerServer; // object for configuration parameters
+
+  TR_server_configuration tcpServerConfig;
+  TR_server_handle tcpServerHandle = nullptr;
+
   int isInitialized;
-  
+
   std::vector<std::unique_ptr<InfoLoggerDispatch>> dispatchEngines;
 
   std::vector<std::unique_ptr<InfoLoggerDispatch>> dispatchEnginesDB;
-  unsigned int dbRoundRobinIx=0;
-  
-  unsigned long long msgCount=0;
+  unsigned int dbRoundRobinIx = 0;
+
+  unsigned long long msgCount = 0;
 };
 
-InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
+InfoLoggerServer::InfoLoggerServer(int argc, char* argv[]) : Daemon(argc, argv)
+{
   if (isOk()) { // proceed only if base daemon init was a success
-    isInitialized=0;
+    isInitialized = 0;
 
     // redirect legacy simplelog interface to SimpleLog
     setSimpleLog(&log);
@@ -104,101 +100,101 @@ InfoLoggerServer::InfoLoggerServer(int argc,char * argv[]):Daemon(argc,argv) {
     // retrieve configuration parameters from config file
     configInfoLoggerServer.readFromConfigFile(config);
 
-
     try {
-      tcpServerConfig.server_type  = TR_SERVER_TCP;                           // TCP server
-      tcpServerConfig.server_port  = configInfoLoggerServer.serverPortRx;     // server port
-      tcpServerConfig.max_clients  = configInfoLoggerServer.maxClientsRx;     // max clients
-      tcpServerConfig.queue_length = configInfoLoggerServer.msgQueueLengthRx; // queue size  
+      tcpServerConfig.server_type = TR_SERVER_TCP;                            // TCP server
+      tcpServerConfig.server_port = configInfoLoggerServer.serverPortRx;      // server port
+      tcpServerConfig.max_clients = configInfoLoggerServer.maxClientsRx;      // max clients
+      tcpServerConfig.queue_length = configInfoLoggerServer.msgQueueLengthRx; // queue size
 
-      tcpServerHandle=TR_server_start(&tcpServerConfig);
-      if (tcpServerHandle==NULL) { throw __LINE__; }
-      
+      tcpServerHandle = TR_server_start(&tcpServerConfig);
+      if (tcpServerHandle == NULL) {
+        throw __LINE__;
+      }
+
       // create dispatch engines
       try {
         //dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchPrint>(&log));
-        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&configInfoLoggerServer,&log));
+        dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&configInfoLoggerServer, &log));
 
         if (configInfoLoggerServer.dbEnabled) {
-          #ifdef WITH_MYSQL
-            log.info("SQL DB initialization");
-            for (int i=0;i<configInfoLoggerServer.dbNThreads;i++) {
-              dispatchEnginesDB.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer,&log));
-            }
-          #else
-            log.error("Not built with MySQL support - can not enable DB");
-          #endif
+#ifdef WITH_MYSQL
+          log.info("SQL DB initialization");
+          for (int i = 0; i < configInfoLoggerServer.dbNThreads; i++) {
+            dispatchEnginesDB.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer, &log));
+          }
+#else
+          log.error("Not built with MySQL support - can not enable DB");
+#endif
         } else {
           log.info("DB disabled");
         }
       } catch (int err) {
-        printf("Failed to initialize dispatch engines: error %d\n",err);
+        printf("Failed to initialize dispatch engines: error %d\n", err);
       }
-      
-      isInitialized=1;
-    }
-    catch (int errLine) {
-      log.error("Server can not start - error %d",errLine);
+
+      isInitialized = 1;
+    } catch (int errLine) {
+      log.error("Server can not start - error %d", errLine);
     }
   }
 }
- 
 
-InfoLoggerServer::~InfoLoggerServer() {
+InfoLoggerServer::~InfoLoggerServer()
+{
   if (isOk()) { // proceed only if base daemon init was a success
-    if (tcpServerHandle!=NULL) {
-      TR_server_stop(tcpServerHandle);  
+    if (tcpServerHandle != NULL) {
+      TR_server_stop(tcpServerHandle);
     }
-    
-    log.info("Received %llu messages",msgCount);
+
+    log.info("Received %llu messages", msgCount);
   }
 }
 
-
-Daemon::LoopStatus InfoLoggerServer::doLoop() {
+Daemon::LoopStatus InfoLoggerServer::doLoop()
+{
   if (!isInitialized) {
     return LoopStatus::Error;
   }
-  
-  // read a file from transport (collection of messages, with a format depending on the transport used)
-  TR_file *newFile;
-  newFile=TR_server_get_file(tcpServerHandle, 0);
 
-  if (newFile!=NULL) {  
+  // read a file from transport (collection of messages, with a format depending on the transport used)
+  TR_file* newFile;
+  newFile = TR_server_get_file(tcpServerHandle, 0);
+
+  if (newFile != NULL) {
     //fflush(stdout);
     //TR_file_dump(newFile);
-    
+
     // decode raw message
-    std::shared_ptr<InfoLoggerMessageList> msgList=nullptr;    
+    std::shared_ptr<InfoLoggerMessageList> msgList = nullptr;
     try {
-      msgList=std::make_shared<InfoLoggerMessageList>(newFile);
-    } catch(...) {
+      msgList = std::make_shared<InfoLoggerMessageList>(newFile);
+    } catch (...) {
       //printf("decoding failed\n");
     }
-    
-    if (msgList!=nullptr) {
+
+    if (msgList != nullptr) {
       //printf("got message\n");
-      
+
       // base dispatch engines
-      for(const auto &dispatch : dispatchEngines){
+      for (const auto& dispatch : dispatchEngines) {
         dispatch->pushMessage(msgList);
       }
-      
+
       // DB dispatch engine ... find one available, or wait
-      unsigned int nThreads=dispatchEnginesDB.size();
-      unsigned int nTry=1;
-      int pushOk=0;
-      for (;nTry<=nThreads*3;nTry++) {
-        int err=dispatchEnginesDB[dbRoundRobinIx]->pushMessage(msgList);
+      unsigned int nThreads = dispatchEnginesDB.size();
+      unsigned int nTry = 1;
+      int pushOk = 0;
+      for (; nTry <= nThreads * 3; nTry++) {
+        int err = dispatchEnginesDB[dbRoundRobinIx]->pushMessage(msgList);
         dbRoundRobinIx++;
-        if (dbRoundRobinIx>=nThreads) {
-          dbRoundRobinIx=0;
+        if (dbRoundRobinIx >= nThreads) {
+          dbRoundRobinIx = 0;
         }
-        if (err==0) {
-          pushOk=1;
+        if (err == 0) {
+          pushOk = 1;
           break;
         }
-        if (nTry%nThreads==0) {
+        if (nTry % nThreads == 0) {
           //log.warning("Warning, DB busy, waiting...");
           usleep(10000);
           // todo: keep newFile for next loop iteration, in order not to get stuck in sleep here
@@ -206,11 +202,10 @@ Daemon::LoopStatus InfoLoggerServer::doLoop() {
       }
       if (!pushOk) {
         log.warning("Warning DB dispatch full, 1 message lost");
-      }      
-      
+      }
 
-       // count messages
-      for (infoLog_msg_t *m=msgList->msg;m!=nullptr;m=m->next) {
+      // count messages
+      for (infoLog_msg_t* m = msgList->msg; m != nullptr; m = m->next) {
         msgCount++;
         /*
         if (msgCount%1000==0) {
@@ -218,24 +213,23 @@ Daemon::LoopStatus InfoLoggerServer::doLoop() {
         }
         */
       }
-      // todo: online analysis of message: set extra field (e.g. partition based on detector name and run, etc)      
-      // dispatch message to online clients           
+      // todo: online analysis of message: set extra field (e.g. partition based on detector name and run, etc)
+      // dispatch message to online clients
       // dispatch message to database, etc.
     }
-    
   }
 
-  if (newFile==NULL) {
+  if (newFile == NULL) {
     return LoopStatus::Idle;
   } else {
-    TR_server_ack_file(tcpServerHandle,&newFile->id);
+    TR_server_ack_file(tcpServerHandle, &newFile->id);
     TR_file_destroy(newFile);
     return LoopStatus::Ok;
   }
 }
 
-
-int main(int argc, char * argv[]) {
-  InfoLoggerServer d(argc,argv);
+int main(int argc, char* argv[])
+{
+  InfoLoggerServer d(argc, argv);
   return d.run();
 }

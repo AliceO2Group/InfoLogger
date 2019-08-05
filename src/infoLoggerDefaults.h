@@ -17,7 +17,6 @@
 #define INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD "infoLoggerD"
 #define INFOLOGGER_CONFIG_SECTION_NAME_CLIENT "client"
 
-
 // Infologger DB: name of the main message table
 #define INFOLOGGER_TABLE_MESSAGES "messages"
 
@@ -29,4 +28,3 @@
 
 // default listening socket name for infoLoggerD
 #define INFOLOGGER_DEFAULT_LOCAL_SOCKET "infoLoggerD"
-

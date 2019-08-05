@@ -31,87 +31,88 @@
 #include <InfoLogger/InfoLogger.hxx>
 #include <memory>
 
+namespace AliceO2
+{
+namespace InfoLogger
+{
+namespace Scripting
+{
 
-namespace AliceO2 {
-namespace InfoLogger {
-namespace Scripting {
+namespace baseInfo = AliceO2::InfoLogger;
+using baseInfoClass = baseInfo::InfoLogger;
 
+/// A class to store metadata associated to a message
+class InfoLoggerMetadata
+{
+ public:
+  // constructor
+  // metadata initialized with default values or, if available, from the runtime environment
+  InfoLoggerMetadata();
 
-  namespace baseInfo = AliceO2::InfoLogger;
-  using baseInfoClass = baseInfo::InfoLogger;
+  // copy-constructor
+  // all metadata copied from existing instance
+  InfoLoggerMetadata(const InfoLoggerMetadata&);
 
+  // destructor
+  ~InfoLoggerMetadata();
 
-  /// A class to store metadata associated to a message
-  class InfoLoggerMetadata {
-    public:
-    
-    // constructor
-    // metadata initialized with default values or, if available, from the runtime environment
-    InfoLoggerMetadata();
-    
-    // copy-constructor
-    // all metadata copied from existing instance
-    InfoLoggerMetadata(const InfoLoggerMetadata &);
-    
-    // destructor
-    ~InfoLoggerMetadata();
-    
-    // Set a field in a message metadata, based on its name.
-    // It can be any field from InfoLoggerMessageOption (1) or InfoLoggerContext (2)
-    // If value is empty (zero-length string), the default value is used for the corresponding field.
-    // Valid values: (1) Severity, Level, ErrorCode, SourceFile, SourceLine (2) Facility, Role, System, Detector, Partition, Run
-    int setField(const std::string &key, const std::string &value);
-    
-    protected:
-    baseInfo::InfoLoggerContext context;
-    baseInfoClass::InfoLoggerMessageOption msgOpt;
-    void reset(); // init fields to suitable default values
-      
-    friend class InfoLogger;
-  };
+  // Set a field in a message metadata, based on its name.
+  // It can be any field from InfoLoggerMessageOption (1) or InfoLoggerContext (2)
+  // If value is empty (zero-length string), the default value is used for the corresponding field.
+  // Valid values: (1) Severity, Level, ErrorCode, SourceFile, SourceLine (2) Facility, Role, System, Detector, Partition, Run
+  int setField(const std::string& key, const std::string& value);
 
+ protected:
+  baseInfo::InfoLoggerContext context;
+  baseInfoClass::InfoLoggerMessageOption msgOpt;
+  void reset(); // init fields to suitable default values
 
-  /// A class with simplified API for logging
-  /// We use the same name as the base InfoLogger class on purpose.
-  class InfoLogger {
-    public:
-    InfoLogger();
-    ~InfoLogger();
- 
-    // log with default metadata fields and specified severity
-    int logInfo(const std::string &message);
-    int logError(const std::string &message);
-    int logWarning(const std::string &message);
-    int logFatal(const std::string &message);
-    int logDebug(const std::string &message);
-    
-    // log with specified metadata
-    int log(const InfoLoggerMetadata &metadata, const std::string &message);
-    
-    // log with default metadata
-    int log(const std::string &message);
-    
-    // set / unset metadata to be used for each message, if none is specified
-    int setDefaultMetadata(const InfoLoggerMetadata &);
-    int unsetDefaultMetadata();
-        
-    // aliases for the log(...) functions, for those languages unfriendly with overloading   
-    int logS(const std::string &message) {
-      return log(message);
-    }
-    int logM(const InfoLoggerMetadata &metadata, const std::string &message) {
-      return log(metadata, message);
-    }
-    
-    private:
-    std::unique_ptr<baseInfoClass> logHandle;   
-    bool isDefinedDefaultMetadata=false;
-    InfoLoggerMetadata defaultMetadata;
-    inline int log(const baseInfoClass::Severity severity, const std::string &message);
- };
+  friend class InfoLogger;
+};
 
+/// A class with simplified API for logging
+/// We use the same name as the base InfoLogger class on purpose.
+class InfoLogger
+{
+ public:
+  InfoLogger();
+  ~InfoLogger();
 
-}
-}
-}
+  // log with default metadata fields and specified severity
+  int logInfo(const std::string& message);
+  int logError(const std::string& message);
+  int logWarning(const std::string& message);
+  int logFatal(const std::string& message);
+  int logDebug(const std::string& message);
+
+  // log with specified metadata
+  int log(const InfoLoggerMetadata& metadata, const std::string& message);
+
+  // log with default metadata
+  int log(const std::string& message);
+
+  // set / unset metadata to be used for each message, if none is specified
+  int setDefaultMetadata(const InfoLoggerMetadata&);
+  int unsetDefaultMetadata();
+
+  // aliases for the log(...) functions, for those languages unfriendly with overloading
+  int logS(const std::string& message)
+  {
+    return log(message);
+  }
+  int logM(const InfoLoggerMetadata& metadata, const std::string& message)
+  {
+    return log(metadata, message);
+  }
+
+ private:
+  std::unique_ptr<baseInfoClass> logHandle;
+  bool isDefinedDefaultMetadata = false;
+  InfoLoggerMetadata defaultMetadata;
+  inline int log(const baseInfoClass::Severity severity, const std::string& message);
+};
+
+} // namespace Scripting
+} // namespace InfoLogger
+} // namespace AliceO2
 #endif //INFOLOGGER_INFOLOGGERSCRIPTING_HXX

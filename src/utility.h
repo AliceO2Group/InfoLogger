@@ -35,7 +35,6 @@
 extern "C" {
 #endif
 
-
 /**************************/
 /* Memory functions       */
 /**************************/
@@ -47,7 +46,7 @@ extern "C" {
   *
   * @see malloc()
 */
-void *checked_malloc(size_t size);
+void* checked_malloc(size_t size);
 
 /** Duplicate string.
   * The same as strdup() with result checking.
@@ -57,21 +56,18 @@ void *checked_malloc(size_t size);
   *
   * @see strdup()
 */
-char *checked_strdup(const char *string);
+char* checked_strdup(const char* string);
 
 /** Free memory allocated by checked_malloc() or checked_strdup().
   *
   * @see checked_malloc()
   * @see checked_strdup()
 */
-void checked_free(void *ptr);
+void checked_free(void* ptr);
 
 /** Counts the number of allocations to be freed by checked_free().
 */
 long checked_memstat();
-
-
-
 
 /**************************/
 /* Line buffering         */
@@ -81,23 +77,22 @@ long checked_memstat();
 struct lineBuffer;
 
 /** Constructor - allocates and init structure */
-struct lineBuffer *lineBuffer_new();
+struct lineBuffer* lineBuffer_new();
 
 /** Destructor - free resources */
-void lineBuffer_destroy(struct lineBuffer *buf);
+void lineBuffer_destroy(struct lineBuffer* buf);
 
 /** add socket content to buffer (timeout in milliseconds, -1 for blocking call) */
-int lineBuffer_add(struct lineBuffer *buf, int fd, int timeout);
+int lineBuffer_add(struct lineBuffer* buf, int fd, int timeout);
 
 /** remove and get first line from buffer
  * Remove first line of buffer and returns it (null terminated)
  * User has to free it when not used any more (with free())
 */
-char* lineBuffer_getLine(struct lineBuffer *buf);
+char* lineBuffer_getLine(struct lineBuffer* buf);
 
 /** Add NULL-terminated string to buffer. Returns 0 on success, -1 on failure (buffer full) */
-int lineBuffer_addstring(struct lineBuffer *buf,char *s);
-
+int lineBuffer_addstring(struct lineBuffer* buf, char* s);
 
 /********************************/
 /* FIFO (single thread access)  */
@@ -107,34 +102,31 @@ int lineBuffer_addstring(struct lineBuffer *buf,char *s);
 struct FIFO;
 
 /** Constructor */
-struct FIFO *FIFO_new(int size);
+struct FIFO* FIFO_new(int size);
 
 /** Destructor */
-void FIFO_destroy(struct FIFO *);
+void FIFO_destroy(struct FIFO*);
 
 /** Read FIFO */
-void* FIFO_read(struct FIFO *);
+void* FIFO_read(struct FIFO*);
 
 /** Write FIFO */
-int FIFO_write(struct FIFO *, void *item);
+int FIFO_write(struct FIFO*, void* item);
 
 /** Is FIFO full? */
-int FIFO_is_full(struct FIFO *);
+int FIFO_is_full(struct FIFO*);
 
 /** Is FIFO empty? */
-int FIFO_is_empty(struct FIFO *);
+int FIFO_is_empty(struct FIFO*);
 
 /** Space left in FIFO (number of items that could be appended) */
-int FIFO_get_space_left(struct FIFO *f);
+int FIFO_get_space_left(struct FIFO* f);
 
 /** Access first item in buffer without removing it */
-void* FIFO_read_index(struct FIFO *f,int index);
+void* FIFO_read_index(struct FIFO* f, int index);
 
 /** Get the FIFO counter (number of files that have been written to it) */
-int FIFO_get_total_files(struct FIFO *f);
-
-
-
+int FIFO_get_total_files(struct FIFO* f);
 
 /********************************/
 /* FIFO (thread safe)           */
@@ -144,37 +136,33 @@ int FIFO_get_total_files(struct FIFO *f);
 struct ptFIFO;
 
 /** Constructor */
-struct ptFIFO *ptFIFO_new(int size);
+struct ptFIFO* ptFIFO_new(int size);
 
 /** Destructor */
-void ptFIFO_destroy(struct ptFIFO *);
+void ptFIFO_destroy(struct ptFIFO*);
 
 /** Read FIFO */
-void* ptFIFO_read(struct ptFIFO *,int timeout);
+void* ptFIFO_read(struct ptFIFO*, int timeout);
 
 /** Write FIFO */
-int ptFIFO_write(struct ptFIFO *, void *item, int timeout);
+int ptFIFO_write(struct ptFIFO*, void* item, int timeout);
 
 /** Get ratio of FIFO buffer used (0 to 1) */
-float ptFIFO_space_used(struct ptFIFO *);
+float ptFIFO_space_used(struct ptFIFO*);
 
 /** Is FIFO empty? */
-int ptFIFO_is_empty(struct ptFIFO *);
-
+int ptFIFO_is_empty(struct ptFIFO*);
 
 /*************************/
 /* Environment functions */
 /*************************/
 
 /** Parse environment variable "name" into an integer stored in "value" */
-int getenv_int(const char *name, int *value);
-
+int getenv_int(const char* name, int* value);
 
 #ifdef __cplusplus
 }
 #endif
 
-
 /* END #ifndef utility_h */
 #endif
-

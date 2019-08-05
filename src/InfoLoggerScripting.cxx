@@ -49,23 +49,23 @@ int InfoLogger::log(const InfoLoggerMetadata &metadata, const std::string &messa
 }
 
 int InfoLogger::logInfo(const std::string &message) {
-  log(baseInfoClass::Info,message);
+  return log(baseInfoClass::Info,message);
 }
 
 int InfoLogger::logError(const std::string &message) {
-  log(baseInfoClass::Error,message);
+  return log(baseInfoClass::Error,message);
 }
 
 int InfoLogger::logWarning(const std::string &message) {
-  log(baseInfoClass::Warning,message);
+  return log(baseInfoClass::Warning,message);
 }
 
 int InfoLogger::logFatal(const std::string &message) {
-  log(baseInfoClass::Fatal,message);
+  return log(baseInfoClass::Fatal,message);
 }
 
 int InfoLogger::logDebug(const std::string &message) {
-  log(baseInfoClass::Debug,message);
+  return log(baseInfoClass::Debug,message);
 }
 
 int InfoLogger::setDefaultMetadata(const InfoLoggerMetadata &md) {

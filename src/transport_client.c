@@ -942,7 +942,7 @@ TR_client_handle TR_client_start(TR_client_configuration* config){
 
   /* create input queue for messages if configured */
   if (config->msg_queue_path!=NULL) {
-    the_client->input_queue_msg=permFIFO_new(config->queue_length,config->msg_queue_path);
+    the_client->input_queue_msg=permFIFO_new(config->queue_length,(char*)config->msg_queue_path);
     if (the_client->input_queue_msg==NULL) {
       checked_free(the_client);
       return NULL;
@@ -1177,7 +1177,7 @@ TR_file* TR_client_get_unacknowledged(TR_client_handle h){
 int TR_client_send_msg(TR_client_handle h, char const *msg) {
 
   if (h->input_queue_msg!=NULL) {
-    return permFIFO_write(h->input_queue_msg,msg,0);
+    return permFIFO_write(h->input_queue_msg,(void*)msg,0);
   }
   
   return -1;

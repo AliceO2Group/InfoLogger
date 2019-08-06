@@ -28,6 +28,12 @@ INFOLOGGER_DB_HOST=$HERE
 # definition of parameters to be configured for various infologger tasks
 declare -a EXTRA_CONFIG=(server browser admin);
 
+# section headers in output config file
+declare -A EXTRA_CONFIGSECTION
+EXTRA_CONFIGSECTION[server]="infoLoggerServer"
+EXTRA_CONFIGSECTION[browser]="infoBrowser"
+EXTRA_CONFIGSECTION[admin]="admin"
+
 # mysql user name
 declare -A EXTRA_USER
 EXTRA_USER[server]="infoLoggerServer"
@@ -169,29 +175,38 @@ echo "Setting up mysql for infoLogger"
 $MYSQL_EXE -h $SQL_ROOT_HOST -u $SQL_ROOT_USER $SQL_PWD_ARG -e "create database $INFOLOGGER_DB_NAME" 2>/dev/null
 echo "MySQL database $INFOLOGGER_DB_NAME created"
 
+# for mysql8
+#PWDOPT="with mysql_native_password"
+
 # Create accounts SQL command
 MYSQL_COMMANDS=""
 for CONFIG in "${EXTRA_CONFIG[@]}"; do
-  MYSQL_COMMAND=`echo "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"%\" identified by \"${EXTRA_PWD[$CONFIG]}\";"`
-  MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
-  MYSQL_COMMAND=`echo "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"localhost\" identified by \"${EXTRA_PWD[$CONFIG]}\";"`
-  MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
-  MYSQL_COMMAND=`echo "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"${HERE}\" identified by \"${EXTRA_PWD[$CONFIG]}\";"`
-  MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
+  for QHOST in "%" "localhost" "${HERE}"; do
+    MYSQL_COMMAND=`echo "create user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\" identified ${PWDOPT} by \"${EXTRA_PWD[$CONFIG]}\";"`
+    MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
+    echo "$MYSQL_COMMAND"
+    MYSQL_COMMAND=`echo "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"`
+    MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
+    echo "$MYSQL_COMMAND"
+  done
 done
+
 $MYSQL_EXE -h $SQL_ROOT_HOST -u $SQL_ROOT_USER $SQL_PWD_ARG -e "$MYSQL_COMMANDS"
 echo "MySQL infoLogger accounts created"
 
 # generate a sample configuration
 INFOLOGGER_SAMPLE_CONFIG="# infoLogger configuration file"$'\n'$'\n'
 for CONFIG in "${EXTRA_CONFIG[@]}"; do
-  INFOLOGGER_SAMPLE_CONFIG+="[$CONFIG]"$'\n'
+  INFOLOGGER_SAMPLE_CONFIG+="[${EXTRA_CONFIGSECTION[$CONFIG]}]"$'\n'
   INFOLOGGER_SAMPLE_CONFIG+="dbUser=${EXTRA_USER[$CONFIG]}"$'\n'
   INFOLOGGER_SAMPLE_CONFIG+="dbPassword=${EXTRA_PWD[$CONFIG]}"$'\n'
   INFOLOGGER_SAMPLE_CONFIG+="dbHost=${EXTRA_HOST[$CONFIG]}"$'\n'
   INFOLOGGER_SAMPLE_CONFIG+="dbName=$INFOLOGGER_DB_NAME"$'\n'
+  INFOLOGGER_SAMPLE_CONFIG+="serverHost=${HERE}"$'\n'
   INFOLOGGER_SAMPLE_CONFIG+=""$'\n'
 done
+  INFOLOGGER_SAMPLE_CONFIG+="[infoLoggerD]"$'\n'
+  INFOLOGGER_SAMPLE_CONFIG+="serverHost=${HERE}"$'\n'
 
 if [ "$INFOLOGGER_CONFIG" != "" ]; then  
   if [ "$INFOLOGGER_CONFIG" != "stdout" ]; then  

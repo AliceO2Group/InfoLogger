@@ -76,6 +76,7 @@ Example usage is shown below. Library files listed there are available from the 
 * **Go**
   * Library files: `infoLoggerForGo.a` and `infoLoggerForGo.go`, to be copied to your `${GOPATH}/src/infoLoggerForGo`
   * Build: `CGO_LDFLAGS="${GOPATH}/src/infoLoggerForGo/infoLoggerForGo.a -lstdc++" go build`
+    If the c++ library version used at compile time is not available at runtime, you may include a static version of the lib in the executable by replacing `-lstdc++` with `/full/path/to/libstdc++.a`.
   * Code example: 
     ```
       package main

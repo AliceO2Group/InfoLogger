@@ -14,3 +14,8 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.3 - 26/06/2019
 - Disable the javascript binding on Mac because it does not compile. 
+
+## v1.3.4 - 13/08/2019
+- node.js binding updated for Mac.
+- Compatibility with mysql v8.
+- Code cleanup (Warnings, clang-format, copyright).

@@ -266,8 +266,8 @@ class InfoLogger::Impl
   int logV(const InfoLoggerMessageOption& options, const InfoLoggerContext& context, const char* message, va_list ap) __attribute__((format(printf, 4, 0)));
 
   // main loop of collecting thread, reading incoming messages from a pipe and redirecting to infoLogger
-  void redirectThreadLoop();  
-  
+  void redirectThreadLoop();
+
  protected:
   int magicTag;                                 //< A static tag used for handle validity cross-check
   int numberOfMessages;                         //< number of messages received by this object
@@ -282,14 +282,14 @@ class InfoLogger::Impl
 
   InfoLoggerClient* client; //< entity to communicate with local infoLoggerD
   SimpleLog stdLog;         //< object to output messages to stdout/file
-  
-  bool isRedirecting=false; // state of stdout/stderr redirection
-  int fdStdout=-1; // initial stdout file descriptor, if redirection active
-  int fdStderr=-1; // initial stderr file descriptor, if redirection active
-  int pipeStdout[2]; // a pipe to redirect stdout to collecting thread
-  int pipeStderr[2]; // a pipe to redirect stderr to collecting thread
+
+  bool isRedirecting = false;                  // state of stdout/stderr redirection
+  int fdStdout = -1;                           // initial stdout file descriptor, if redirection active
+  int fdStderr = -1;                           // initial stderr file descriptor, if redirection active
+  int pipeStdout[2];                           // a pipe to redirect stdout to collecting thread
+  int pipeStderr[2];                           // a pipe to redirect stderr to collecting thread
   std::unique_ptr<std::thread> redirectThread; // the thread handling the redirection
-  bool redirectThreadShutdown; // flag to ask the thread to stop
+  bool redirectThreadShutdown;                 // flag to ask the thread to stop
 };
 
 void InfoLogger::Impl::refreshDefaultMsg()
@@ -741,22 +741,22 @@ int InfoLogger::setMessageOption(const char* fieldName, const char* fieldValue, 
 // required with some compilers to avoid linking errors
 constexpr InfoLogger::InfoLoggerMessageOption InfoLogger::undefinedMessageOption;
 
-
-void InfoLogger::Impl::redirectThreadLoop() {
+void InfoLogger::Impl::redirectThreadLoop()
+{
   LineBuffer lbStdout; // buffer for input lines
   LineBuffer lbStderr; // buffer for input lines
   std::string msg;
-  bool isActive=0;
-  while(!redirectThreadShutdown) {
-    isActive=0;
+  bool isActive = 0;
+  while (!redirectThreadShutdown) {
+    isActive = 0;
     lbStdout.appendFromFileDescriptor(pipeStdout[0], 0);
     for (;;) {
       if (lbStdout.getNextLine(msg)) {
         // no line left
         break;
       }
-      isActive=1;
-      pushMessage(InfoLogger::Severity::Info,msg.c_str());
+      isActive = 1;
+      pushMessage(InfoLogger::Severity::Info, msg.c_str());
     }
     lbStderr.appendFromFileDescriptor(pipeStderr[0], 0);
     for (;;) {
@@ -764,71 +764,70 @@ void InfoLogger::Impl::redirectThreadLoop() {
         // no line left
         break;
       }
-      isActive=1;
-      pushMessage(InfoLogger::Severity::Error,msg.c_str());
+      isActive = 1;
+      pushMessage(InfoLogger::Severity::Error, msg.c_str());
     }
 
     if (!isActive) {
       usleep(50000);
     }
   }
-//  fprintf(fp,"thread stopped\n");
-//  fclose(fp);
+  //  fprintf(fp,"thread stopped\n");
+  //  fclose(fp);
 }
 
-
-int InfoLogger::setStandardRedirection(bool state) {
-  if (state==mPimpl->isRedirecting) {
+int InfoLogger::setStandardRedirection(bool state)
+{
+  if (state == mPimpl->isRedirecting) {
     // we are already in the requested redirection state
     return -1;
   }
-  
+
   if (state) {
     // turn ON redirection
 
     // create a pipe
-    if (pipe(mPimpl->pipeStdout)!=0) {
+    if (pipe(mPimpl->pipeStdout) != 0) {
       return -1;
     }
-    if (pipe(mPimpl->pipeStderr)!=0) {
+    if (pipe(mPimpl->pipeStderr) != 0) {
       return -1;
     }
-    
+
     // save current stdout/stderr
     mPimpl->fdStdout = dup(STDOUT_FILENO);
     dup2(mPimpl->pipeStdout[1], STDOUT_FILENO);
     mPimpl->fdStderr = dup(STDERR_FILENO);
     dup2(mPimpl->pipeStderr[1], STDERR_FILENO);
 
-    mPimpl->stdLog.setFileDescriptors(mPimpl->fdStdout,mPimpl->fdStderr);
+    mPimpl->stdLog.setFileDescriptors(mPimpl->fdStdout, mPimpl->fdStderr);
 
     // create collecting thread
-    mPimpl->redirectThreadShutdown=0;
+    mPimpl->redirectThreadShutdown = 0;
     std::function<void(void)> l = std::bind(&InfoLogger::Impl::redirectThreadLoop, mPimpl.get());
     mPimpl->redirectThread = std::make_unique<std::thread>(l);
 
   } else {
     // turn OFF redirection
-    
-    // stop collecting thread
-    mPimpl->redirectThreadShutdown=1;
-    mPimpl->redirectThread->join();
-    mPimpl->redirectThread=nullptr;
 
-    mPimpl->stdLog.setFileDescriptors(STDOUT_FILENO,STDERR_FILENO);
- 
+    // stop collecting thread
+    mPimpl->redirectThreadShutdown = 1;
+    mPimpl->redirectThread->join();
+    mPimpl->redirectThread = nullptr;
+
+    mPimpl->stdLog.setFileDescriptors(STDOUT_FILENO, STDERR_FILENO);
+
     dup2(mPimpl->fdStdout, STDOUT_FILENO);
     close(mPimpl->fdStdout);
     close(mPimpl->pipeStdout[0]);
-    close(mPimpl->pipeStdout[1]);     
+    close(mPimpl->pipeStdout[1]);
     dup2(mPimpl->fdStderr, STDERR_FILENO);
     close(mPimpl->fdStderr);
     close(mPimpl->pipeStderr[0]);
-    close(mPimpl->pipeStderr[1]);     
-
+    close(mPimpl->pipeStderr[1]);
   }
-  
-  mPimpl->isRedirecting=state;
+
+  mPimpl->isRedirecting = state;
   return 0;
 }
 

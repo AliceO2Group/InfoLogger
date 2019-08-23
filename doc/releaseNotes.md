@@ -19,3 +19,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - node.js binding updated for Mac.
 - Compatibility with mysql v8.
 - Code cleanup (Warnings, clang-format, copyright).
+
+## next version
+- added process stdout/stderr capture and redirection to infologger

@@ -118,6 +118,7 @@ set(INFOLOGGER_LIB_OBJECTS
   $<TARGET_OBJECTS:objInfoLoggerClient>
   $<TARGET_OBJECTS:objCommonConfiguration>
   $<TARGET_OBJECTS:objCommonSimpleLog>
+  $<TARGET_OBJECTS:objCommonLineBuffer>
 )
 
 # shared library
@@ -137,6 +138,7 @@ target_link_libraries(InfoLogger
   PUBLIC
 #  AliceO2::Common
   Boost::boost
+  pthread
 )
 install(TARGETS InfoLogger
   EXPORT InfoLoggerTargets
@@ -188,13 +190,13 @@ target_include_directories(libInfoLogger-static
   ${INFOLOGGER_INCLUDE_DIRS_PUBLIC}
 )
 add_dependencies(libInfoLogger-static Common-standalone)
+target_link_libraries(libInfoLogger-static pthread)
 
 
 # executable: log (command line tool to inject log messages)
 add_executable(
   log
-  src/log.cxx
-  $<TARGET_OBJECTS:objCommonLineBuffer>
+  src/log.cxx  
 )
 target_link_libraries(
   log

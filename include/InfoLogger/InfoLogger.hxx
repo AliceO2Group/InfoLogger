@@ -196,6 +196,12 @@ class InfoLogger
   // all context fields will be set to default unless an explicit context argument is given for each message.
   int unsetContext();
 
+  /// Turn on/off stdout/stderr redirection  
+  /// true -> turn ON. Stdout/Stderr are redirected to internal pipes and a dedicated thread captures the stream and redirects to this instance of infologger (with corresponding severity).
+  /// false -> turn OFF (if it was ON). Stdout/Stderr are redirected to previous outputs, and capture thread is stopped.
+  /// Return 0 on success, or an error code otherwise
+  int setStandardRedirection(bool state);
+
   // todo: common handling of error codes in O2?
   // 0-9999: "shared" -> can be reused accross modules
   // 99.9999: 2-digit 'error namespace' + local error id

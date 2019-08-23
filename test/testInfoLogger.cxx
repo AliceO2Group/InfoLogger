@@ -23,6 +23,15 @@ int main()
   InfoLogger theLog;
 
   theLog.log("infoLogger message test");
+  printf("Message on stdout (initial stdout)\n");
+  theLog.setStandardRedirection(1);
+  printf("Message on stdout (redirection enabled)\n");
+  fprintf(stderr, "Message on stderr (redirection enabled)\n");
+  usleep(100000);
+  theLog.setStandardRedirection(0);
+  printf("Message on stdout (redirection stopped)\n");
+
+  theLog.log("infoLogger message test");
   theLog.log(InfoLogger::Severity::Info, "infoLogger INFO message test");
   theLog.log(InfoLogger::Severity::Warning, "infoLogger WARNING message test");
   theLog.log(InfoLogger::Severity::Error, "infoLogger ERROR message test");

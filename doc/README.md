@@ -178,6 +178,10 @@ The InfoLogger library allows to inject messages directly from programs, as show
  
  * Some example calls are available in [the source code](/test/testInfoLogger.cxx)
  
+ * There is the possibility to easily redirect FairLogger messages (see InfoLoggerFMQ.hxx) and process stdout/stderr to infologger (see InfoLogger.hxx setStandardRedirection())
+   without changing the code from where they are issued. Although practical to get all output in InfoLogger, the messages captured this way are injected with a reduced number of tags,
+   so it is recommended to use the native InfoLogger API to inject messages whenever possible.
+ 
  * The tags associated to a message consist of the following fields (which may be left undefined):
    * Severity: the kind of message, one of: Info (default), Error, Fatal, Warning, Debug
    * Level: the relative visibility of the message and associated target audience to whom is addressed the message: from 1 (important, visible to all) to 99 (low-level debug message, for experts only).

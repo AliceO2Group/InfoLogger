@@ -408,6 +408,7 @@ foreach (t ${INSTALL_TARGETS})
 endforeach()
 
 install(PROGRAMS src/infoBrowser.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME infoBrowser)
+install(PROGRAMS src/infoLoggerTester.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME infoLoggerTester)
 install(PROGRAMS newMysql.sh DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 #####################################

@@ -20,5 +20,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - Compatibility with mysql v8.
 - Code cleanup (Warnings, clang-format, copyright).
 
-## next version
+## v1.3.5 - 06/09/2019
 - added process stdout/stderr capture and redirection to infologger
+- added infoLoggerTester to check full message pipeline from client to server and database.

@@ -15,6 +15,7 @@
 
 #include <InfoLogger/InfoLogger.hxx>
 #include <boost/format.hpp>
+#include <InfoLoggerErrorCodes.h>
 
 using namespace AliceO2::InfoLogger;
 

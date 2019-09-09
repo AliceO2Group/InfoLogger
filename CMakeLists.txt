@@ -382,7 +382,7 @@ foreach (f ${TEST_SRCS})
   message ("${exe}")
   add_executable(${exe} ${f} ${INFOLOGGER_LIB_OBJECTS} $<TARGET_OBJECTS:objCommonTimer>)
   target_link_libraries(${exe} InfoLogger)
-  target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS})
+  target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS} src)
   add_test(NAME ${test_name} COMMAND ${exe})
 endforeach()
 

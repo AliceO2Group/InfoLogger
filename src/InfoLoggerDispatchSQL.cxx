@@ -21,7 +21,7 @@ typedef bool my_bool;
 #endif
 
 // some constants
-#define SQL_RETRY_CONNECT 1 // base retry time, will be sleeping up to 10x this value
+#define SQL_RETRY_CONNECT 1 // SQL database connect retry time
 
 class InfoLoggerDispatchSQLImpl
 {
@@ -103,14 +103,7 @@ void InfoLoggerDispatchSQLImpl::start()
   }
 
   // try to connect DB
-  int maxRetry = 10;
-  for (int n = 0; n < maxRetry; n++) {
-    InfoLoggerDispatchSQLImpl::connectDB();
-    if (dbIsConnected) {
-      break;
-    }
-    sleep(SQL_RETRY_CONNECT);
-  }
+  // done automatically in customloop
 }
 
 InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, SimpleLog* log) : InfoLoggerDispatch(config, log)
@@ -119,6 +112,9 @@ InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, Sim
   dPtr->theLog = log;
   dPtr->theConfig = config;
   dPtr->start();
+
+  // enable customloop callback
+  isReady = true;
 }
 
 void InfoLoggerDispatchSQLImpl::stop()
@@ -152,7 +148,7 @@ int InfoLoggerDispatchSQLImpl::connectDB()
     time_t now = time(NULL);
     if (now < dbLastConnectTry + SQL_RETRY_CONNECT) {
       // wait before reconnecting
-      return 0;
+      return 1;
     }
     dbLastConnectTry = now;
     if (mysql_real_connect(&db, theConfig->dbHost.c_str(), theConfig->dbUser.c_str(), theConfig->dbPassword.c_str(), theConfig->dbName.c_str(), 0, NULL, 0)) {
@@ -160,11 +156,11 @@ int InfoLoggerDispatchSQLImpl::connectDB()
       dbIsConnected = 1;
       dbConnectTrials = 0;
     } else {
-      if (dbConnectTrials == 1) { // the first attempt always fails, hide it
+      if (dbConnectTrials == 0) { // log only first attempt
         theLog->error("DB connection failed: %s", mysql_error(&db));
       }
       dbConnectTrials++;
-      return 0;
+      return 1;
     }
 
     // create prepared insert statement
@@ -209,8 +205,12 @@ int InfoLoggerDispatchSQLImpl::connectDB()
 
 int InfoLoggerDispatchSQLImpl::customLoop()
 {
-
-  return connectDB();
+  int err = connectDB();
+  if (err) {
+    // temporization to avoid immediate retry
+    sleep(SQL_RETRY_CONNECT);
+  }
+  return err;
 }
 
 int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMessageList> lmsg)

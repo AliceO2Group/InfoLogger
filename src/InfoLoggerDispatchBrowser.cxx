@@ -81,6 +81,9 @@ InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser(ConfigInfoLogge
     throw __LINE__;
   }
   //theLog.info("%s() success\n",__FUNCTION__);
+  
+  // enable customloop callback
+  isReady = true;
 }
 InfoLoggerDispatchOnlineBrowser::~InfoLoggerDispatchOnlineBrowser()
 {

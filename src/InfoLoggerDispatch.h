@@ -52,6 +52,9 @@ class InfoLoggerDispatch
   SimpleLog defaultLog;
 
   ConfigInfoLoggerServer* theConfig;
+
+  bool isReady = false; // this flag must be set to true by derived instances when ready.
+                        // customloop will not be called unless set.
 };
 
 class InfoLoggerDispatchPrint : public InfoLoggerDispatch

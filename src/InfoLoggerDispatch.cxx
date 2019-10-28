@@ -16,15 +16,15 @@
 
 InfoLoggerDispatch::InfoLoggerDispatch(ConfigInfoLoggerServer* vConfig, SimpleLog* vLog)
 {
-  dispatchThread = std::make_unique<Thread>(InfoLoggerDispatch::threadCallback, this);
   input = std::make_unique<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>>(vConfig->dbDispatchQueueSize);
-  dispatchThread->start();
   if (vLog != NULL) {
     theLog = vLog;
   } else {
     theLog = &defaultLog;
   }
   theConfig = vConfig;
+  dispatchThread = std::make_unique<Thread>(InfoLoggerDispatch::threadCallback, this, "InfoLoggerDispatch", 50000);
+  dispatchThread->start();
 }
 
 InfoLoggerDispatch::~InfoLoggerDispatch()
@@ -52,6 +52,10 @@ Thread::CallbackResult InfoLoggerDispatch::threadCallback(void* arg)
   InfoLoggerDispatch* dPtr = (InfoLoggerDispatch*)arg;
   if (dPtr == NULL) {
     return Thread::CallbackResult::Error;
+  }
+
+  if (!dPtr->isReady) {
+    return Thread::CallbackResult::Idle;
   }
 
   int nMsgProcessed = 0;

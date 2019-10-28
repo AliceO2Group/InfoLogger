@@ -26,3 +26,4 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## next version
 - added header file InfoLoggerErrorCodes.h to reference centrally the definition of error code ranges reserved specifically for each o2 module, and possibly the individual description / documentation of each error code.
+- fix in infoLoggerServer threads initialization.

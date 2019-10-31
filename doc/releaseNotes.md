@@ -24,6 +24,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - added process stdout/stderr capture and redirection to infologger
 - added infoLoggerTester to check full message pipeline from client to server and database.
 
-## next version
+## v1.3.6 - 31/10/2019
 - added header file InfoLoggerErrorCodes.h to reference centrally the definition of error code ranges reserved specifically for each o2 module, and possibly the individual description / documentation of each error code.
 - fix in infoLoggerServer threads initialization.

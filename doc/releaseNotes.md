@@ -27,3 +27,6 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.6 - 31/10/2019
 - added header file InfoLoggerErrorCodes.h to reference centrally the definition of error code ranges reserved specifically for each o2 module, and possibly the individual description / documentation of each error code.
 - fix in infoLoggerServer threads initialization.
+
+## v1.3.7 - 13/11/2019
+- newMysql.sh: no changes done if SQL settings already ok.

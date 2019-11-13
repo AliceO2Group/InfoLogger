@@ -10,6 +10,8 @@
 # option i: disable interactive mode
 # option a: source a bash script (e.g. to override multiple variables at once)
 # option s: evaluate associated argument (e.g. to override a value)
+# option f: force re-do all actions
+# option q: enable SQL debugging
 
 # defaults assume this script is executed on infoLoggerServer host
 # and that DB runs on same node (local connection to db)
@@ -18,6 +20,12 @@ IS_INTERACTIVE=1
 SQL_ROOT_USER=root
 SQL_ROOT_PWD=""
 SQL_ROOT_HOST=localhost
+
+# if set, force all actions even if they seem not necessary
+FORCE_REDO=0
+
+# if set, SQL queries & output printed
+SQL_DEBUG=0
 
 # where are we running now
 HERE=`hostname -f`
@@ -77,7 +85,7 @@ MYSQL_EXE=mysql
 
 
 # parse command line arguments
-while getopts "ia:s:" option
+while getopts "ia:s:fq" option
 do
   case $option in
     i)
@@ -100,8 +108,17 @@ do
     s)
       eval $OPTARG
       ;;
+    f)
+      echo "Force redo all actions"
+      FORCE_REDO=1
+      ;;
+    q)
+      echo "SQL debugging enabled"
+      SQL_DEBUG=1
+      ;;  
   esac
 done
+
 
 if [ "$IS_INTERACTIVE" -eq "1" ]; then
   # begin interactive part
@@ -169,30 +186,72 @@ if [ "$?" != "0" ]; then
   exit 1
 fi
 
+# function to execute SQL command
+# arg1: SQL command
+# arg2: database name, if any
+function mysqlExecute {
+  if [ "$SQL_DEBUG" -eq "1" ]; then
+    echo "SQL : $1"
+  fi
+  SQLRES=`$MYSQL_EXE -h $SQL_ROOT_HOST -u $SQL_ROOT_USER $SQL_PWD_ARG -B -N -e "$1" $2 2>&1`
+  RET=$?
+  if [ "$SQL_DEBUG" -eq "1" ]; then
+    if [ "$SQLRES" != "" ]; then
+      echo "$SQLRES"
+    fi
+  fi
+  return $RET
+}
+
 echo "Setting up mysql for infoLogger"
 
+CHANGES=0
+
 # Create database
-$MYSQL_EXE -h $SQL_ROOT_HOST -u $SQL_ROOT_USER $SQL_PWD_ARG -e "create database $INFOLOGGER_DB_NAME" 2>/dev/null
-echo "MySQL database $INFOLOGGER_DB_NAME created"
+mysqlExecute "quit"
+if [ "$?" != "0" ] || [ "$FORCE_REDO" -eq 1 ]; then 
+  echo "Create database $INFOLOGGER_DB_NAME"
+  mysqlExecute "create database $INFOLOGGER_DB_NAME"
+  if [ "$?" != "0" ] && [ "$FORCE_REDO" -eq 0 ]; then 
+    exit
+  fi
+  CHANGES=1
+else
+  echo "Database $INFOLOGGER_DB_NAME already exists, skipping database create"
+fi
+
 
 # for mysql8
 #PWDOPT="with mysql_native_password"
 
 # Create accounts SQL command
 MYSQL_COMMANDS=""
+
 for CONFIG in "${EXTRA_CONFIG[@]}"; do
+  # check if we can already connect
+  mysql -u "${EXTRA_USER[$CONFIG]}" -p"${EXTRA_PWD[$CONFIG]}" -B -N -e "quit" $INFOLOGGER_DB_NAME > /dev/null 2>&1
+#  mysqlExecute "select current_user()"
+  
+  if [ "$?" == "0" ] && [ "$FORCE_REDO" -eq 0 ]; then
+    echo "Can already connect as ${EXTRA_USER[$CONFIG]}, skipping user create"
+    continue
+  else
+    CHANGES=1
+  fi
+  
   for QHOST in "%" "localhost" "${HERE}"; do
-    MYSQL_COMMAND=`echo "create user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\" identified ${PWDOPT} by \"${EXTRA_PWD[$CONFIG]}\";"`
-    MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
-    echo "$MYSQL_COMMAND"
-    MYSQL_COMMAND=`echo "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"`
-    MYSQL_COMMANDS=${MYSQL_COMMANDS}$'\n'${MYSQL_COMMAND}
-    echo "$MYSQL_COMMAND"
+    mysqlExecute "drop user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
+    mysqlExecute "create user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
+    mysqlExecute "set password for  \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\" = PASSWORD(\"${EXTRA_PWD[$CONFIG]}\");"
+    mysqlExecute "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
   done
 done
 
-$MYSQL_EXE -h $SQL_ROOT_HOST -u $SQL_ROOT_USER $SQL_PWD_ARG -e "$MYSQL_COMMANDS"
 echo "MySQL infoLogger accounts created"
+
+if [ "$CHANGES" == "0" ]; then
+  echo "No changes"
+fi
 
 # generate a sample configuration
 INFOLOGGER_SAMPLE_CONFIG="# infoLogger configuration file"$'\n'$'\n'

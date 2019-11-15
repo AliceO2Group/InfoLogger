@@ -208,7 +208,7 @@ echo "Setting up mysql for infoLogger"
 CHANGES=0
 
 # Create database
-mysqlExecute "quit"
+mysqlExecute "quit" $INFOLOGGER_DB_NAME
 if [ "$?" != "0" ] || [ "$FORCE_REDO" -eq 1 ]; then 
   echo "Create database $INFOLOGGER_DB_NAME"
   mysqlExecute "create database $INFOLOGGER_DB_NAME"

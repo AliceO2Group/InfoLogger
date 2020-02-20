@@ -30,3 +30,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.7 - 13/11/2019
 - newMysql.sh: no changes done if SQL settings already ok.
+
+## v1.3.8 - 20/02/2020
+- infoLoggerTester: increased delay for query test.

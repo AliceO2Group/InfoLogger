@@ -33,3 +33,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.8 - 20/02/2020
 - infoLoggerTester: increased delay for query test.
+
+## v1.3.9 - 09/03/2020
+- upgrading to Common v1.4.9, providing support for log rotate daemon logs.

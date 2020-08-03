@@ -89,6 +89,9 @@ int main(int argc, char* argv[])
   double t = theTimer.getTime();
   printf("Done in %lf seconds\n", t);
   printf("%.2lf msg/s\n", maxMsgCount / t);
-
+  if (msgBuffer != nullptr) {
+    free(msgBuffer);
+  }
+  
   return 0;
 }

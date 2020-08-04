@@ -9,6 +9,10 @@
 // or submit itself to any jurisdiction.
 
 #include <Common/SimpleLog.h>
+#include <Common/Timer.h>
+#include <queue>
+#include <mutex>
+#include <thread>
 
 // class to communicate with local infoLoggerD process
 
@@ -21,8 +25,10 @@ class ConfigInfoLoggerClient
   void resetConfig(); // set default configuration parameters
 
   std::string txSocketPath; // name of socket used to receive log messages from clients
-  int txSocketOutBufferSize;
+  int txSocketOutBufferSize; // buffer size of outgoing socket. -1 for system default.
   std::string logFile; // log file for internal library logs
+  double reconnectTimeout; // retry timeout for infoLoggerD reconnect (seconds)
+  int maxMessagesBuffered; // max messages in buffer when reconnect pending
 };
 
 class InfoLoggerClient
@@ -42,7 +48,20 @@ class InfoLoggerClient
  private:
   ConfigInfoLoggerClient cfg;
 
+  int connect();     // connect to infoLoggerD. returns 0 on success, or an error code.
+  void disconnect();  // disconnect infoLoggerD.
   int isInitialized; // set to 1 when object initialized with success, 0 otherwise
   SimpleLog log;     // object for daemon logging, as defined in config
   int txSocket;      // socket to infoLoggerD. >=0 if set.
+  
+  AliceO2::Common::Timer reconnectTimer; // try to reconnect
+  bool reconnectNeeded; // set when need to reconnect after timeout
+  std::queue<std::string> messageBuffer; // pending messages
+  std::mutex mutex; // lock for exclusive access to buffer
+  std::unique_ptr<std::thread> reconnectThread; // thread trying to reconnect to infoLoggerD
+  int reconnectAbort; // flag set to stop thread
+  void reconnect(); // thread loop
+  void reconnectThreadCleanup(); // cleanup thread resources
+  void reconnectThreadStart(); // start reconnection thread
+  bool isVerbose = true;
 };

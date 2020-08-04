@@ -215,6 +215,7 @@ int InfoLoggerClient::isOk()
 
 InfoLoggerClient::~InfoLoggerClient()
 {
+  isVerbose = 1;
   reconnectThreadCleanup();
   disconnect();
   if (messageBuffer.size()) {

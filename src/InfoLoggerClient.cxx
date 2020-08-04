@@ -34,11 +34,7 @@
 #include "infoLoggerDefaults.h"
 
 #ifndef MSG_NOSIGNAL
-  #ifdef SO_NOSIGPIPE
-    #define MSG_NOSIGNAL SO_NOSIGPIPE
-  #else
-    #define MSG_NOSIGNAL 0
-  #endif
+  #define MSG_NOSIGNAL 0
 #endif
 const int sendFlags = MSG_NOSIGNAL;
 
@@ -123,6 +119,19 @@ int InfoLoggerClient::connect() {
       throw __LINE__;
     }
     */
+
+    // configure socket to avoid SIGPIPE (when possible)
+    #ifdef SO_NOSIGPIPE
+    {
+      int optValue = 1;
+      socklen_t optLen = sizeof(optValue);
+      if (setsockopt(txSocket, SOL_SOCKET, SO_NOSIGPIPE, &optValue, optLen) == -1) {
+        if (isVerbose) log.error("setsockopt() failed: %s", strerror(errno));
+        throw __LINE__;
+      }
+    }
+    #endif
+    
     
     // configure socket TX buffer size
     if (cfg.txSocketOutBufferSize != -1) {
@@ -206,6 +215,7 @@ int InfoLoggerClient::isOk()
 
 InfoLoggerClient::~InfoLoggerClient()
 {
+  isVerbose = 1;
   reconnectThreadCleanup();
   disconnect();
   if (messageBuffer.size()) {

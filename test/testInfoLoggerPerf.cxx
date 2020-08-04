@@ -28,10 +28,11 @@ int main(int argc, char* argv[])
   int maxMsgSize = 100;   // max size of message to send
   int sizeIsRandom = 0;   // flag set to get a random message size (up to maxMsgSize)
   int noOutput = 0;       // when set, messages are created but not sent
-
+  int delay = 0;          // delay in microseconds between messages
+  
   // parse command line parameters
   int option;
-  while ((option = getopt(argc, argv, "c:s:rn")) != -1) {
+  while ((option = getopt(argc, argv, "c:s:rnd:")) != -1) {
     switch (option) {
       case 'c':
         maxMsgCount = atoi(optarg);
@@ -45,10 +46,13 @@ int main(int argc, char* argv[])
       case 'n':
         noOutput = 1;
         break;
+      case 'd':
+        delay = atoi(optarg);
+	break;
     }
   }
 
-  printf("Generating log messages: maxMsgCount=%d maxMsgSize=%d sizeIsRandom=%d\n", maxMsgCount, maxMsgSize, sizeIsRandom);
+  printf("Generating log messages: maxMsgCount=%d maxMsgSize=%d sizeIsRandom=%d delay=%d\n", maxMsgCount, maxMsgSize, sizeIsRandom, delay);
 
   char* msgBuffer = (char*)malloc(maxMsgSize + 1);
   if (msgBuffer == nullptr)
@@ -78,10 +82,16 @@ int main(int argc, char* argv[])
       theLog.log("%s", msgBuffer);
     }
     msgBuffer[sz] = cBak;
+    if (delay > 0) {
+      usleep(delay);
+    }
   }
   double t = theTimer.getTime();
   printf("Done in %lf seconds\n", t);
   printf("%.2lf msg/s\n", maxMsgCount / t);
-
+  if (msgBuffer != nullptr) {
+    free(msgBuffer);
+  }
+  
   return 0;
 }

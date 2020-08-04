@@ -119,6 +119,7 @@ set(INFOLOGGER_LIB_OBJECTS
   $<TARGET_OBJECTS:objCommonConfiguration>
   $<TARGET_OBJECTS:objCommonSimpleLog>
   $<TARGET_OBJECTS:objCommonLineBuffer>
+  $<TARGET_OBJECTS:objCommonTimer>
 )
 
 # shared library
@@ -380,7 +381,7 @@ foreach (f ${TEST_SRCS})
   string(REGEX REPLACE ".cxx" "" test_name ${test_name})
   set(exe "${test_name}.exe")
   message ("${exe}")
-  add_executable(${exe} ${f} ${INFOLOGGER_LIB_OBJECTS} $<TARGET_OBJECTS:objCommonTimer>)
+  add_executable(${exe} ${f} ${INFOLOGGER_LIB_OBJECTS})
   target_link_libraries(${exe} InfoLogger)
   target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS} src)
   add_test(NAME ${test_name} COMMAND ${exe})

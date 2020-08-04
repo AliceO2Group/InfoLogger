@@ -36,3 +36,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.9 - 09/03/2020
 - upgrading to Common v1.4.9, providing support for log rotate daemon logs.
+
+## v1.3.10 - 04/08/2020
+- added automatic reconnection from clients to infoLoggerD

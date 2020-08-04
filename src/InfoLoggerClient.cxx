@@ -33,6 +33,15 @@
 #include "InfoLoggerClient.h"
 #include "infoLoggerDefaults.h"
 
+#ifndef MSG_NOSIGNAL
+  #ifdef SO_NOSIGPIPE
+    #define MSG_NOSIGNAL SO_NOSIGPIPE
+  #else
+    #define MSG_NOSIGNAL 0
+  #endif
+#endif
+const int sendFlags = MSG_NOSIGNAL;
+
 //////////////////////////////////////////////////////
 // class ConfigInfoLoggerClient
 // stores configuration params for infologgerD clients
@@ -213,8 +222,8 @@ int InfoLoggerClient::send(const char* message, unsigned int messageSize)
     // so, clean it up if needed
     reconnectThreadCleanup();
 
-    int flags = MSG_NOSIGNAL;
-    int bytesWritten = ::send(txSocket, message, messageSize, MSG_NOSIGNAL);
+
+    int bytesWritten = ::send(txSocket, message, messageSize, sendFlags);
     if (bytesWritten == (int)messageSize) {
       mutex.unlock();
       return 0;
@@ -243,9 +252,8 @@ void InfoLoggerClient::reconnect() {
           log.info("Reconnection successful");
           int nFlushed = 0;
           while(!messageBuffer.empty()) {
-            int flags = MSG_NOSIGNAL;
             size_t messageSize = messageBuffer.front().size();
-            int bytesWritten = ::send(txSocket, messageBuffer.front().c_str(), messageSize, MSG_NOSIGNAL);
+            int bytesWritten = ::send(txSocket, messageBuffer.front().c_str(), messageSize, sendFlags);
             if (bytesWritten == (int)messageSize) {
                messageBuffer.pop();
                nFlushed++;

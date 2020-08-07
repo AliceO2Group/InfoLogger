@@ -16,6 +16,7 @@
 #include <InfoLogger/InfoLogger.hxx>
 #include <boost/format.hpp>
 #include <InfoLoggerErrorCodes.h>
+#include <InfoLogger/InfoLoggerMacros.hxx>
 
 using namespace AliceO2::InfoLogger;
 
@@ -54,6 +55,8 @@ int main()
   theLog << "message with formatting: " << boost::format("%+5d %.3f") % 12345 % 5.4321 << InfoLogger::endm;
   theLog << LOGINFO(10) << "infoLogger message test with source code info, level 10" << InfoLogger::endm;
   theLog << LOGERROR(10, 999) << "infoLogger error message test with source code info, level 10 errcode 999" << InfoLogger::endm;
+
+  theLog.log(LogInfoDevel, "Test message with InfoLoggerMessageOption macro");
 
   return 0;
 }

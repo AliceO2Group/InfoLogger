@@ -379,7 +379,15 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_errcode, Int, options.errorCode);
   }
   if (options.sourceFile != undefinedMessageOption.sourceFile) {
-    InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_errsource, String, options.sourceFile);
+    // trim directory path to keep it short
+    const char *shortName=options.sourceFile;
+    for (int i=(int)strlen(options.sourceFile)-1; i>=0; i--) {
+      if (options.sourceFile[i]=='/') {
+        shortName=&options.sourceFile[i+1];
+        break;
+      }
+    }
+    InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_errsource, String, shortName);
   }
   if (options.sourceLine != undefinedMessageOption.sourceLine) {
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_errline, Int, options.sourceLine);

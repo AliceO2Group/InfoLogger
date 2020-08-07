@@ -39,3 +39,8 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.10 - 04/08/2020
 - added automatic reconnection from clients to infoLoggerD
+
+## v1.3.11 - 07/08/2020
+- added helper definition for typical levels (operations, support, developer, trace)
+- added macros for compact writing of log commands with all fields set (severity, level, errno, source file/line). See InfoLoggerMacros.hxx.
+- sourceFile field: leading path is removed to keep only short filename.

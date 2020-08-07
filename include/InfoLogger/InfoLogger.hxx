@@ -154,6 +154,21 @@ class InfoLogger
                   Debug = 'D',
                   Undefined = 'U' };
 
+  /// Some predefined constants that may be used to set the message level
+  /// (i.e. visibility of the message, based on who reads it)
+  /// The level is an integer in the 1-99 range (1: topmost visibility)
+  /// The enum below provides the main boundaries for typical operations,
+  /// and one may use finer granularity within each range.
+  /// operations (1-5) support (6-10) developer (11-20) trace (21-99).
+  /// Trace messages should typically not be enabled in normal running conditions,
+  /// and usually related to debugging activities (also akin to the 'Debug' severity).
+  enum Level { 
+  	Ops = 1,
+	Support = 6,
+	Devel = 11,
+	Trace = 21
+  };
+
   ///////////////////////
   /// C-style interface
   ///////////////////////

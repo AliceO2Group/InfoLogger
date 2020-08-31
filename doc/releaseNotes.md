@@ -44,3 +44,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - added helper definition for typical levels (operations, support, developer, trace)
 - added macros for compact writing of log commands with all fields set (severity, level, errno, source file/line). See InfoLoggerMacros.hxx.
 - sourceFile field: leading path is removed to keep only short filename.
+
+## v1.3.12 - 31/08/2020
+- fix in infoBrowser for level filter names

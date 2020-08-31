@@ -57,6 +57,6 @@ int main()
   theLog << LOGERROR(10, 999) << "infoLogger error message test with source code info, level 10 errcode 999" << InfoLogger::endm;
 
   theLog.log(LogInfoDevel, "Test message with InfoLoggerMessageOption macro");
-
+  theLog << LogInfoOps << "Test message with InfoLoggerMessageOption macro" << InfoLogger::endm;
   return 0;
 }

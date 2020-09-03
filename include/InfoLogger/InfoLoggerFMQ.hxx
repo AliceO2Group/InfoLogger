@@ -8,6 +8,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
+#ifndef INFOLOGGER_INFOLOGGERFMQ_HXX
+#define INFOLOGGER_INFOLOGGERFMQ_HXX
+
 #include <fairmq/FairMQLogger.h>
 #include <InfoLogger/InfoLogger.hxx>
 
@@ -80,3 +83,5 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
       theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());
     });
 }
+
+#endif //INFOLOGGER_INFOLOGGERFMQ_HXX

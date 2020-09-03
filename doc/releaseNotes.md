@@ -47,3 +47,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.12 - 31/08/2020
 - fix in infoBrowser for level filter names
+
+## v1.3.13 - 03/09/2020
+- added unsetFMQLogsToInfoLogger() function, to be called before destroying infoLogger handles used for FMQ redirection.

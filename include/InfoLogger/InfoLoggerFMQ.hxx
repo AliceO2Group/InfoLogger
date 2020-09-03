@@ -14,8 +14,12 @@
 #include <fairmq/FairMQLogger.h>
 #include <InfoLogger/InfoLogger.hxx>
 
+#define INFOLOGGER_FMQ_SINK_NAME "infoLogger"
+
 // This function setup a custom sink for FMQ logs so that they are redirected to infoLogger
 // The infologger context is set when invoked. Corresponding fields are fixed afterwards.
+// The infoLogger handle given as parameter should remain valid for the lifetime of FMQ,
+// or until unsetFMQLogsToInfoLogger() is called
 void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
 {
 
@@ -32,7 +36,7 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
   fair::Logger::SetConsoleSeverity(fair::Severity::nolog);
 
   fair::Logger::AddCustomSink(
-    "infoLogger", "trace", [&](const std::string& content, const fair::LogMetaData& metadata) {
+    INFOLOGGER_FMQ_SINK_NAME, "trace", [&](const std::string& content, const fair::LogMetaData& metadata) {
       // todo: update context from time to time?
       // ctx.refresh();
 
@@ -82,6 +86,11 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
       };
       theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());
     });
+}
+
+// unregister FMQ to InfoLogger redirection
+void unsetFMQLogsToInfoLogger() {
+  fair::Logger::RemoveCustomSink(INFOLOGGER_FMQ_SINK_NAME); 
 }
 
 #endif //INFOLOGGER_INFOLOGGERFMQ_HXX

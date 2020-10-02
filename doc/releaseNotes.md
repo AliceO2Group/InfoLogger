@@ -51,5 +51,5 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.13 - 03/09/2020
 - added unsetFMQLogsToInfoLogger() function, to be called before destroying infoLogger handles used for FMQ redirection.
 
-## next version
+## v1.3.14 - 02/10/2020
 - added functions to discard locally (in client) messages with debug severity or high level. See filterDiscardDebug(), filterDiscardLevel() and filterReset().

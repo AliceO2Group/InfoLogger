@@ -58,5 +58,19 @@ int main()
 
   theLog.log(LogInfoDevel, "Test message with InfoLoggerMessageOption macro");
   theLog << LogInfoOps << "Test message with InfoLoggerMessageOption macro" << InfoLogger::endm;
+  
+  
+  // local filtering of messages  
+  theLog.log(LogInfoDevel, "Devel message without filter");
+  theLog.filterDiscardLevel(InfoLogger::Level::Devel);
+  theLog.log(LogInfoDevel, "Devel message with level filter - you should not see this");
+  theLog.filterReset();
+  theLog.log(LogInfoDevel, "Devel message with level filter reset - you should see this again");
+  theLog.log(LogDebugDevel, "Debug message without filter");
+  theLog.filterDiscardDebug(1);
+  theLog.log(LogDebugDevel, "Debug message with severity filter - you should not see this");
+  theLog.log(LogInfoDevel, "Info message with severity filter - you should see this");
+  theLog.filterReset();
+  theLog.log(LogDebugDevel, "Debug message with severity filter - you should see this again");
   return 0;
 }

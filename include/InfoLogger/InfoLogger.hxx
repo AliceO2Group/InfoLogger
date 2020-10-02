@@ -295,6 +295,26 @@ class InfoLogger
     return *this;
   }
 
+
+  /// Functions to define a local log filtering policy, to discard immediately any log message
+  /// matching criteria.
+  /// This allows an application to self-configure its verbosity.
+  /// Messages are dropped immediately in the process, they do not reach infoLoggerD.
+
+  /// Select discarding of messages with DEBUG severity.
+  /// parameter: 0 (default, debug messages kept) or 1 (debug messages discarded)
+  void filterDiscardDebug(bool enable);
+  
+  /// Select discarding of messages with higher levels.
+  /// parameter: level from which messages are discarded (bigger than or equal to this level).
+  /// Can be InfoLogger::undefinedMessageOption.level, to keep messages of all levels (default)
+  /// Messages with undefined level are never filtered out.
+  void filterDiscardLevel(int excludeLevel);
+
+  /// Reset defined filters.
+  /// All messages are then kept and handled normally.
+  void filterReset();
+  
   ///////////////////////
   /// internals
   ///////////////////////

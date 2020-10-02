@@ -290,6 +290,9 @@ class InfoLogger::Impl
   int pipeStderr[2];                           // a pipe to redirect stderr to collecting thread
   std::unique_ptr<std::thread> redirectThread; // the thread handling the redirection
   bool redirectThreadShutdown;                 // flag to ask the thread to stop
+  
+  bool filterDiscardDebug = false;  // when set, messages with debug severity are dropped
+  int filterDiscardLevel = InfoLogger::undefinedMessageOption.level; // when set, messages with higher level (>=) are dropped
 };
 
 void InfoLogger::Impl::refreshDefaultMsg()
@@ -352,6 +355,16 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char* mes
 
 int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const InfoLoggerContext& context, const char* messageBody)
 {
+  // check if message passes local filter criteria, if any
+  if (filterDiscardDebug && (options.severity == InfoLogger::Severity::Debug)) {
+    return 1;
+  }
+  if ((filterDiscardLevel != undefinedMessageOption.level)
+       && (options.level != undefinedMessageOption.level)
+       && (options.level >= filterDiscardLevel)) {
+      return 1;
+  }
+  
   infoLog_msg_t msg = defaultMsg;
 
   struct timeval tv;
@@ -838,6 +851,21 @@ int InfoLogger::setStandardRedirection(bool state)
   mPimpl->isRedirecting = state;
   return 0;
 }
+
+void InfoLogger::filterDiscardDebug(bool enable) {
+  mPimpl->filterDiscardDebug=enable;
+}
+
+void InfoLogger::filterDiscardLevel(int excludeLevel) {
+  mPimpl->filterDiscardLevel = excludeLevel;
+}
+
+void InfoLogger::filterReset() {
+  mPimpl->filterDiscardDebug = false;
+  mPimpl->filterDiscardLevel = InfoLogger::undefinedMessageOption.level;
+}
+
+
 
 // end of namespace
 } // namespace InfoLogger

@@ -54,5 +54,5 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.14 - 02/10/2020
 - added functions to discard locally (in client) messages with debug severity or high level. See filterDiscardDebug(), filterDiscardLevel() and filterReset().
 
-## next version
+## v1.3.15 - 06/10/2020
 - increased width of pid column in database, for machines with pid counters exceeding the usual 32765 maximum.

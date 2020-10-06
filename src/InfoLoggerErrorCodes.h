@@ -35,6 +35,7 @@ static constexpr ErrorCodeRange errorCodeRanges[]={
   { 0, 999, "reserved for general purpose", "" },
   { 1000, 1999, "infoLogger", "" },
   { 2000, 2999, "aliECS", "" },
+  { 3000, 3999, "readout", "" },
   { 0, 0, nullptr, nullptr}  
 };
 

@@ -33,8 +33,6 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
     logPtr = &theLog;
   }
 
-  fair::Logger::SetConsoleSeverity(fair::Severity::nolog);
-
   fair::Logger::AddCustomSink(
     INFOLOGGER_FMQ_SINK_NAME, "trace", [&](const std::string& content, const fair::LogMetaData& metadata) {
       // todo: update context from time to time?
@@ -86,6 +84,9 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
       };
       theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());
     });
+
+  fair::Logger::SetCustomSeverity(INFOLOGGER_FMQ_SINK_NAME, fair::Logger::GetConsoleSeverity());
+  fair::Logger::SetConsoleSeverity(fair::Severity::nolog);
 }
 
 // unregister FMQ to InfoLogger redirection

@@ -83,6 +83,7 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
         atoi(metadata.line.c_str())
       };
       theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());
+      fair::Logger::SetConsoleSeverity(fair::Severity::nolog);
     });
 
   fair::Logger::SetCustomSeverity(INFOLOGGER_FMQ_SINK_NAME, fair::Logger::GetConsoleSeverity());

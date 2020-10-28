@@ -266,6 +266,8 @@ achieved on CentOS 7 with e.g. (as root):
   During development phase, it can be useful to set mode to "stdout", to allow using the infoLogger interface
   and printing messages without infoLoggerD/infoLoggerServer.
   When "infoLoggerD" mode is selected and no infoLoggerD connection can be established, the mode falls back to "stdout".
+  
+  There is a built-in protection in the logging API to avoid message floods. If a client tries to send more than 500 messages in one second, or more than 1000 messages in one minute, further messages are redirected to a local file in /tmp. When the number of messages in this overflow file exceeds 1000 (or if can't be created), further messages are dropped. Normal behavior resumes when the message rate is reduced below 10 messages per minute. Some warning messages are logged by the library itself when this situation occurs.
 
 * infoLoggerD local socket
   

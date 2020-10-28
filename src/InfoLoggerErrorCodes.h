@@ -52,6 +52,9 @@ typedef struct {
 // Static array defining available error codes
 // Terminated by a null entry
 static constexpr ErrorCode errorCodes[]={
+  // infoLogger error codes
+  { 1101, "Message flood detected", nullptr},
+  { 1102, "End of message flood", nullptr},    
   { 0, nullptr, nullptr}
 };
 

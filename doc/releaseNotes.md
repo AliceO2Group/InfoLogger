@@ -56,3 +56,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.15 - 06/10/2020
 - increased width of pid column in database, for machines with pid counters exceeding the usual 32765 maximum.
+
+## v1.3.16 - 28/10/2020
+- added message flood protection.

@@ -24,10 +24,10 @@ Command-line options:
 -d detetor   : defines a predefined filter on startup
 -p partition : defines a predefined filter on startup
 -f facility  : defines a predefined filter on startup
--l level     : defines a predefined filter on startup
+-l level     : defines a predefined filter on startup (use same string as found in select box)
 -admin       : enables admin commands for messages archival
--prefs	     : loads on startup a 'preference' file saved previously
--z config    : provides path to configuration file (by default: /etc/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
+-prefs file  : loads on startup a preference file saved previously from the Display menu (geometry, filters, online state)
+-z file      : provides path to configuration file (by default: /etc/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
 ```
 
 # GUI

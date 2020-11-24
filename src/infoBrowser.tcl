@@ -5,18 +5,21 @@
 #
 # This GUI allows to browse the log messages of the infoLogger system.
 # command line options:
-# -s severity : launch with filter on severity
-# -d detector : launch with filter on detector
-# -p partition : launch with filter on partition
-# -f facility : launch with filter on facility
-# -l level : launch with filter on level (same string as found in select box)
-# -admin : launch with archive management enabled (not by default)
-#
+# -s severity  : defines a predefined filter on startup
+# -d detetor   : defines a predefined filter on startup
+# -p partition : defines a predefined filter on startup
+# -f facility  : defines a predefined filter on startup
+# -l level     : defines a predefined filter on startup (use same string as found in select box)
+# -admin       : enables admin commands for messages archival
+# -prefs file  : loads on startup a preference file saved previously from the Display menu (geometry, filters, online state)
+# -z file      : provides path to configuration file (by default: /etc/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
+# 
 # requires tcl/tk 8.4 (panedwindow widget)
 #
 # 12/05/2017  SC  - Import infoBrowser from DATE 7.108 to O2 FLP prototype
 #                   Protocol v1.4
 #                   Updated default configuration settings to split from DATE
+# 24/11/2020  SC  - Added extended display preferences save/load
 ################################################################
 
 # infoBrowser version

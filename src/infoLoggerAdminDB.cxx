@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
   bool optPartitioning = 0; // use partitioning (e.g. message by day) for tables created
   bool optArchive = 0;      // move content of main message table to (time-based name) archive table
   bool optList = 0;         // list current tables
+  bool optNone = 0;         // no command specified - test DB access only
 
   // configure log output
   log.setOutputFormat(SimpleLog::FormatOption::ShowSeverityTxt | SimpleLog::FormatOption::ShowMessage);
@@ -96,6 +97,8 @@ int main(int argc, char* argv[])
     optDestroy = 1;
   } else if (command == "list") {
     optList = 1;
+  } else if (command == "") {
+    optNone = 1;
   } else {
     log.error("Unkown command %s", command.c_str());
     return -1;
@@ -131,9 +134,15 @@ int main(int argc, char* argv[])
     return -1;
   }
 
+  // if no command defined, stop here
+  if (optNone) {
+    log.info("No command specified, exiting.");
+    return 0;
+  }
+
   // execute command(s)
   if (optList) {
-    // destroy all messages tables
+    // list all messages tables
     std::string sqlQuery = "show tables like '" INFOLOGGER_TABLE_MESSAGES "%'";
     if (mysql_query(&db, sqlQuery.c_str())) {
       log.error("Failed to execute %s\n%s", sqlQuery.c_str(), mysql_error(&db));

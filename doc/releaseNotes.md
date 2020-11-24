@@ -59,3 +59,9 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.16 - 28/10/2020
 - added message flood protection.
+
+## v1.3.17 - 24/11/2020
+- added test mode for infoLoggerAdminDB: call it without arguments to check if connection to infoLogger database works.
+- added infoBrowser "-admin" command-line option to enable shortcuts to archive commands in "Archive" menu.
+- infoBrowser documentation updated.
+- added infoBrowser "Display" menu to save/load window geometry and filters (replaces and extends the "Filters" menu). Possibily to start infoBrowser with settings loaded from file with -prefs command-line option.

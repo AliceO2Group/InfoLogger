@@ -26,6 +26,7 @@ Command-line options:
 -f facility  : defines a predefined filter on startup
 -l level     : defines a predefined filter on startup
 -admin       : enables admin commands for messages archival
+-prefs	     : loads on startup a 'preference' file saved previously
 -z config    : provides path to configuration file (by default: /etc/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
 ```
 
@@ -69,7 +70,7 @@ _Time_ filter **(10)** is available for offline queries only, to select messages
 
 Log messages can be filtered based on their intended audience. Select one of the appropriate _'Level'_ in area **(11)**, next to the filter definition. It can be, by increasing order of verbosity, one of: _ops, support, devel, trace, any_, (or a custom integer value to be defined).
 
-The _Filters_ menu **(2)** allows to clear filters, save a filter scheme or load one from a file. This is convenient for queries frequently used.
+The _Display_ menu **(2)** allows to save all display settings (including filters), load them, and clear filters. This is convenient for queries frequently used, or to setup a known working environment on startup (use the -prefs command line option). There is the choice to save all settings, or just one of geometry (position and size of window, list and size of displayed columns, and other buttons states), filters (all filters settings), and state (_'online'_ mode or _'query'_ mode, as defined when saving the settings. If a query state was executed, it is executed again on the new preferences file load. Click _Clean now_ before saving if you don't want the query to be executed on load). 
 
 The _Browse errors_ buttons **(15)** allow to jump to respectively to first, previous, next, and last errors displayed (severity _error_ or _fatal_).
 The number of messages displayed (total, and per severity) are reported in **(17)**.
@@ -93,13 +94,5 @@ Several instances of _infoBrowser_ can be launched concurrently.
 - Remember filtering options can not be changed in _'online'_ mode. If you want to insert some values in a filter field, first you have to uncheck the _'online'_ button.
 - Use the _%_ character as wildcard in the filter definitions.
 
-
-<!-- TODO
-
-embed error codes doc in infoBrowser 
-save / load display settings (filters, visible columns, queries, display position/size, column width)
-support of regexp
-
--->
 
 

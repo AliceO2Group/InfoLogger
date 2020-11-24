@@ -19,6 +19,10 @@
 #                   Updated default configuration settings to split from DATE
 ################################################################
 
+# infoBrowser version
+# needs to be updated on changes significant for the "preference settings"
+set infoBrowserVersion 1.3
+
 # check Tcl/Tk version, it would be nice to find 8.4 or higher
 set version_ok [split [info tclversion] "."]
 if {[llength $version_ok]==2} {
@@ -37,6 +41,10 @@ if {!$version_ok} {
 # Create busy flag to avoid starting different things at the same time
 # only one guy (timeformat, query, online) should edit the message lists at a time
 set busy 0
+
+# init globals
+set online 0
+set queryExecuted 0
 
 # Define online server timeouts (seconds)
 set onlineserver(retry) 5
@@ -189,20 +197,23 @@ font create titlefont -family Arial -size 10 -weight bold
 menu .menubar -type menubar -relief groove
 .menubar add command -label "Quit" -underline 0 -command {exit 0}
 .menubar add cascade -label "Archive" -menu .menubar.archive -underline 0
-.menubar add cascade -label "Filters" -menu .menubar.filter -underline 0 -state disabled
+.menubar add cascade -label "Display" -menu .menubar.prefs -underline 0
 .menubar add cascade -label "Export" -menu .menubar.export -underline 0
+
 menu .menubar.archive -tearoff 0
 .menubar.archive add command -label "Select" -underline 0 -command select_archive
 .menubar.archive add command -label "Create" -underline 0 -command create_archive -state disabled
 .menubar.archive add command -label "Delete" -underline 0 -command delete_archive -state disabled
-menu .menubar.filter -tearoff 0
-.menubar.filter add command -label "Clear" -underline 0 -command filter_clear
-.menubar.filter add command -label "Save" -underline 0 -command filter_save
-.menubar.filter add command -label "Load" -underline 0 -command filter_load
 menu .menubar.export -tearoff 0
 .menubar.export add command -label "All messages displayed" -underline 0 -command {export_messages all}
 .menubar.export add command -label "Selected messages only" -underline 0 -command {export_messages selected}
-
+menu .menubar.prefs -tearoff 0
+.menubar.prefs add command -label "Save all settings" -underline 0 -command {prefs_save 1 1 1 }
+.menubar.prefs add command -label "Save geometry" -underline 0 -command {prefs_save 1 0 0}
+.menubar.prefs add command -label "Save filters" -underline 0 -command {prefs_save 0 1 0}
+.menubar.prefs add command -label "Save state" -underline 0 -command {prefs_save 0 0 1}
+.menubar.prefs add command -label "Load settings" -underline 0 -command {prefs_load}
+.menubar.prefs add command -label "Filters clear" -underline 0 -command filter_clear
 pack .menubar -fill x -expand 0
 
 
@@ -286,47 +297,141 @@ proc filter_clear {} {
   .select.time.vstart delete 0 end
   .select.time.vend delete 0 end
 
-  global vfilter_level llevel
-  .select.level.v configure -text [lindex $llevel 0]
-  set vfilter_level [lindex $llevel 1]
+  setFilterLevelByName "any"
 }
 
-proc filter_save {} {
-  global filter_c
+proc prefs_save { saveGeom saveFilter saveState } {
   global defaultDir
   
-  set filename [tk_getSaveFile -initialdir $defaultDir -title "Save filters to" -defaultextension ".ibf" -filetypes {{{infoBrowser filters} {.ibf}}}]
+  set filename [tk_getSaveFile -initialdir $defaultDir -title "Save to" -defaultextension ".ibp" -filetypes {{{infoBrowser preferences} {.ibp}}}]
+
   if {$filename != ""} {
-    set fd [open "$filename" "w"]
-    foreach c $filter_c {
-      puts $fd ".select.filter.vin_$c [.select.filter.vin_$c get]"
-      puts $fd ".select.filter.vex_$c [.select.filter.vex_$c get]"
+  set fd [open "$filename" "w"]
+  
+  # version check
+  global infoBrowserVersion
+  puts $fd "# infoBrowser preferences file"
+  puts $fd "# saved [clock format [clock seconds]]"
+  puts $fd "\n# check version
+  global infoBrowserVersion
+  if {\$infoBrowserVersion != \"$infoBrowserVersion\"} {
+    puts \"Incompatible infoBrowser version\"
+    return -1
+  }"
+  
+  if {$saveGeom} {
+  # window geometry
+  puts $fd "\n# window geometry
+  wm geometry . [wm geometry .]"
+  
+  # visible fields
+  puts $fd "\n# Fields visibility"
+  global log_fields
+  global log_visible_fields
+  foreach item $log_fields {
+    if {$item=="Subsecond"} {continue}
+    if {[lsearch $log_visible_fields $item]>=0} {
+      puts $fd "  .msg_options.check_$item select"
+    } else {
+      puts $fd "  .msg_options.check_$item deselect"
     }
-    puts $fd ".select.time.vstart [.select.time.vstart get]"
-    puts $fd ".select.time.vend [.select.time.vend get]"
-    close $fd
+  }
+  puts $fd "  update_visible_fields"  
+
+  # subsecond decimal
+  global subsecond_decimal
+  puts $fd "\n# subseconds decimals
+  global subsecond_decimal
+  set subsecond_decimal $subsecond_decimal"
+
+  # size of columns
+  puts $fd "\n# columns sizes"
+  for {set p 0} {$p<[expr [llength [.messages.pw panes]]-1]} {incr p} {
+    puts $fd "  .messages.pw sash place $p [.messages.pw sash coord $p]"
+  }
+
+  # other buttons
+  global autoscroll
+  if {$autoscroll} {
+    set v_autoscroll "select"
+  } else {
+    set v_autoscroll "deselect"
+  }
+  global autoclean
+  if {$autoclean} {
+    set v_autoclean "select"
+  } else {
+    set v_autoclean "deselect"
+  }
+  puts $fd "\n# misc
+  global autoscroll
+  set autoscroll $autoscroll  
+  .frview.autoscroll ${v_autoscroll}
+  global autoclean
+  set autoclean $autoclean
+  .frview.autoclean ${v_autoclean}"
+  }
+  
+  if {$saveFilter} {
+  # filters
+  global filter_c
+  puts $fd "\n# filters"
+  foreach c $filter_c {
+      puts $fd "  .select.filter.vin_$c delete 0 end"
+      puts $fd "  set value \"[.select.filter.vin_$c get]\""
+      puts $fd "  .select.filter.vin_$c insert 0 \"\$value\""
+
+      puts $fd "  .select.filter.vex_$c delete 0 end"
+      puts $fd "  set value \"[.select.filter.vex_$c get]\""
+      puts $fd "  .select.filter.vex_$c insert 0 \"\$value\""
+  }
+  puts $fd "  .select.time.vstart delete 0 end"
+  puts $fd "  set value \"[.select.time.vstart get]\""
+  puts $fd "  .select.time.vstart insert 0 \"\$value\""
+  puts $fd "  .select.time.vend delete 0 end"
+  puts $fd "  set value \"[.select.time.vend get]\""
+  puts $fd "  .select.time.vend insert 0 \"\$value\""
+  puts $fd "  setFilterLevelByName \"[.select.level.v cget -text]\""
+  }
+  
+  if {$saveState} {
+  # query state
+  global online
+  global queryExecuted
+  if {$online} {
+    # we are in online mode, so store online mode command
+    puts $fd "  .cmd.online select"
+    puts $fd "  doOnline"
+  } elseif {$queryExecuted} {
+    # a query was executed, so store query execute command
+    puts $fd "  doQuery"
+  }
+  }
+  
+  puts $fd "return 0"
+  close $fd
   }
 }
 
-proc filter_load {} {
-  global filter_c
-  global defaultDir
-  set filename [tk_getOpenFile -initialdir $defaultDir -title "Load filters from"  -filetypes {{{infoBrowser filters} {.ibf}}}]
-  if {$filename != ""} {
-    set fd [open "$filename" "r"]
-    while {1} {
-      gets $fd line
-      if {[eof $fd]} {break}
-      set l [split $line]
-      if {[llength $l] < 2} {continue}
-      set w [lindex $l 0]
-      set v [join [lrange $l 1 end]]
-      if {[string first ".select." $w]!=0} {continue}
-      eval "$w delete 0 end"
-      if {[string length $v]==0} {continue}
-      eval "$w insert 0 \"$v\""
+proc doPrefsLoad {filename} {
+# disconnect if needed
+    global online
+    if {$online} {
+      .cmd.online deselect
+      doOnline
     }
-    close $fd    
+    doClean
+    # source preferences
+    if {[catch {source $filename} err]} {
+      puts "error loading preferences from $filename:\n$err"
+    }
+}
+
+proc prefs_load {} {
+  global defaultDir
+  set filename [tk_getOpenFile -initialdir $defaultDir -title "Load from"  -filetypes {{{infoBrowser preferences} {.ibp}}}]
+  if {$filename != ""} {
+    doPrefsLoad $filename
   }
 }
 
@@ -1304,7 +1409,8 @@ proc filter_on {} {
   }
 
   # enable filter operations
-  .menubar entryconfigure 3 -state normal
+  .menubar.prefs entryconfigure 4 -state normal
+  .menubar.prefs entryconfigure 5 -state normal
 }
 
 
@@ -1334,7 +1440,8 @@ proc filter_off {} {
   }
   
   # disable filters operations
-  .menubar entryconfigure 3 -state disabled
+  .menubar.prefs entryconfigure 4 -state disabled
+  .menubar.prefs entryconfigure 5 -state disabled 
 }
 
 
@@ -1657,6 +1764,9 @@ if {$i==0} {
   set querying 0
   
   set busy 0
+  
+  global queryExecuted 
+  set queryExecuted 1
 }
 
 
@@ -2002,13 +2112,12 @@ proc server_connect {} {
   update
 }
 
-
 proc doOnline {} {
   global online
   global server_fd
 
   global busy
-    
+  
   if {$online} {
 
     if {$busy} {return}
@@ -2040,7 +2149,7 @@ proc doOnline {} {
     server_connect
     
     update_stats reset
-    update   
+    update
     
   } else {
     # close server
@@ -2166,6 +2275,9 @@ proc doClean {} {
     set busy 0
   }
   
+  global queryExecuted 
+  set queryExecuted 0
+  
   update
 }
 
@@ -2214,8 +2326,8 @@ proc mysqlquery {query} {
   return $r
 }
 
-
-
+# by default, will start in online mode
+set goOnline 1
 
 # process command line arguments
 set x 0
@@ -2280,6 +2392,15 @@ while {[set opt [lindex $argv $x]] != ""} {
         puts "infoLoggerAdminDB failure, admin commands disabled"
       }
    }
+   -prefs {
+      set prefFile [lindex $argv [expr $x + 1]]
+      incr x
+      if {[file exists $prefFile]} {
+        puts "Preloading settings from $prefFile"
+        doPrefsLoad $prefFile
+      }
+      set goOnline 0
+   }
    -z {
         set configFile [lindex $argv [expr $x + 1]]
         incr x   
@@ -2289,6 +2410,8 @@ while {[set opt [lindex $argv $x]] != ""} {
 }
 
 
-# start infoBrowser in Online mode
-.cmd.online select
-doOnline
+if {$goOnline} {
+  .cmd.online select
+  doOnline
+}
+

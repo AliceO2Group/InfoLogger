@@ -15,7 +15,7 @@ formatting or c++ stream syntax.
 all messages on the local node. They are then transported to a central server.
 * infoLoggerServer: a daemon collecting centrally the messages sent by
 remote infoLoggerD processes. Messages are stored in a MySQL database. It also serves the infoBrowser online clients.
-* infoBrowser: a GUI to display online log messages as they arrive on the central server, or to query
+* [infoBrowser](infoBrowser.md): a GUI to display online log messages as they arrive on the central server, or to query
 them from the database. Messages can be filtered based on their tags.
 * infoLoggerAdminDB: a command line tool to create, archive, clean or destroy
 the logging database content.
@@ -116,8 +116,7 @@ collected centrally.
   `/opt/o2-InfoLogger/bin/infoBrowser &`
     * When launched, it goes in "online" mode, i.e. it connects to the infoLoggerServer and displays messages in real time.
     * To browse previously stored messages, click the green "online" button (to exit online mode), fill-in selection filters, and push "query".
-    * Detailed usage of infoBrowser can be found in the historical [ALICE DAQ documentation](https://alice-daq.web.cern.ch/operations/infobrowser).
-      The interface has not changed.
+    * Detailed usage of infoBrowser can be found in the [separate document](infoBrowser.md).
 
 * Log a test message from command line:
   `/opt/o2-InfoLogger/bin/log test`

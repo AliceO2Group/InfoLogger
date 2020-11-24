@@ -5,11 +5,12 @@
 #
 # This GUI allows to browse the log messages of the infoLogger system.
 # command line options:
-# -p partition : launch with filter on partition
+# -s severity : launch with filter on severity
 # -d detector : launch with filter on detector
+# -p partition : launch with filter on partition
 # -f facility : launch with filter on facility
 # -l level : launch with filter on level (same string as found in select box)
-# -full : launch with archive management enabled (not by default)
+# -admin : launch with archive management enabled (not by default)
 #
 # requires tcl/tk 8.4 (panedwindow widget)
 #
@@ -72,7 +73,6 @@ set proxyPort 8080
 
 # helpAvailable: -1 unknown (e.g. not tried yet) 0 not available (no wiki connection) 1 available (wiki cx ok)
 set helpAvailable -1     
-
 
 set defaultDir "/tmp"
 set infoDir ""
@@ -490,8 +490,8 @@ proc create_archive {} {
   wm title .boxmsg "Archive"
   pack .boxmsg.l -padx 10 -pady 10
   update
-  global infoDir
-  exec $infoDir/newDateLogs.sh
+  global adminExec  
+  exec $adminExec -c archive
   .boxmsg.l configure -text "Creating archive ... done!"
   after 1000 {set done 1}
   vwait done
@@ -513,8 +513,8 @@ proc delete_archive {} {
     destroy .boxmsg.no
     .boxmsg.l configure -text "Deleting messages ..." -width 50
     update
-    global infoDir
-    exec $infoDir/newDateLogs.sh -d
+    global adminExec  
+    exec $adminExec -c clear
     .boxmsg.l configure -text "Deleting messages ... done!"
     after 1000 {set done 1}
     vwait done
@@ -1108,11 +1108,6 @@ pack .cmd -side right -padx 20 -in .select -fill x
 # Database query
 ##############################
 
-
-# Command to create tables (check in newDateLogs.sh):
-# definition of message table
-
-
 # connect database
 if [ catch {package require mysqltcl} ] {
   puts "Error - package mysqltcl required"
@@ -1241,7 +1236,11 @@ proc display_tooltip {errCode x y} {
 
     global wikiURLquery
     set rp ""
-    set rp [getPage "${wikiURLquery}/${errCode}"]
+    if {$wikiURLquery!=""} {
+      catch {
+        set rp [getPage "${wikiURLquery}/${errCode}"]
+      }
+    }
 
     if {$rp!=""} {
       set helpAvailable 1
@@ -2225,7 +2224,7 @@ while {[set opt [lindex $argv $x]] != ""} {
    -s {
         set task [string toupper [lindex $argv [expr $x + 1]]]	
         incr x
-	set box .select.filter.vin_partition
+	set box .select.filter.vin_severity
 	if {[winfo exists $box]} {
           $box delete 0 end
 	  $box insert 0 $task
@@ -2263,10 +2262,23 @@ while {[set opt [lindex $argv $x]] != ""} {
         incr x
         setFilterLevelByName $vfilter_level_arg
    }   
-   -full {
-      # enable archive commands
-      .menubar.archive entryconfigure [.menubar.archive index 1] -state normal
-      .menubar.archive entryconfigure [.menubar.archive index 2] -state normal
+   -admin {
+      set adminExecOk 1
+      # look for admin executable in path or same dir as this script
+      set adminExec "infoLoggerAdminDB"
+      if {[catch {exec $adminExec -h}]} {
+        set adminExec "[file dirname [info script]]/${adminExec}"
+        if {[catch {exec $adminExec -h}]} {
+          set adminExecOk 0
+        }
+      }
+      if {$adminExecOk} {
+        # enable archive commands
+        .menubar.archive entryconfigure [.menubar.archive index 1] -state normal
+        .menubar.archive entryconfigure [.menubar.archive index 2] -state normal
+      } else  {
+        puts "infoLoggerAdminDB failure, admin commands disabled"
+      }
    }
    -z {
         set configFile [lindex $argv [expr $x + 1]]

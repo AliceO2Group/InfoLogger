@@ -10,7 +10,6 @@
 
 #include "InfoLoggerDispatch.h"
 #include <mysql.h>
-#include <mysql_version.h>
 #include "utility.h"
 #include "infoLoggerMessage.h"
 #include <unistd.h>

@@ -34,7 +34,7 @@ class InfoLoggerDispatchSQLImpl
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
 
  private:
-  MYSQL db;                            // handle to mysql db
+  MYSQL *db = NULL;                    // handle to mysql db
   MYSQL_STMT* stmt = NULL;             // prepared insertion query
   MYSQL_BIND bind[INFOLOG_FIELDS_MAX]; // parameters bound to variables
 
@@ -50,6 +50,7 @@ class InfoLoggerDispatchSQLImpl
   unsigned long long msgDroppedCount = 0; // counter for number of messages dropped (DB unavailable, etc)
 
   int connectDB(); // function to connect to database
+  int disconnectDB(); // disconnect/cleanup DB connection
 };
 
 void InfoLoggerDispatchSQLImpl::start()
@@ -57,12 +58,6 @@ void InfoLoggerDispatchSQLImpl::start()
 
   // log DB params
   theLog->info("Using DB %s@%s:%s", theConfig->dbUser.c_str(), theConfig->dbHost.c_str(), theConfig->dbName.c_str());
-
-  // init mysql lib
-  if (mysql_init(&db) == NULL) {
-    theLog->error("mysql_init() failed");
-    throw __LINE__;
-  }
 
   // prepare insert query from 1st protocol definition
   // e.g. INSERT INTO messages(severity,level,timestamp,hostname,rolename,pid,username,system,facility,detector,partition,run,errcode,errLine,errsource) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) */
@@ -118,11 +113,7 @@ InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, Sim
 
 void InfoLoggerDispatchSQLImpl::stop()
 {
-  if (dbIsConnected) {
-    mysql_stmt_close(stmt);
-    theLog->info("DB disconnected");
-  }
-  mysql_close(&db);
+  disconnectDB();
   theLog->info("DB thread insert count = %llu, dropped msg count = %llu", insertCount, msgDroppedCount);
 }
 
@@ -150,27 +141,39 @@ int InfoLoggerDispatchSQLImpl::connectDB()
       return 1;
     }
     dbLastConnectTry = now;
-    if (mysql_real_connect(&db, theConfig->dbHost.c_str(), theConfig->dbUser.c_str(), theConfig->dbPassword.c_str(), theConfig->dbName.c_str(), 0, NULL, 0)) {
+
+    if (db == NULL) {
+      // init mysql handle
+      db = mysql_init(db);
+      if (db == NULL) {
+        theLog->error("mysql_init() failed");
+        return 1;
+      }
+    }
+
+    if (mysql_real_connect(db, theConfig->dbHost.c_str(), theConfig->dbUser.c_str(), theConfig->dbPassword.c_str(), theConfig->dbName.c_str(), 0, NULL, 0)) {
       theLog->info("DB connected");
       dbIsConnected = 1;
       dbConnectTrials = 0;
     } else {
       if (dbConnectTrials == 0) { // log only first attempt
-        theLog->error("DB connection failed: %s", mysql_error(&db));
+        theLog->error("DB connection failed: %s", mysql_error(db));
       }
       dbConnectTrials++;
       return 1;
     }
 
     // create prepared insert statement
-    stmt = mysql_stmt_init(&db);
+    stmt = mysql_stmt_init(db);
     if (stmt == NULL) {
-      theLog->error("mysql_stmt_init() failed: %s", mysql_error(&db));
+      theLog->error("mysql_stmt_init() failed: %s", mysql_error(db));
+      disconnectDB();
       return -1;
     }
 
     if (mysql_stmt_prepare(stmt, sql_insert.c_str(), sql_insert.length())) {
-      theLog->error("mysql_stmt_prepare() failed: %s\n", mysql_error(&db));
+      theLog->error("mysql_stmt_prepare() failed: %s", mysql_error(db));
+      disconnectDB();
       return -1;
     }
 
@@ -195,10 +198,28 @@ int InfoLoggerDispatchSQLImpl::connectDB()
       }
     }
     if (errline) {
+      disconnectDB();
       return -1;
     }
   }
 
+  return 0;
+}
+
+int InfoLoggerDispatchSQLImpl::disconnectDB()
+{
+  if (stmt != NULL) {
+    mysql_stmt_close(stmt);
+    stmt = NULL;
+  }
+  if (db != NULL) {
+    mysql_close(db);
+    db = NULL;
+  }
+  if (dbIsConnected) {    
+    theLog->info("DB disconnected");
+  }
+  dbIsConnected = 0;
   return 0;
 }
 
@@ -266,24 +287,19 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
 
       // update bind variables
       if (mysql_stmt_bind_param(stmt, bind)) {
-        theLog->error("mysql_stmt_bind() failed: %s\n", mysql_error(&db));
-        mysql_stmt_close(stmt);
-        mysql_close(&db);
-        theLog->info("DB disconnected");
+        theLog->error("mysql_stmt_bind() failed: %s", mysql_error(db));
+        disconnectDB();
         msgDroppedCount++;
         return -1;
       }
 
       // Do the insertion
       if (mysql_stmt_execute(stmt)) {
-        theLog->error("mysql_stmt_exec() failed: %s\n", mysql_error(&db));
-        mysql_stmt_close(stmt);
-        mysql_close(&db);
-        theLog->info("DB disconnected");
+        theLog->error("mysql_stmt_exec() failed: %s", mysql_error(db));
         // retry with new connection - usually it means server was down
-        dbIsConnected = 0;
+        disconnectDB();
         msgDroppedCount++;
-        break;
+        return -1;
       }
 
       insertCount++;

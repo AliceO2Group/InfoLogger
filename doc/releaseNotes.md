@@ -65,3 +65,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - added infoBrowser "-admin" command-line option to enable shortcuts to archive commands in "Archive" menu.
 - infoBrowser documentation updated.
 - added infoBrowser "Display" menu to save/load window geometry and filters (replaces and extends the "Filters" menu). Possibily to start infoBrowser with settings loaded from file with -prefs command-line option.
+
+## v1.3.18 - 08/01/2021
+- improved DB connection failure recovery

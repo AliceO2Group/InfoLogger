@@ -66,8 +66,11 @@ Thread::CallbackResult InfoLoggerDispatch::threadCallback(void* arg)
 
   while (!dPtr->input->isEmpty()) {
     std::shared_ptr<InfoLoggerMessageList> nextMessage = nullptr;
+    dPtr->input->front(nextMessage);
+    if (dPtr->customMessageProcess(nextMessage)) {
+      return Thread::CallbackResult::Idle;
+    }
     dPtr->input->pop(nextMessage);
-    dPtr->customMessageProcess(nextMessage);
     nMsgProcessed++;
   }
 

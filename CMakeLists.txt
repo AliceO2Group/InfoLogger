@@ -57,7 +57,7 @@ endif()
 include(ExternalProject)
 externalproject_add (Common-standalone
   GIT_REPOSITORY "https://github.com/AliceO2Group/Common.git"
-  GIT_TAG "v1.4.9"
+  GIT_TAG "v1.5.1"
   LOG_DOWNLOAD 1
   UPDATE_COMMAND ""
   PATCH_COMMAND ""

@@ -242,9 +242,9 @@ int InfoLoggerClient::send(const char* message, unsigned int messageSize)
     // launch a thread for automatic reconnect, and buffer (reasonably) messages until then
     reconnectThreadStart();
   }
-  if (messageBuffer.size()<cfg.maxMessagesBuffered) {
+  if ((int)messageBuffer.size()<cfg.maxMessagesBuffered) {
     messageBuffer.push(message);
-    if (messageBuffer.size()==cfg.maxMessagesBuffered) {
+    if ((int)messageBuffer.size()==cfg.maxMessagesBuffered) {
       log.warning("Max buffer size reached, next messages will be lost until reconnect");
     }
   }

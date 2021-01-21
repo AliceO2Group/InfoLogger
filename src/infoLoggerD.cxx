@@ -72,7 +72,8 @@ class ConfigInfoLoggerD
   std::string serverHost = "localhost";                // IP name to connect infoLoggerServer
   int serverPort = INFOLOGGER_DEFAULT_SERVER_RX_PORT;  // IP port number to connect infoLoggerServer
   int msgQueueLength = 1000;                           // transmission queue size
-  std::string msgQueuePath = "/tmp/infoLoggerD.queue"; // path to temp file storing messages
+  std::string msgQueuePath = localLogDirectory + "/infoLoggerD.queue"; // path to temp file storing messages
+  int msgQueueReset = 0;                               // when set, existing temp file is cleared (and pending messages lost)
   std::string clientName = "infoLoggerD";              // name identifying client to infoLoggerServer
   int isProxy = 0;                                     // flag set to allow infoLoggerD to be a transport proxy to infoLoggerServer
 
@@ -101,6 +102,7 @@ void ConfigInfoLoggerD::readFromConfigFile(ConfigFile& config)
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".serverPort", serverPort);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueueLength", msgQueueLength);
   config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueuePath", msgQueuePath);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".msgQueueReset", msgQueueReset);
   config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".clientName", clientName);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_INFOLOGGERD ".isProxy", isProxy);
 
@@ -213,7 +215,10 @@ class InfoLoggerD : public Daemon
   FILE* logOutput = nullptr; // handle to local log file where to copy incoming messages, if configured to do so
 };
 
-InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv)
+// list of extra keys accepted on the command line (-o key=value entries)
+#define EXTRA_OPTIONS {"msgQueueReset"}
+
+InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv, nullptr, EXTRA_OPTIONS)
 {
   if (isOk()) { // proceed only if base daemon init was a success
 
@@ -227,6 +232,13 @@ InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv)
       // redirect legacy simplelog interface to SimpleLog
       setSimpleLog(&log);
 
+      // retrieve configuration parameters from command line
+      for(auto const & o : execOptions) {
+        if (o.key == "msgQueueReset") {
+	  configInfoLoggerD.msgQueueReset = atoi(o.value.c_str());
+	}
+      }
+      
       // retrieve configuration parameters from config file
       configInfoLoggerD.readFromConfigFile(config);
 
@@ -308,6 +320,26 @@ InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv)
         } else {
           cfgCx.proxy_state = TR_PROXY_CAN_BE_PROXY;
         }
+	
+	// check message queue
+        struct stat queueInfo;
+	log.info("Checking message queue file %s", configInfoLoggerD.msgQueuePath.c_str());
+	if (lstat(cfgCx.msg_queue_path, &queueInfo) == 0) {
+	  if (S_ISREG(queueInfo.st_mode))  {
+            log.info("Pending messages = %ld bytes", (long) queueInfo.st_size);
+	  } else {
+	    log.error("This is not a regular file");
+	  }
+	} else {
+	  log.info("No pending messages");
+	}
+
+	if (configInfoLoggerD.msgQueueReset) {
+	  log.info("Clearing queue");
+	  if (remove(configInfoLoggerD.msgQueuePath.c_str())) {
+	    log.info("Failed to delete %s", configInfoLoggerD.msgQueuePath.c_str());
+	  }
+	}
 
         hCx = TR_client_start(&cfgCx);
         if (hCx == nullptr) {

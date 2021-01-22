@@ -87,6 +87,8 @@ class InfoLoggerServer : public Daemon
   unsigned int dbRoundRobinIx = 0;
 
   unsigned long long msgCount = 0;
+  
+  FILE *msgDump = nullptr;
 };
 
 InfoLoggerServer::InfoLoggerServer(int argc, char* argv[]) : Daemon(argc, argv)
@@ -109,6 +111,19 @@ InfoLoggerServer::InfoLoggerServer(int argc, char* argv[]) : Daemon(argc, argv)
       tcpServerHandle = TR_server_start(&tcpServerConfig);
       if (tcpServerHandle == NULL) {
         throw __LINE__;
+      }
+
+      // create message dump (copy of all incoming messages)
+      if (configInfoLoggerServer.msgDumpFile.size()) {
+        time_t t = time(NULL);
+	std::string f = configInfoLoggerServer.msgDumpFile.c_str();
+	f += std::to_string(t) + ".log";
+        msgDump = fopen(f.c_str(),"wb");
+	if (msgDump != nullptr) {
+          log.info("Dumping copy of incoming messages to %s", f.c_str());
+	} else {
+	  log.error("Failed to create message dump file %s", f.c_str());
+	}
       }
 
       // create dispatch engines
@@ -147,6 +162,9 @@ InfoLoggerServer::~InfoLoggerServer()
     }
 
     log.info("Received %llu messages", msgCount);
+    if (msgDump != nullptr) {
+      fclose(msgDump);
+    }
   }
 }
 
@@ -163,6 +181,17 @@ Daemon::LoopStatus InfoLoggerServer::doLoop()
   if (newFile != NULL) {
     //fflush(stdout);
     //TR_file_dump(newFile);
+
+    // dump new message
+    if (msgDump != nullptr) {
+      TR_blob* b;
+      for (b = newFile->first; b != NULL; b = b->next) {
+        fprintf(msgDump, "*** begin: %d bytes\n", (int)b->size);
+	fwrite(b->value, b->size, 1, msgDump);
+	fprintf(msgDump, "\n*** end\n");
+	fflush(msgDump);
+      }
+    }
 
     // decode raw message
     std::shared_ptr<InfoLoggerMessageList> msgList = nullptr;

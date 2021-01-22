@@ -33,7 +33,8 @@ class ConfigInfoLoggerServer
   int serverPortRx = INFOLOGGER_DEFAULT_SERVER_RX_PORT; // IP port number to receive incoming messages, where infoLoggerD clients connect
   int maxClientsRx = 3000;                              // maximum number of connected infoLoggerD clients
   int msgQueueLengthRx = 10000;                         // reception queue size
-
+  std::string msgDumpFile = "";                         // a file to dump copy of all incoming messages
+  
   // settings for database connection
   std::string dbHost = "localhost";  // database host name
   std::string dbUser = "o2";         // database user name

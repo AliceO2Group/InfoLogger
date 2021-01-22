@@ -326,8 +326,9 @@ InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv, nullptr, E
 
         // check message queue
         struct stat queueInfo;
-        log.info("Checking message queue file %s", configInfoLoggerD.msgQueuePath.c_str());
-        if (lstat(cfgCx.msg_queue_path, &queueInfo) == 0) {
+        std::string msgQueuePathFifo = configInfoLoggerD.msgQueuePath + ".fifo";
+        log.info("Checking message queue file %s", msgQueuePathFifo.c_str());
+        if (lstat(msgQueuePathFifo.c_str(), &queueInfo) == 0) {
           if (S_ISREG(queueInfo.st_mode)) {
             log.info("Pending messages = %ld bytes", (long)queueInfo.st_size);
           } else {
@@ -337,10 +338,21 @@ InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv, nullptr, E
           log.info("No pending messages");
         }
 
+        // if the queue.reset file exists, remove it and reset queue
+        // (so it's done once only, on this startup)
+        std::string msgQueuePathReset = configInfoLoggerD.msgQueuePath + ".reset";
+        if (lstat(msgQueuePathReset.c_str(), &queueInfo) == 0) {
+          if (S_ISREG(queueInfo.st_mode)) {
+            log.info("Detected file %s, forcing queue reset", msgQueuePathReset.c_str());
+            remove(msgQueuePathReset.c_str());
+            configInfoLoggerD.msgQueueReset = 1;
+          }
+        }
+
         if (configInfoLoggerD.msgQueueReset) {
           log.info("Clearing queue");
-          if (remove(configInfoLoggerD.msgQueuePath.c_str())) {
-            log.info("Failed to delete %s", configInfoLoggerD.msgQueuePath.c_str());
+          if (remove(msgQueuePathFifo.c_str())) {
+            log.info("Failed to delete %s", msgQueuePathFifo.c_str());
           }
         }
 

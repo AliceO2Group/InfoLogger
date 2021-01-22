@@ -68,3 +68,7 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.18 - 08/01/2021
 - improved DB connection failure recovery
+
+## v1.3.19 - 22/01/2021
+- added infoLoggerServer debug options
+- added option to reset local message queue on infoLoggerD startup

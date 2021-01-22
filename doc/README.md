@@ -276,3 +276,13 @@ achieved on CentOS 7 with e.g. (as root):
   This can be done by specifying in infoLoggerD configuration the rxSocketPath parameter, and name it with a path starting with '/', e.g. '/tmp/infoLoggerD.socket'.
   The same value has to be set for the client configuration, in the txSocketPath key.
   User is responsible to ensure that file access permissions are configured properly.
+  
+* infoLoggerD local cache
+
+  infoLoggerD stores messages in a persistent local file until messages are successfully transmitted and acknowledged by infoLoggerServer.
+  When infoLoggerServer is unavailable for a long time, messages may accumulate locally. They will all be transmitted to infoLoggerServer when available again.
+  In some cases, one may want to delete this local cache.
+  This can be configured on startup of infoLoggerD by one of the following ways:
+  - in the infoLoggerD configuration section, set: `msgQueueReset=1` (this is permanent, done on each startup of infoLoggerD, which might not be what you want)
+  - when starting infoLoggerD process from the command line (not with the systemctl service), add option: `-o msgQueueReset=1`
+  - create a file named [msgQueuePath].reset (by default, msgQueuePath=/tmp/infoLoggerD/infoLoggerD.queue), e.g. `touch /tmp/infoLoggerD/infoLoggerD.queue.reset`. This will reset the queue on next startup (by hand or with e.g. service infoLoggerD restart), and the reset file will also be deleted (which ensures cleanup is done once only).

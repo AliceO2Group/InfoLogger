@@ -71,7 +71,7 @@ class ConfigInfoLoggerD
   // settings for remote infoLoggerServer access
   std::string serverHost = "localhost";                // IP name to connect infoLoggerServer
   int serverPort = INFOLOGGER_DEFAULT_SERVER_RX_PORT;  // IP port number to connect infoLoggerServer
-  int msgQueueLength = 1000;                           // transmission queue size
+  int msgQueueLength = 10000;                           // transmission queue size
   std::string msgQueuePath = localLogDirectory + "/infoLoggerD.queue"; // path to temp file storing messages
   int msgQueueReset = 0;                                               // when set, existing temp file is cleared (and pending messages lost)
   std::string clientName = "infoLoggerD";              // name identifying client to infoLoggerServer

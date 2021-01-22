@@ -47,6 +47,7 @@ int main(int argc, char* argv[])
   bool optArchive = 0;      // move content of main message table to (time-based name) archive table
   bool optList = 0;         // list current tables
   bool optNone = 0;         // no command specified - test DB access only
+  bool optShowCreate = 0;   // print command used to create table
 
   // configure log output
   log.setOutputFormat(SimpleLog::FormatOption::ShowSeverityTxt | SimpleLog::FormatOption::ShowMessage);
@@ -97,6 +98,8 @@ int main(int argc, char* argv[])
     optDestroy = 1;
   } else if (command == "list") {
     optList = 1;
+  } else if (command == "showCreate") {
+    optShowCreate = 1;
   } else if (command == "") {
     optNone = 1;
   } else {
@@ -226,6 +229,10 @@ int main(int argc, char* argv[])
   if (optPartitioning) {
     log.info("Using partitioning");
     sqlTableDesriptionMessages += " partition by hash(timestamp div 86400) partitions 365";
+  }
+
+  if (optShowCreate) {
+    log.info("SQL create statement:\n\ncreate table " INFOLOGGER_TABLE_MESSAGES " %s;\n", sqlTableDesriptionMessages.c_str());
   }
 
   if (optArchive) {

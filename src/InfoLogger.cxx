@@ -301,6 +301,7 @@ class InfoLogger::Impl
   
   // message flood prevention
   // constants
+  const bool flood_protection = 1; // if set, flood protection mechanism enabled
   const unsigned int flood_maxmsg_sec=500; // maximum messages in one second to trigger flood
   const unsigned int flood_maxmsg_min=1000; // maximum messages in one minute to trigger flood
   const unsigned int flood_maxmsg_file=1000; // maximum number of messages in overflow log file
@@ -475,6 +476,8 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_username, String, context.userName.c_str());
   }
 
+  if (flood_protection) {
+  
   // update message statistics */
   if (now-floodStat_time_lastsec>1) {
     floodStat_time_lastsec=now;
@@ -547,7 +550,8 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
       floodReset();
     }
   }
-
+  }
+  
   if (client != nullptr) {
     char buffer[LOG_MAX_SIZE];
     msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Encoded);

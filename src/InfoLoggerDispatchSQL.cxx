@@ -52,12 +52,12 @@ class InfoLoggerDispatchSQLImpl
 
   int connectDB(); // function to connect to database
   int disconnectDB(); // disconnect/cleanup DB connection
-  
-  int commitEnabled = 1; // flag to enable transactions
-  int commitDebug = 0; // log transactions
+
+  int commitEnabled = 1;       // flag to enable transactions
+  int commitDebug = 0;         // log transactions
   int commitTimeout = 1000000; // time between commits
-  Timer commitTimer; // timer for transaction
-  int commitNumberOfMsg; // number of messages since last commit
+  Timer commitTimer;           // timer for transaction
+  int commitNumberOfMsg;       // number of messages since last commit
 };
 
 void InfoLoggerDispatchSQLImpl::start()
@@ -208,7 +208,7 @@ int InfoLoggerDispatchSQLImpl::connectDB()
       disconnectDB();
       return -1;
     }
-    
+
     // reset transactions
     commitNumberOfMsg = 0;
   }
@@ -243,19 +243,19 @@ int InfoLoggerDispatchSQLImpl::customLoop()
     // complete pending transactions
     if (commitNumberOfMsg) {
       if (commitTimer.isTimeout()) {
-	if (mysql_query (db, "COMMIT")) {
-	  theLog->error("DB transaction commit failed: %s", mysql_error(db));
-	  commitEnabled = 0;
-	} else {
+        if (mysql_query(db, "COMMIT")) {
+          theLog->error("DB transaction commit failed: %s", mysql_error(db));
+          commitEnabled = 0;
+        } else {
           if (commitDebug) {
-	    theLog->info("DB commit - %d msgs", commitNumberOfMsg);
-	  }
-	}
-	commitNumberOfMsg = 0;
+            theLog->info("DB commit - %d msgs", commitNumberOfMsg);
+          }
+        }
+        commitNumberOfMsg = 0;
       }
     }
   }
-  
+
   return err;
 }
 
@@ -302,19 +302,19 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
 
     if (commitEnabled) {
       if (commitNumberOfMsg == 0) {
-        if (mysql_query (db, "START TRANSACTION")) {
-	  theLog->error("DB start transaction failed: %s", mysql_error(db));
-	  commitEnabled = 0;
-	  return -1;
-	} else {
-	  if (commitDebug) {
+        if (mysql_query(db, "START TRANSACTION")) {
+          theLog->error("DB start transaction failed: %s", mysql_error(db));
+          commitEnabled = 0;
+          return -1;
+        } else {
+          if (commitDebug) {
             theLog->info("DB transaction started");
-	  }
-	}
+          }
+        }
         commitTimer.reset(commitTimeout);
       }
     }
-    
+
     // re-format message with multiple line - assumes it is the LAST field in the protocol
     for (msg = (char*)m->values[nFields - 1].value.vString; msg != NULL; msg = nl) {
       nl = strchr(msg, '\f');
@@ -345,13 +345,12 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
 
       insertCount++;
       commitNumberOfMsg++;
- 
-      if (commitDebug) {          
-        if (insertCount%1000==0) {
-          theLog->info("insert count = %llu",insertCount);
+
+      if (commitDebug) {
+        if (insertCount % 1000 == 0) {
+          theLog->info("insert count = %llu", insertCount);
         }
       }
-          
     }
   }
   return 0;

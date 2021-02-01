@@ -301,6 +301,7 @@ class InfoLogger::Impl
   
   // message flood prevention
   // constants
+  const bool flood_protection = 1;         // if set, flood protection mechanism enabled
   const unsigned int flood_maxmsg_sec=500; // maximum messages in one second to trigger flood
   const unsigned int flood_maxmsg_min=1000; // maximum messages in one minute to trigger flood
   const unsigned int flood_maxmsg_file=1000; // maximum number of messages in overflow log file
@@ -475,76 +476,79 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_username, String, context.userName.c_str());
   }
 
-  // update message statistics */
-  if (now-floodStat_time_lastsec>1) {
-    floodStat_time_lastsec=now;
-    floodStat_msgs_sec=1;
-  } else {
-    floodStat_msgs_sec++;
-  }
-  if (now-floodStat_time_lastmin>60) {
-    floodStat_time_lastmin=now;
-    floodStat_msgs_lastmin=floodStat_msgs_min;
-    floodStat_msgs_min=1;
-  } else {
-    floodStat_msgs_min++;
-  }
-  
-  // message flood prevention
-  if (!noFlood) {
-    switch (floodMode) {
-      case 0:
-	if ((floodStat_msgs_sec>flood_maxmsg_sec)||(floodStat_msgs_min>flood_maxmsg_min)) {
-          floodFile_msg=0;
-          floodFile_msg_drop=0;
-          std::string floodFile_path = floodFile_dir + "/infoLogger.flood-" + std::to_string(context.processId) + "@" + context.hostName + "-" + std::to_string((int)now);
-          floodFile_fp=fopen(floodFile_path.c_str(),"w");
-          if (floodFile_fp==NULL) {
-            floodMode=2;
-	    std::string msg = "Message flood detected - further messages will be dropped (failed to create flood file " + floodFile_path + ")";
-            pushMessage(LogWarningSupport_(1101), currentContext, msg.c_str(),1);
-            goto case2;
-          } else {
-            floodMode=1;
-	    std::string msg = "Message flood detected - further messages will be stored locally in " + floodFile_path;
-            pushMessage(LogWarningSupport_(1101), currentContext, msg.c_str(),1);
-          }
-	} else {
-          break;
-	}
-      case 1:
-	if (floodStat_msgs_lastmin<flood_maxmsg_reset) { 
-          // reset flood mode
-          break;
-	}
-	if (floodFile_msg>=flood_maxmsg_file) {
-          if (floodFile_fp!=nullptr) {
-            fclose(floodFile_fp);
-            floodFile_fp=nullptr;
-          }
-          pushMessage(LogWarningSupport_(1101), currentContext, "Message flood - maximum entries in local file exceeded, further messages will be dropped",1);
-          floodMode=2;
-	} else {
-          // log to flood file
-          fprintf(floodFile_fp,"%f\t%c\t%s\t%s\n",now,(char)options.severity,context.facility.c_str(),messageBody);
-          fflush(floodFile_fp);
-          floodFile_msg++;
-          return 0;
-	}
-      case 2:
-      case2:
-	if (floodStat_msgs_lastmin<flood_maxmsg_reset) { 
-          // reset flood mode
-          break;
-	}
-	// drop message
-	floodFile_msg_drop++;
-	return 0;
+  if (flood_protection) {
+
+    // update message statistics */
+    if (now - floodStat_time_lastsec > 1) {
+      floodStat_time_lastsec = now;
+      floodStat_msgs_sec = 1;
+    } else {
+      floodStat_msgs_sec++;
     }
-    if (floodMode) {
-      std::string msg = "Message flood - resuming normal operation: " + std::to_string(floodFile_msg) + " messages stored locally, " + std::to_string(floodFile_msg_drop) + " messages dropped";
-      pushMessage(LogWarningSupport_(1102), currentContext, msg.c_str(),1);
-      floodReset();
+    if (now - floodStat_time_lastmin > 60) {
+      floodStat_time_lastmin = now;
+      floodStat_msgs_lastmin = floodStat_msgs_min;
+      floodStat_msgs_min = 1;
+    } else {
+      floodStat_msgs_min++;
+    }
+
+    // message flood prevention
+    if (!noFlood) {
+      switch (floodMode) {
+        case 0:
+          if ((floodStat_msgs_sec > flood_maxmsg_sec) || (floodStat_msgs_min > flood_maxmsg_min)) {
+            floodFile_msg = 0;
+            floodFile_msg_drop = 0;
+            std::string floodFile_path = floodFile_dir + "/infoLogger.flood-" + std::to_string(context.processId) + "@" + context.hostName + "-" + std::to_string((int)now);
+            floodFile_fp = fopen(floodFile_path.c_str(), "w");
+            if (floodFile_fp == NULL) {
+              floodMode = 2;
+              std::string msg = "Message flood detected - further messages will be dropped (failed to create flood file " + floodFile_path + ")";
+              pushMessage(LogWarningSupport_(1101), currentContext, msg.c_str(), 1);
+              goto case2;
+            } else {
+              floodMode = 1;
+              std::string msg = "Message flood detected - further messages will be stored locally in " + floodFile_path;
+              pushMessage(LogWarningSupport_(1101), currentContext, msg.c_str(), 1);
+            }
+          } else {
+            break;
+          }
+        case 1:
+          if (floodStat_msgs_lastmin < flood_maxmsg_reset) {
+            // reset flood mode
+            break;
+          }
+          if (floodFile_msg >= flood_maxmsg_file) {
+            if (floodFile_fp != nullptr) {
+              fclose(floodFile_fp);
+              floodFile_fp = nullptr;
+            }
+            pushMessage(LogWarningSupport_(1101), currentContext, "Message flood - maximum entries in local file exceeded, further messages will be dropped", 1);
+            floodMode = 2;
+          } else {
+            // log to flood file
+            fprintf(floodFile_fp, "%f\t%c\t%s\t%s\n", now, (char)options.severity, context.facility.c_str(), messageBody);
+            fflush(floodFile_fp);
+            floodFile_msg++;
+            return 0;
+          }
+        case 2:
+        case2:
+          if (floodStat_msgs_lastmin < flood_maxmsg_reset) {
+            // reset flood mode
+            break;
+          }
+          // drop message
+          floodFile_msg_drop++;
+          return 0;
+      }
+      if (floodMode) {
+        std::string msg = "Message flood - resuming normal operation: " + std::to_string(floodFile_msg) + " messages stored locally, " + std::to_string(floodFile_msg_drop) + " messages dropped";
+        pushMessage(LogWarningSupport_(1102), currentContext, msg.c_str(), 1);
+        floodReset();
+      }
     }
   }
 

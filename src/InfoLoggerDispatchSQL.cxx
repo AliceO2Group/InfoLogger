@@ -10,10 +10,12 @@
 
 #include "InfoLoggerDispatch.h"
 #include <mysql.h>
+#include <mysqld_error.h>
 #include "utility.h"
 #include "infoLoggerMessage.h"
 #include <unistd.h>
 #include <string.h>
+#include <Common/Timer.h>
 
 #if LIBMYSQL_VERSION_ID >= 80000
 typedef bool my_bool;
@@ -47,10 +49,17 @@ class InfoLoggerDispatchSQLImpl
   std::string sql_insert;
 
   unsigned long long insertCount = 0;     // counter for number of queries executed
-  unsigned long long msgDroppedCount = 0; // counter for number of messages dropped (DB unavailable, etc)
+  unsigned long long msgDelayedCount = 0; // counter for number of messages delayed (insert failed, retry)
+  unsigned long long msgDroppedCount = 0; // counter for number of messages dropped (insert failed, dropped)
 
   int connectDB(); // function to connect to database
   int disconnectDB(); // disconnect/cleanup DB connection
+
+  int commitEnabled = 1;       // flag to enable transactions
+  int commitDebug = 0;         // log transactions
+  int commitTimeout = 1000000; // time between commits
+  Timer commitTimer;           // timer for transaction
+  int commitNumberOfMsg;       // number of messages since last commit
 };
 
 void InfoLoggerDispatchSQLImpl::start()
@@ -114,7 +123,7 @@ InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, Sim
 void InfoLoggerDispatchSQLImpl::stop()
 {
   disconnectDB();
-  theLog->info("DB thread insert count = %llu, dropped msg count = %llu", insertCount, msgDroppedCount);
+  theLog->info("DB thread insert count = %llu, delayed msg count = %llu, dropped msg count = %llu", insertCount, msgDelayedCount, msgDroppedCount);
 }
 
 InfoLoggerDispatchSQL::~InfoLoggerDispatchSQL()
@@ -201,6 +210,9 @@ int InfoLoggerDispatchSQLImpl::connectDB()
       disconnectDB();
       return -1;
     }
+
+    // reset transactions
+    commitNumberOfMsg = 0;
   }
 
   return 0;
@@ -229,17 +241,46 @@ int InfoLoggerDispatchSQLImpl::customLoop()
   if (err) {
     // temporization to avoid immediate retry
     sleep(SQL_RETRY_CONNECT);
+  } else if (commitEnabled) {
+    // complete pending transactions
+    if (commitNumberOfMsg) {
+      if (commitTimer.isTimeout()) {
+        if (mysql_query(db, "COMMIT")) {
+          theLog->error("DB transaction commit failed: %s", mysql_error(db));
+          commitEnabled = 0;
+        } else {
+          if (commitDebug) {
+            theLog->info("DB commit - %d msgs", commitNumberOfMsg);
+          }
+        }
+        commitNumberOfMsg = 0;
+      }
+    }
   }
+
   return err;
 }
 
 int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMessageList> lmsg)
 {
-  // todo: keep message in queue on error!
+  // procedure for dropped messages and keep count of them
+  auto returnDroppedMessage = [&](const char* message) {
+    // log bad message content (truncated)
+    const int maxLen = 200;
+    int msgLen = (int)strlen(message);
+    theLog->error("Dropping message (%d bytes): %.*s%s", msgLen, maxLen, message, (msgLen > maxLen) ? "..." : "");
+    msgDroppedCount++;
+    return 0; // remove message from queue
+  };
+
+  // procedure for delayed messages and keep count of them
+  auto returnDelayedMessage = [&]() {
+    msgDelayedCount++;
+    return -1; // keep message in queue
+  };
 
   if (!dbIsConnected) {
-    msgDroppedCount++;
-    return -1;
+    return returnDelayedMessage();
   }
 
   infoLog_msg_t* m;
@@ -274,6 +315,21 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
       }
     }
 
+    if (commitEnabled) {
+      if (commitNumberOfMsg == 0) {
+        if (mysql_query(db, "START TRANSACTION")) {
+          theLog->error("DB start transaction failed: %s", mysql_error(db));
+          commitEnabled = 0;
+          return returnDelayedMessage();
+        } else {
+          if (commitDebug) {
+            theLog->info("DB transaction started");
+          }
+        }
+        commitTimer.reset(commitTimeout);
+      }
+    }
+
     // re-format message with multiple line - assumes it is the LAST field in the protocol
     for (msg = (char*)m->values[nFields - 1].value.vString; msg != NULL; msg = nl) {
       nl = strchr(msg, '\f');
@@ -288,27 +344,33 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
       // update bind variables
       if (mysql_stmt_bind_param(stmt, bind)) {
         theLog->error("mysql_stmt_bind() failed: %s", mysql_error(db));
-        disconnectDB();
-        msgDroppedCount++;
-        return -1;
+        theLog->error("message: %s", msg);
+        // if can not bind, message malformed, drop it
+        return returnDroppedMessage(msg);
       }
 
       // Do the insertion
       if (mysql_stmt_execute(stmt)) {
-        theLog->error("mysql_stmt_exec() failed: %s", mysql_error(db));
+        theLog->error("mysql_stmt_exec() failed: (%d) %s", mysql_errno(db), mysql_error(db));
+        // column too long
+        if (mysql_errno(db) == ER_DATA_TOO_LONG) {
+          return returnDroppedMessage(msg);
+        }
         // retry with new connection - usually it means server was down
         disconnectDB();
-        msgDroppedCount++;
-        return -1;
+        return returnDelayedMessage();
       }
 
       insertCount++;
-      /*          
-if (insertCount%1000==0) {
-            theLog->info("insert count = %llu",insertCount);
-          }
-          */
+      commitNumberOfMsg++;
+
+      if (commitDebug) {
+        if (insertCount % 1000 == 0) {
+          theLog->info("insert count = %llu", insertCount);
+        }
+      }
     }
   }
+  // report message success, it will be removed from queue
   return 0;
 }

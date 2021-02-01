@@ -72,3 +72,8 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.19 - 22/01/2021
 - added infoLoggerServer debug options
 - added option to reset local message queue on infoLoggerD startup
+
+## v1.3.20 - 01/02/2021
+- infoLoggerServer:
+  - bulk insert mode (transactions).
+  - drop messages too long for DB.

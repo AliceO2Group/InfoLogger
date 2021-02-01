@@ -241,6 +241,7 @@ add_executable(
   $<TARGET_OBJECTS:objCommonSimpleLog>
   $<TARGET_OBJECTS:objCommonDaemon>
   $<TARGET_OBJECTS:objCommonThread>
+  $<TARGET_OBJECTS:objCommonTimer>
   src/infoLoggerServer.cxx
   src/InfoLoggerDispatch.cxx
   src/InfoLoggerDispatchBrowser.cxx
@@ -375,6 +376,7 @@ set(TEST_SRCS
   test/testInfoLogger.c
   test/testInfoLogger.cxx
   test/testInfoLoggerPerf.cxx
+  test/testInfoLoggerDB.cxx  
 )
 foreach (f ${TEST_SRCS})
   get_filename_component(test_name ${f} NAME)
@@ -386,6 +388,19 @@ foreach (f ${TEST_SRCS})
   target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS} src)
   add_test(NAME ${test_name} COMMAND ${exe})
 endforeach()
+
+target_include_directories(
+  testInfoLoggerDB.exe
+  PRIVATE
+  ${INFOLOGGER_INCLUDE_DIRS_PUBLIC}
+  ${COMMON_STANDALONE_INCLUDE_DIRS}
+  ${MYSQL_INCLUDE_DIRS}
+)
+target_link_libraries(
+  testInfoLoggerDB.exe
+  pthread
+  ${MYSQL_LIBRARIES}
+)
 
 
 # define what should be built

@@ -268,17 +268,17 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
     // log bad message content (truncated)
     const int maxLen = 200;
     int msgLen = (int)strlen(message);
-    theLog->error("Dropping message (%d bytes): %.*s%s", msgLen, maxLen, message, (msgLen>maxLen) ? "..." : "");
+    theLog->error("Dropping message (%d bytes): %.*s%s", msgLen, maxLen, message, (msgLen > maxLen) ? "..." : "");
     msgDroppedCount++;
     return 0; // remove message from queue
   };
-  
+
   // procedure for delayed messages and keep count of them
   auto returnDelayedMessage = [&]() {
     msgDelayedCount++;
     return -1; // keep message in queue
   };
-    
+
   if (!dbIsConnected) {
     return returnDelayedMessage();
   }
@@ -320,7 +320,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
         if (mysql_query(db, "START TRANSACTION")) {
           theLog->error("DB start transaction failed: %s", mysql_error(db));
           commitEnabled = 0;
-	  return returnDelayedMessage();
+          return returnDelayedMessage();
         } else {
           if (commitDebug) {
             theLog->info("DB transaction started");
@@ -344,7 +344,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
       // update bind variables
       if (mysql_stmt_bind_param(stmt, bind)) {
         theLog->error("mysql_stmt_bind() failed: %s", mysql_error(db));
-	theLog->error("message: %s", msg);
+        theLog->error("message: %s", msg);
         // if can not bind, message malformed, drop it
         return returnDroppedMessage(msg);
       }
@@ -352,10 +352,10 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
       // Do the insertion
       if (mysql_stmt_execute(stmt)) {
         theLog->error("mysql_stmt_exec() failed: (%d) %s", mysql_errno(db), mysql_error(db));
-	// column too long
-	if (mysql_errno(db) == ER_DATA_TOO_LONG) {
-	  return returnDroppedMessage(msg);
-	}
+        // column too long
+        if (mysql_errno(db) == ER_DATA_TOO_LONG) {
+          return returnDroppedMessage(msg);
+        }
         // retry with new connection - usually it means server was down
         disconnectDB();
         return returnDelayedMessage();

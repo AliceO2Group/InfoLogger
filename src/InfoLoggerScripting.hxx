@@ -76,7 +76,7 @@ class InfoLogger
 {
  public:
   InfoLogger();
-  InfoLogger(const std::string &options);
+  InfoLogger(const std::string& options);
   ~InfoLogger();
 
   // log with default metadata fields and specified severity

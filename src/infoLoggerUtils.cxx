@@ -10,8 +10,6 @@
 
 #include "infoLoggerUtils.h"
 
-
-
 int getKeyValuePairsFromString(const std::string& input, std::map<std::string, std::string>& output)
 {
   output.clear();
@@ -24,16 +22,16 @@ int getKeyValuePairsFromString(const std::string& input, std::map<std::string, s
     if (ix2 >= ix1) {
       break;
     } // end of string
-    
+
     const std::string& trimchars = "\t\n\v\f\r ";
- 
+
     // trim key
     std::string key = input.substr(ix0, ix2 - ix0);
     key.erase(key.find_last_not_of(trimchars) + 1);
     key.erase(0, key.find_first_not_of(trimchars));
-    
+
     // trim value
-    std::string value;    
+    std::string value;
     if (ix1 == std::string::npos) {
       value = input.substr(ix2 + 1);
     } else {
@@ -44,7 +42,7 @@ int getKeyValuePairsFromString(const std::string& input, std::map<std::string, s
 
     // insert in map
     output.insert(std::pair<std::string, std::string>(key, value));
-    
+
     // iterate next pair unless end of string
     if (ix1 == std::string::npos) {
       break;

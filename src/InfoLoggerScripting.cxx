@@ -22,7 +22,7 @@ InfoLogger::InfoLogger()
 {
   logHandle = std::make_unique<baseInfoClass>();
 }
-InfoLogger::InfoLogger(const std::string &options)
+InfoLogger::InfoLogger(const std::string& options)
 {
   logHandle = std::make_unique<baseInfoClass>(options);
 }

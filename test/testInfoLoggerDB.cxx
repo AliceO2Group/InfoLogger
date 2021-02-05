@@ -5,6 +5,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+
+#if LIBMYSQL_VERSION_ID >= 80000
+typedef bool my_bool;
+#endif
+
 int main(int argc, char** argv)
 {
 

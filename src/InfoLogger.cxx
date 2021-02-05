@@ -19,6 +19,7 @@
 
 #include "infoLoggerMessage.h"
 #include "InfoLoggerClient.h"
+#include "infoLoggerUtils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,60 +172,105 @@ namespace AliceO2
 namespace InfoLogger
 {
 
-int infoLoggerDWarningDone = 0;
-
 // private class to isolate internal data from external interface
 class InfoLogger::Impl
 {
  public:
-  Impl()
+  Impl(const std::string &options)
   {
     // initiate internal members
     magicTag = InfoLoggerMagicNumber;
     numberOfMessages = 0;
     currentStreamMessage.clear();
     currentStreamOptions = undefinedMessageOption;
-
+    client = nullptr;
+     
     floodReset();
 
     if (infoLog_proto_init()) {
       throw __LINE__;
     }
     refreshDefaultMsg();
-    currentMode = OutputMode::infoLoggerD;
 
-    const char* confEnv = getenv("INFOLOGGER_MODE");
-    if (confEnv != NULL) {
-      if (!strcmp(confEnv, "stdout")) {
-        currentMode = OutputMode::stdout;
-      } else if (!strcmp(confEnv, "infoLoggerD")) {
-        currentMode = OutputMode::infoLoggerD;
-      } else if (!strncmp(confEnv, "file", 4)) {
-        currentMode = OutputMode::file;
-        const char* logFile = "./log.txt";
-        if (confEnv[4] == ':') {
-          logFile = &confEnv[5];
-        }
-        printf("Logging to file %s\n", logFile);
-        stdLog.setLogFile(logFile);
-      } else if (!strcmp(confEnv, "raw")) {
-        currentMode = OutputMode::raw;
-      } else if (!strcmp(confEnv, "none")) {
-        currentMode = OutputMode::none; // useful for benchmarks
+    // option-processing routine    
+    auto processOptions = [&] (std::string opt) {
+      std::map<std::string, std::string> kv;
+      if (getKeyValuePairsFromString(opt, kv)) {
+	throw __LINE__;
+      }
+      for (auto& it : kv) {
+	if (it.first == "outputMode") {
+          getOutputStreamFromString(it.second.c_str(), mainMode);
+	} else if (it.first == "outputModeFallback") {
+          getOutputStreamFromString(it.second.c_str(), fallbackMode);
+	} else if (it.first == "verbose") {
+          verbose = atoi(it.second.c_str());
+	} else {
+          // unknown option 
+          // printf("Unknown option %s\n",it.second.c_str());
+          throw __LINE__;
+	}
+      }
+      return;
+    };
+    
+    // parse options from constructor arg
+    processOptions(options);
+
+    // parse options from environment     
+    const char* confEnvOptions = getenv("INFOLOGGER_OPTIONS");
+    if (confEnvOptions != NULL) {
+       processOptions(confEnvOptions);
+    }
+
+    const char* confEnvMode = getenv("INFOLOGGER_MODE");
+    if (confEnvMode != NULL) {
+      getOutputStreamFromString(confEnvMode, mainMode);
+    }
+    
+    // init main output and fallbacks if needed    
+    currentMode = mainMode;
+    for (int it = 0; it < 3 ; it++) {
+      if (it == 0) {
+        currentMode = mainMode;
+      } else if (it == 1) {
+        currentMode = fallbackMode;
+      } else {
+        currentMode.mode = OutputMode::none;
+	currentMode.path = "/dev/null";
+      }
+      if (verbose) {
+        printf("Using output mode %s\n", getStringFromMode(currentMode.mode));
+      }
+      
+      if (currentMode.mode == OutputMode::file) {
+	if (verbose) {
+	  printf("Logging to file %s\n", currentMode.path.c_str());
+	}
+	if (stdLog.setLogFile(currentMode.path.c_str(),0,4,0) == 0) {
+          break;
+	}
+      } else if (currentMode.mode == OutputMode::stdout) {
+	if (stdLog.setLogFile(nullptr) == 0) {
+	  break;
+	}
+      } else if (currentMode.mode == OutputMode::none) {
+	if (stdLog.setLogFile(currentMode.path.c_str()) == 0) {
+          break;
+	}
+      } else if (currentMode.mode == OutputMode::infoLoggerD) {
+	client = new InfoLoggerClient;
+	if (client != nullptr) {
+          if (client->isOk()) {
+	    break;
+	  }
+	}
+      }
+      if (verbose) {
+	printf("Output to %s failed\n", getStringFromMode(currentMode.mode));
       }
     }
-    client = nullptr;
-    if (currentMode == OutputMode::infoLoggerD) {
-      client = new InfoLoggerClient;
-      if ((client == nullptr) || (!client->isOk())) {
-        // fallback to stdout if infoLoggerD not available
-        if (!infoLoggerDWarningDone) {
-          infoLoggerDWarningDone = 1;
-          //fprintf(stderr,"infoLoggerD not available, falling back to stdout logging\n");
-        }
-        currentMode = OutputMode::stdout;
-      }
-    }
+    
     // todo
     // switch mode based on configuration / environment
     // connect to client only on first message (or try again after timeout)
@@ -258,8 +304,60 @@ class InfoLogger::Impl
                     raw,
                     none };
 
-  OutputMode currentMode; // current option for output
-
+  struct OutputStream {
+    OutputMode mode; // selected mode 
+    std::string path; // optional path (eg for 'file' mode)
+  };
+  
+  // convert a string to a member of the OutputMode enum
+  // and sets filePath in case of the "file" mode
+  // throw an integer error code on error
+  void getOutputStreamFromString(const char *s, OutputStream &out) {
+    if (s == nullptr) {
+      throw __LINE__;
+    }
+    out.mode = OutputMode::none;
+    out.path = "";
+    if (!strcmp(s,"stdout")) {
+      out.mode = OutputMode::stdout;
+    } else if (!strncmp(s,"file", 4)) {
+      out.mode = OutputMode::file;
+      if (s[4] == ':') {
+        out.path = std::string(&s[5]);
+      } else {
+        out.path = "./log.txt";
+      }
+    } else if (!strcmp(s,"infoLoggerD")) {
+      out.mode = OutputMode::infoLoggerD;
+    } else if (!strcmp(s,"raw")) {
+      out.mode = OutputMode::raw;
+    } else if (!strcmp(s,"none")) {
+      out.mode = OutputMode::none;
+    } else {
+      throw __LINE__;
+    }
+    return;
+  };
+  
+  const char* getStringFromMode(OutputMode m) {
+    if (m==OutputMode::stdout) {
+      return "stdout";
+    } else if (m==OutputMode::file) {
+      return "file";
+    } else if (m==OutputMode::infoLoggerD) {
+      return "infoLoggerD";
+    } else if (m==OutputMode::none) {
+      return "none";
+    } 
+    return "unknown";
+  }
+  
+  OutputStream currentMode; // current option for output
+  OutputStream mainMode = {OutputMode::infoLoggerD, ""}; // main output mode
+  OutputStream fallbackMode = {OutputMode::stdout, ""}; // in case main mode is not available
+  
+  bool verbose = 0; // in verbose mode, more info printed on stdout
+  
   /// Log a message, with a list of arguments of type va_list.
   /// \param message  NUL-terminated string message to push to the log system. It uses the same format as specified for printf(), and the function accepts additionnal formatting parameters.
   /// \param ap       Variable list of arguments (c.f. vprintf)
@@ -285,7 +383,7 @@ class InfoLogger::Impl
   void refreshDefaultMsg();
   infoLog_msg_t defaultMsg; //< default log message (in particular, to complete optionnal fields)
 
-  InfoLoggerClient* client; //< entity to communicate with local infoLoggerD
+  InfoLoggerClient* client = nullptr; //< entity to communicate with local infoLoggerD
   SimpleLog stdLog;         //< object to output messages to stdout/file
 
   bool isRedirecting = false;                  // state of stdout/stderr redirection
@@ -561,7 +659,7 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     // on error, close connection / use stdout / buffer messages in memory ?
   }
 
-  if ((currentMode == OutputMode::stdout) || (currentMode == OutputMode::file)) {
+  if ((currentMode.mode == OutputMode::stdout) || (currentMode.mode == OutputMode::file)) {
     char buffer[LOG_MAX_SIZE];
     msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Simple);
 
@@ -582,7 +680,7 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
   }
 
   // raw output: infoLogger protocol to stdout
-  if (currentMode == OutputMode::raw) {
+  if (currentMode.mode == OutputMode::raw) {
     char buffer[LOG_MAX_SIZE];
     msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Encoded);
     puts(buffer);
@@ -625,7 +723,15 @@ int InfoLogger::Impl::logV(const InfoLoggerMessageOption& options, const InfoLog
 
 InfoLogger::InfoLogger()
 {
-  mPimpl = std::make_unique<InfoLogger::Impl>();
+  mPimpl = std::make_unique<InfoLogger::Impl>("");
+  if (mPimpl == NULL) {
+    throw __LINE__;
+  }
+}
+
+InfoLogger::InfoLogger(const std::string &options)
+{
+  mPimpl = std::make_unique<InfoLogger::Impl>(options);
   if (mPimpl == NULL) {
     throw __LINE__;
   }

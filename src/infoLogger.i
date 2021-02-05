@@ -45,6 +45,7 @@ class InfoLoggerMetadata {
 class InfoLogger {
   public:
     InfoLogger();
+    InfoLogger(const std::string &message);
     ~InfoLogger();
 
     int logInfo(const std::string &message);

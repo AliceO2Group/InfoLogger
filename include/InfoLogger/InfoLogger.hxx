@@ -139,6 +139,11 @@ class InfoLogger
   /// May throw exceptions on failure.
   InfoLogger();
 
+  // Constructor
+  // with optional options
+  // provided as a comma-separated list of key=value pairs
+  InfoLogger(const std::string& options);
+
   /// Destructor
   virtual ~InfoLogger();
 

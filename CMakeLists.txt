@@ -105,6 +105,7 @@ add_library (objInfoLoggerClient OBJECT
   src/InfoLoggerClient.cxx
   src/infoLoggerMessageDecode.c
   src/InfoLoggerMessageHelper.cxx
+  src/infoLoggerUtils.cxx  
   src/utility.c
   src/simplelog.cxx
 )
@@ -249,6 +250,7 @@ add_executable(
   src/infoLoggerMessageDecode.c
   src/InfoLoggerMessageHelper.cxx
   src/InfoLoggerMessageList.cxx
+  src/infoLoggerUtils.cxx
   $<$<BOOL:${MYSQL_FOUND}>:src/InfoLoggerDispatchSQL.cxx>
 )
 target_include_directories(

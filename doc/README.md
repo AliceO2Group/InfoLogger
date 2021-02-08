@@ -267,6 +267,20 @@ achieved on CentOS 7 with e.g. (as root):
   When "infoLoggerD" mode is selected and no infoLoggerD connection can be established, the mode falls back to "stdout".
   
   There is a built-in protection in the logging API to avoid message floods. If a client tries to send more than 500 messages in one second, or more than 1000 messages in one minute, further messages are redirected to a local file in /tmp. When the number of messages in this overflow file exceeds 1000 (or if can't be created), further messages are dropped. Normal behavior resumes when the message rate is reduced below 10 messages per minute. Some warning messages are logged by the library itself when this situation occurs.
+  
+  Constructor of the InfoLogger accepts an optional string parameter, used to override some defaults.
+  The same settings can also be defined using the INFOLOGGER_OPTIONS environment variable.
+    
+  The order of evaluation is done in this order: constructor options, environment variable options, configuration file.
+  Each step may overwrite what was set by the previous one.
+  
+  The option string consists of a comma-separated list of key=value pairs, e.g "param1=value1, param2=value2".
+  The configuration parameters accepted in this option string are:
+   - outputMode: the main output mode of the library. As accepted by INFOLOGGER_MODE. Default: infoLoggerD.
+   - outputModeFallback: the fallback output mode of the library. As accepted by INFOLOGGER_MODE. Default: stdout. The fallback mode is selected on initialization only (not later at runtime), if the main mode fails on first attempt.
+   - verbose: 0 or 1. Default: 0. If 1, extra information is printed on stdout, e.g. to report the selected output.
+
+
 
 * infoLoggerD local socket
   

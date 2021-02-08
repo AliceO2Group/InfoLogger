@@ -77,3 +77,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - infoLoggerServer:
   - bulk insert mode (transactions).
   - drop messages too long for DB.
+
+## v1.3.21 - 08/02/2021
+- infoLogger API: added optional string parameter to the constructor, for custom configuration.

@@ -190,7 +190,7 @@ if {[catch {
   }
     
   # wait a bit
-  after 1500 { set timeout 1}
+  after 2500 { set timeout 1}
   vwait timeout
   
   # query DB for message

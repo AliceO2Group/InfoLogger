@@ -80,3 +80,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v1.3.21 - 08/02/2021
 - infoLogger API: added optional string parameter to the constructor, for custom configuration.
+
+## v1.3.22 - 15/02/2021
+- increased test timeout for slow machines

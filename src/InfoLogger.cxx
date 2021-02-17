@@ -265,6 +265,8 @@ class InfoLogger::Impl
             break;
           }
         }
+      } else {
+        break;
       }
       if (verbose) {
         printf("Output to %s failed\n", getStringFromMode(currentMode.mode));

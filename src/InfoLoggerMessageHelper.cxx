@@ -13,6 +13,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <string>
 
 #include "InfoLoggerMessageHelper.h"
 #include "InfoLogger/InfoLogger.hxx"
@@ -138,6 +139,7 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t* msg, char* buffer, int
   int status;
 
   // todo: escape %... & other printf formats ?
+  std::string strBuf;
 
   switch (format) {
 
@@ -238,6 +240,34 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t* msg, char* buffer, int
       if ((status) && (status != -1)) {
         return __LINE__;
       }
+      break;
+
+    case InfoLoggerMessageHelper::Format::Debug:
+      // one line per field, fieldName = value
+      for (int i = 0; i < protocols[0].numberOfFields; i++) {
+        if (msg->values[i].isUndefined) {
+          // strBuf += "(undefined)";
+        } else {
+          if (strBuf.length()) {
+            strBuf += ", ";
+          }
+          strBuf += std::string(protocols[0].fields[i].name) + " = ";
+          switch (protocols[0].fields[i].type) {
+            case infoLog_msgField_def_t::ILOG_TYPE_STRING:
+              strBuf += std::string(msg->values[i].value.vString);
+              break;
+            case infoLog_msgField_def_t::ILOG_TYPE_INT:
+              strBuf += std::to_string(msg->values[i].value.vInt);
+              break;
+            case infoLog_msgField_def_t::ILOG_TYPE_DOUBLE:
+              strBuf += std::to_string(msg->values[i].value.vDouble);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+      appendString(buffer, bufferSize, &ix, strBuf.c_str());
       break;
 
     default:

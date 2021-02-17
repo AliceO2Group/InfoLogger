@@ -265,6 +265,8 @@ class InfoLogger::Impl
             break;
           }
         }
+      } else {
+        break;
       }
       if (verbose) {
         printf("Output to %s failed\n", getStringFromMode(currentMode.mode));
@@ -302,6 +304,7 @@ class InfoLogger::Impl
                     file,
                     infoLoggerD,
                     raw,
+                    debug,
                     none };
 
   struct OutputStream {
@@ -332,6 +335,8 @@ class InfoLogger::Impl
       out.mode = OutputMode::infoLoggerD;
     } else if (!strcmp(s, "raw")) {
       out.mode = OutputMode::raw;
+    } else if (!strcmp(s, "debug")) {
+      out.mode = OutputMode::debug;
     } else if (!strcmp(s, "none")) {
       out.mode = OutputMode::none;
     } else {
@@ -348,6 +353,10 @@ class InfoLogger::Impl
       return "file";
     } else if (m == OutputMode::infoLoggerD) {
       return "infoLoggerD";
+    } else if (m == OutputMode::raw) {
+      return "raw";
+    } else if (m == OutputMode::debug) {
+      return "debug";
     } else if (m == OutputMode::none) {
       return "none";
     }
@@ -688,6 +697,12 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     puts(buffer);
   }
 
+  // debug output: infoLogger fields one by one
+  if (currentMode.mode == OutputMode::debug) {
+    char buffer[LOG_MAX_SIZE];
+    msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Debug);
+    puts(buffer);
+  }
   return 0;
 }
 

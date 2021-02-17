@@ -244,15 +244,15 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t* msg, char* buffer, int
 
     case InfoLoggerMessageHelper::Format::Debug:
       // one line per field, fieldName = value
-      for (int i=0;i<protocols[0].numberOfFields;i++) {
-	if (msg->values[i].isUndefined) {
-	  // strBuf += "(undefined)";
-	} else {
-	  if (strBuf.length()) {
-	    	strBuf += ", ";
-	  }
-	  strBuf += std::string(protocols[0].fields[i].name) + " = ";
-	  switch (protocols[0].fields[i].type) {
+      for (int i = 0; i < protocols[0].numberOfFields; i++) {
+        if (msg->values[i].isUndefined) {
+          // strBuf += "(undefined)";
+        } else {
+          if (strBuf.length()) {
+            strBuf += ", ";
+          }
+          strBuf += std::string(protocols[0].fields[i].name) + " = ";
+          switch (protocols[0].fields[i].type) {
             case infoLog_msgField_def_t::ILOG_TYPE_STRING:
               strBuf += std::string(msg->values[i].value.vString);
               break;
@@ -264,8 +264,8 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t* msg, char* buffer, int
               break;
             default:
               break;
-	  }
-	}
+          }
+        }
       }
       appendString(buffer, bufferSize, &ix, strBuf.c_str());
       break;

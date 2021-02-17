@@ -39,7 +39,7 @@ class InfoLoggerMessageHelper
                 Detailed,
                 Full,
                 Encoded,
-		Debug };
+                Debug };
   int MessageToText(infoLog_msg_t* msg, char* buffer, int bufferSize, InfoLoggerMessageHelper::Format format);
 
   // indexes to access a given field in msg struct (protocol independent)

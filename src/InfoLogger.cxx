@@ -304,7 +304,7 @@ class InfoLogger::Impl
                     file,
                     infoLoggerD,
                     raw,
-		    debug,
+                    debug,
                     none };
 
   struct OutputStream {
@@ -696,7 +696,7 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Encoded);
     puts(buffer);
   }
-  
+
   // debug output: infoLogger fields one by one
   if (currentMode.mode == OutputMode::debug) {
     char buffer[LOG_MAX_SIZE];

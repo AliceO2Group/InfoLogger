@@ -734,7 +734,6 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = "@PROJECT_SOURCE_DIR@/include" \
-                         "@PROJECT_BINARY_DIR@/include" \
                          "@PROJECT_SOURCE_DIR@/src" \
                          "@PROJECT_SOURCE_DIR@/doc"
 
@@ -2055,7 +2054,7 @@ DOT_NUM_THREADS        = 0
 # The default value is: Helvetica.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DOT_FONTNAME           = FreeSans
+#DOT_FONTNAME           = FreeSans
 
 # The DOT_FONTSIZE tag can be used to set the size (in points) of the font of
 # dot graphs.

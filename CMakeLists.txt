@@ -13,6 +13,16 @@ project(
   LANGUAGES CXX C
 )
 
+# default install dirs	
+include(GNUInstallDirs)
+
+# add subdirectories
+add_subdirectory(doc)
+# stop immediately for easy building of doc only
+if(ONLYDOC)
+  return()
+endif()
+
 # global compilation options
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,14 +33,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # build-time binaries
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 # installation
-include(GNUInstallDirs)
 set(CMAKE_INSTALL_LIBDIR lib)
 
 # add local modules directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
-# add subdirectories
-add_subdirectory(doc)
 
 # dependencies to build the InfoLogger components
 # NB: cmake/InfoLoggerConfig.cmake defines dependencies for clients using the library

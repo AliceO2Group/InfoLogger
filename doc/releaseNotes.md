@@ -86,3 +86,4 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## next version
 - added INFOLOGGER_MODE=debug. In this mode, infoLogger library prints on stdout one line per message, with a list of comma-separated field = value pairs. Undefined fields are not shown.
+- added INFOLOGGER_OPTIONS environment variable, which allows overriding some of the built-in client defaults: outputMode, outputModeFallback, verbose, floodProtection.

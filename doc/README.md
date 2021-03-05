@@ -279,6 +279,7 @@ achieved on CentOS 7 with e.g. (as root):
    - outputMode: the main output mode of the library. As accepted by INFOLOGGER_MODE. Default: infoLoggerD.
    - outputModeFallback: the fallback output mode of the library. As accepted by INFOLOGGER_MODE. Default: stdout. The fallback mode is selected on initialization only (not later at runtime), if the main mode fails on first attempt.
    - verbose: 0 or 1. Default: 0. If 1, extra information is printed on stdout, e.g. to report the selected output.
+   - floodProtection: 0 or 1. Default: 1. Enable(1)/disable(0) the message flood protection.
 
 
 

@@ -202,12 +202,20 @@ int main(int argc, char** argv)
     }
   }
 
-  InfoLogger theLog;
+  std::unique_ptr<InfoLogger> theLog;
+  try {
+    theLog=std::make_unique<InfoLogger>();
+  }
+  catch(int err) {
+    printf("Failed to initialize infoLogger: exception %d\n",err);
+    return -1;
+  }
+  
 
   // additionnal args = messages to send
   int i;
   for (i = optind; i < argc; i++) {
-    theLog.log(msgOptions, msgContext, "%s", argv[i]);
+    theLog->log(msgOptions, msgContext, "%s", argv[i]);
   }
 
   // todo: catch exceptions
@@ -227,7 +235,7 @@ int main(int argc, char** argv)
           break;
         }
         //infoLogger_msg_xt(UNDEFINED_STRING,UNDEFINED_INT,UNDEFINED_INT,facility,severity,level,msg);
-        theLog.log(msgOptions, msgContext, "%s", msg.c_str());
+        theLog->log(msgOptions, msgContext, "%s", msg.c_str());
       }
       if (eof)
         break;

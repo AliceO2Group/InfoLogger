@@ -199,15 +199,18 @@ class InfoLogger::Impl
         throw __LINE__;
       }
       for (auto& it : kv) {
+        //printf("%s = %s\n",it.first.c_str(), it.second.c_str());
         if (it.first == "outputMode") {
           getOutputStreamFromString(it.second.c_str(), mainMode);
         } else if (it.first == "outputModeFallback") {
           getOutputStreamFromString(it.second.c_str(), fallbackMode);
         } else if (it.first == "verbose") {
           verbose = atoi(it.second.c_str());
-        } else {
+        } else if (it.first == "floodProtection") {
+	  flood_protection = atoi(it.second.c_str());
+	} else {
           // unknown option
-          // printf("Unknown option %s\n",it.second.c_str());
+          printf("Unknown infoLogger option %s\n",it.first.c_str());
           throw __LINE__;
         }
       }
@@ -241,6 +244,9 @@ class InfoLogger::Impl
       }
       if (verbose) {
         printf("Using output mode %s\n", getStringFromMode(currentMode.mode));
+	if (!flood_protection) {
+          printf("Flood protection disabled\n");
+	}
       }
 
       if (currentMode.mode == OutputMode::file) {
@@ -410,7 +416,7 @@ class InfoLogger::Impl
   
   // message flood prevention
   // constants
-  const bool flood_protection = 1;         // if set, flood protection mechanism enabled
+  bool flood_protection = 1;         // if set, flood protection mechanism enabled
   const unsigned int flood_maxmsg_sec=500; // maximum messages in one second to trigger flood
   const unsigned int flood_maxmsg_min=1000; // maximum messages in one minute to trigger flood
   const unsigned int flood_maxmsg_file=1000; // maximum number of messages in overflow log file

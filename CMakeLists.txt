@@ -10,20 +10,18 @@ cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 project(
   InfoLogger
   DESCRIPTION "O2 Logging library and services"
-  LANGUAGES CXX C
+  LANGUAGES NONE
 )
 
-# default install dirs	
-include(GNUInstallDirs)
-
-# add subdirectories
-add_subdirectory(doc)
-# stop immediately for easy building of doc only
+# simplified build mode for doc only
 if(ONLYDOC)
+  add_subdirectory(doc)
   return()
 endif()
 
 # global compilation options
+enable_language(C)
+enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -33,10 +31,14 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # build-time binaries
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 # installation
+include(GNUInstallDirs)
 set(CMAKE_INSTALL_LIBDIR lib)
 
 # add local modules directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
+# add subdirectories
+add_subdirectory(doc)
 
 # dependencies to build the InfoLogger components
 # NB: cmake/InfoLoggerConfig.cmake defines dependencies for clients using the library

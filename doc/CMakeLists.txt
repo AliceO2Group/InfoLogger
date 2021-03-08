@@ -1,17 +1,20 @@
-include(FindDoxygen)
+# Generate documentation
 
-# put doc in a subdirectory with project name, if not already set so
+# define doc build path
+set(DOC_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/doc-build")
+
+# define doc installation path
+# ensures it ends with project name
 if (NOT CMAKE_INSTALL_DOCDIR)
   set(CMAKE_INSTALL_DOCDIR "doc")
 endif()
 if (NOT "${CMAKE_INSTALL_DOCDIR}" MATCHES "${PROJECT_NAME}$")
   set(CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DOCDIR}/${PROJECT_NAME}")
 endif()
-set(DOC_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_DOCDIR}")
 
 # log doc build(install paths)
-message(STATUS "Documentation will be generated in ${DOC_OUTPUT_DIR}")
-message(STATUS "Documentation will be installed in ${CMAKE_INSTALL_DOCDIR}")
+message(STATUS "Documentation will be built in ${DOC_BUILD_DIR}")
+message(STATUS "Documentation will be installed in ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DOCDIR}")
 
 # general files directly from source
 install(
@@ -21,6 +24,7 @@ install(
 )
 
 # doxygen-generated files
+include(FindDoxygen)
 if (DOXYGEN_FOUND)
   if(NOT DOXYGEN_DOT_FOUND)
     message(WARNING "dot not found. Please install Graphviz.")
@@ -42,7 +46,7 @@ if (DOXYGEN_FOUND)
   # doxygen fails creating multi-level output directory, make sure it exists
   add_custom_target(
     doc-dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${DOC_OUTPUT_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${DOC_BUILD_DIR}"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Create the doxygen output directory"
     VERBATIM
@@ -50,11 +54,11 @@ if (DOXYGEN_FOUND)
 
   # install generated files
   install(
-    DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_DOCDIR}/html
+    DIRECTORY ${DOC_BUILD_DIR}/html
     TYPE DOC
     OPTIONAL # because available only after "make doc"
   )
-else (DO)
+else ()
   message(WARNING "Doxygen not found")
 endif (DOXYGEN_FOUND)
 

@@ -84,6 +84,6 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v1.3.22 - 15/02/2021
 - increased test timeout for slow machines
 
-## next version
+## v1.3.23 - 09/03/2021
 - added INFOLOGGER_MODE=debug. In this mode, infoLogger library prints on stdout one line per message, with a list of comma-separated field = value pairs. Undefined fields are not shown.
 - added INFOLOGGER_OPTIONS environment variable, which allows overriding some of the built-in client defaults: outputMode, outputModeFallback, verbose, floodProtection.

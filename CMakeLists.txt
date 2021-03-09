@@ -10,10 +10,18 @@ cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 project(
   InfoLogger
   DESCRIPTION "O2 Logging library and services"
-  LANGUAGES CXX C
+  LANGUAGES NONE
 )
 
+# simplified build mode for doc only
+if(ONLYDOC)
+  add_subdirectory(doc)
+  return()
+endif()
+
 # global compilation options
+enable_language(C)
+enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

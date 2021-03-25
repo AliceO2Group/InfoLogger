@@ -20,6 +20,7 @@
 #include "infoLoggerMessage.h"
 #include "InfoLoggerClient.h"
 #include "infoLoggerUtils.h"
+#include "infoLoggerDefaults.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -221,12 +222,12 @@ class InfoLogger::Impl
     processOptions(options);
 
     // parse options from environment
-    const char* confEnvOptions = getenv("INFOLOGGER_OPTIONS");
+    const char* confEnvOptions = getenv(INFOLOGGER_ENV_OPTIONS);
     if (confEnvOptions != NULL) {
       processOptions(confEnvOptions);
     }
 
-    const char* confEnvMode = getenv("INFOLOGGER_MODE");
+    const char* confEnvMode = getenv(INFOLOGGER_ENV_MODE);
     if (confEnvMode != NULL) {
       getOutputStreamFromString(confEnvMode, mainMode);
     }

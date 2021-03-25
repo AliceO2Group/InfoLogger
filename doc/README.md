@@ -1,25 +1,27 @@
 # InfoLogger
 
-This package provides means to inject, collect, store, and display log messages
-from processes.
+The InfoLogger package provides means to inject, collect, store, and display log messages from processes running on multiple machines.
+
+The following executables, presented with the _nicknames_ used below, are part of the InfoLogger package:
+
+  - o2-infologger-log or _log_: command line tool to inject log messages e.g. from shell scripts, or to redirect program output to InfoLogger. The preferred way to inject data is using directly one of the InfoLogger libraries.
+  - o2-infologger-daemon or _infoLoggerD_: a daemon process collecting all local messages and sending them to _infoLoggerServer_.
+  - o2-infologger-server or _infoLoggerServer_: the central process collecting, archiving, and distributing messages from multiple hosts.
+  - o2-infologger-browser or [_infoBrowser_](infoBrowser.md): native GUI to display log messages in real time or from database archive. Messages can be filtered based on their tags.
+  - o2-infologger-admindb or _infoLoggerAdminDB_: to maintain the logging database, i.e. create, archive, clean or destroy the database content.
+  - o2-infologger-newdb : helper script for the initial set-up of the logging database, in particular for the definition of access credentials.
+  - o2-infologger-tester : a tool to check the logging chain, from injection to DB storage and online subscription.
+
+The following libraries are also provided, to inject logs into the system:
+
+  - libO2Infologger (static and dynamic versions), for C and C++. Provided with include files and ad-hoc CMake exports.
+  - Language-specific libraries, for the support of Tcl, Python, Go, and nodejs languages.
+  
+There are also some InfoLogger internal test components, not used in normal runtime conditions, for development and debugging purpose (o2-infologger-test-*).
+The source code repository is <https://github.com/AliceO2Group/InfoLogger>.
 
 
 ## Architecture
-
-The InfoLogger system consists of several components:
-
-* libInfoLogger.so: C and C++ client APIs to create and inject log messages. It features printf-like
-formatting or c++ stream syntax.
-* log: a command line tool to inject log messages e.g. from shell scripts, or to redirect program output to InfoLogger.
-* infoLoggerD: a daemon running in the background and collecting
-all messages on the local node. They are then transported to a central server.
-* infoLoggerServer: a daemon collecting centrally the messages sent by
-remote infoLoggerD processes. Messages are stored in a MySQL database. It also serves the infoBrowser online clients.
-* [infoBrowser](infoBrowser.md): a GUI to display online log messages as they arrive on the central server, or to query
-them from the database. Messages can be filtered based on their tags.
-* infoLoggerAdminDB: a command line tool to create, archive, clean or destroy
-the logging database content.
-
 
 ![infoLogger architecture](infoLogger_architecture.png "Components of InfoLogger system")
 
@@ -27,12 +29,14 @@ the logging database content.
 
 ## Installation
 
-Installation described here is for standard [CERN CentOS 7 (CC7)](http://linux.web.cern.ch/linux/centos7/) operating system.
+Installation is usually done as part of the [FLP Suite](https://alice-o2-project.web.cern.ch/flp-suite).
+
+The procedure described here can be used to setup a standalone InfoLogger system.
+It shows the steps involved for a standard [CERN CentOS 7 (CC7)](http://linux.web.cern.ch/linux/centos7/) operating system.
 It was tested fine on machines installed with the default 'desktop recommended setup' selected during CERN PXE-boot setup phase.
 Some minor tweaks might be needed on different systems.
 
-
-Infologger RPM packages can be installed through yum repository.
+Infologger RPM packages can be installed through a yum repository (e.g. the [O2/FLP yum repository](https://alice-flp.docs.cern.ch/kb/yum))
 At the moment, everything is bundled in a single RPM named o2-InfoLogger-standalone, containing all components described above.
 To quickly test the infoLogger API, the installation of this RPM is enough, the InfoLogger library will use stdout as fallback if
 the central services are not available, so one can play with basic functionality without setting up the full infoLoggerD/infoLoggerServer/database chain.
@@ -48,7 +52,7 @@ on a single node (commands executed as root).
 
 * Install a MySQL database. Here we use mariadb, as it's the standard one available in base CC7
 install, but other MySQL versions would work just as fine (just make sure to replace mariadb by
-mysql in the infoLoggerServer.service file, the default one being located in
+mysql in the o2-infologger-server.service file, the default one being located in
 /usr/lib/systemd/system/)
 
   * Setup package:
@@ -60,9 +64,10 @@ mysql in the infoLoggerServer.service file, the default one being located in
      ```
      
   * Create empty database and accounts for InfoLogger (interactive script, defaults should be fine):
-     `/opt/o2-InfoLogger/bin/newMysql.sh`
+     `/opt/o2-InfoLogger/bin/o2-infologger-newdb`
   * Create InfoLogger configuration, and fill with DB access parameters returned by previous script:
-     `vi /etc/infoLogger.cfg`
+     `mkdir -p /etc/o2.d/infologger/
+      vi /etc/o2.d/infologger/infoLogger.cfg`
 
       ```
       [infoLoggerServer]
@@ -87,22 +92,22 @@ mysql in the infoLoggerServer.service file, the default one being located in
     See also notes below in the "Configuration" section for custom configuration of each component (not necessary for this standalone setup example).
 
 * Create an empty message table in database for infoLoggerServer:
-    `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -c create`
+    `/opt/o2-InfoLogger/bin/o2-infologger-admindb -c create`
 
 * Configure services to start now and at boot time:
     ```
-    systemctl enable infoLoggerServer.service
-    systemctl enable infoLoggerD.service
-    systemctl start infoLoggerServer.service
-    systemctl start infoLoggerD.service
+    systemctl enable o2-infologger-server.service
+    systemctl enable o2-infologger-daemon.service
+    systemctl start o2-infologger-server.service
+    systemctl start o2-infologger-daemon.service
     ```
 
    Default InfoLogger service files for systemd can be found in /usr/lib/systemd/system/ if need to be edited.
 
 * Check status of services:
     ```
-    systemctl status infoLoggerServer.service
-    systemctl status infoLoggerD.service
+    systemctl status o2-infologger-server.service
+    systemctl status o2-infologger-daemon.service
     ```
 
 
@@ -113,23 +118,23 @@ collected centrally.
 
 ## Usage
 * Start infoBrowser:
-  `/opt/o2-InfoLogger/bin/infoBrowser &`
+  `/opt/o2-InfoLogger/bin/o2-infologger-browser &`
     * When launched, it goes in "online" mode, i.e. it connects to the infoLoggerServer and displays messages in real time.
     * To browse previously stored messages, click the green "online" button (to exit online mode), fill-in selection filters, and push "query".
     * Detailed usage of infoBrowser can be found in the [separate document](infoBrowser.md).
 
 * Log a test message from command line:
-  `/opt/o2-InfoLogger/bin/log test`
-    * See command line options with `/opt/o2-InfoLogger/bin/log -h`
-    * It can be used to redirect output of a process to InfoLogger with e.g. `myProcess | /opt/o2-InfoLogger/bin/log -x`.
+  `/opt/o2-InfoLogger/bin/o2-infologger-log test`
+    * See command line options with `/opt/o2-InfoLogger/bin/o2-infologger-log -h`
+    * It can be used to redirect output of a process to InfoLogger with e.g. `myProcess | /opt/o2-InfoLogger/bin/o2-infologger-log -x`.
     * This utility uses pid/username of parent process to identify message source. In case of pipe redirection, it detects pid/username of process injecting logs, for a better tagging of messages.
     * Most message fields can be explicitely set with the -o command line option.      
 
 * Archive table of messages and create fresh one:
-  `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -c archive`
+  `/opt/o2-InfoLogger/bin/o2-infologger-admindb -c archive`
     * Archived messages can still be accessed from infoBrowser through the
     Archive menu.
-    * See other administrative commands possible with `/opt/o2-InfoLogger/bin/infoLoggerAdminDB -h`
+    * See other administrative commands possible with `/opt/o2-InfoLogger/bin/o2-infologger-admindb -h`
 
 
 ## API for developers
@@ -152,7 +157,7 @@ The InfoLogger library allows to inject messages directly from programs, as show
    ```
 
   ```
-  g++ myLog.cpp -I/opt/o2-InfoLogger/include/ -lInfoLogger-standalone -L/opt/o2-InfoLogger/lib -Wl,-rpath=/opt/o2-InfoLogger/lib
+  g++ myLog.cpp -I/opt/o2-InfoLogger/include/ -lO2Infologger -L/opt/o2-InfoLogger/lib -Wl,-rpath=/opt/o2-InfoLogger/lib
   ./a.out
   ```
 
@@ -168,7 +173,7 @@ The InfoLogger library allows to inject messages directly from programs, as show
    }
   ```
   ```
-  gcc myLog.c -I/opt/o2-InfoLogger/include/ -lInfoLogger-standalone -L/opt/o2-InfoLogger/lib -Wl,-rpath=/opt/o2-InfoLogger/lib
+  gcc myLog.c -I/opt/o2-InfoLogger/include/ -lO2Infologger -L/opt/o2-InfoLogger/lib -Wl,-rpath=/opt/o2-InfoLogger/lib
   ./a.out
   ```
 
@@ -233,11 +238,11 @@ The InfoLogger library allows to inject messages directly from programs, as show
 
 ## Configuration
 
-* Description and example of parameters for each InfoLogger component can be found in /opt/o2-InfoLogger/etc/*.cfg.
+* Description and example of parameters for each InfoLogger component can be found in /opt/o2-InfoLogger/etc/o2.d/infologger/*.cfg.
   The parameters can usually be mixed in a single configuration file, as they are grouped in sections ([infoLoggerServer], [infoLoggerD], [infoBrowser], [client] ...).
 
 * Path to configuration file can be defined as startup parameter for the infoLoggerServer and infoLoggerD daemons. Processes using the client library can also be
-  configured by defining the INFOLOGGER_CONFIG environment variable, pointing to the selected config file. The path should be in the form: "file:/etc/infoLogger.cfg"
+  configured by defining the O2_INFOLOGGER_CONFIG environment variable, pointing to the selected config file. The path should be in the form: "file:/etc/o2.d/infologger/infoLogger.cfg"
 
 * On multiple-hosts systems, the serverHost configuration key should be set for infoLoggerD and infoBrowser, so that they are able to connect infoLoggerServer
   if not running locally.
@@ -254,12 +259,12 @@ achieved on CentOS 7 with e.g. (as root):
 
 * Client library
 
-  Behavior of infoLogger library can be configured with INFOLOGGER_MODE environment variable.
+  Behavior of infoLogger library can be configured with O2_INFOLOGGER_MODE environment variable.
   This defines where to inject messages at runtime.
   Possible values are:
   * infoLoggerD = inject messages to infoLogger system, through infoLoggerD process (this is the default mode). If infoLoggerD is not found, an error message is printed on stderr and further logs are output to stdout.
   * stdout = print messages to stdout/stderr (severity error and fatal)
-  * file = print messages to a file. By default, "./log.txt". Specific file can be set with e.g. INFOLOGGER_MODE=file:/path/to/my/logfile.txt
+  * file = print messages to a file. By default, "./log.txt". Specific file can be set with e.g. O2_INFOLOGGER_MODE=file:/path/to/my/logfile.txt
   * none = messages are discarded
   
   During development phase, it can be useful to set mode to "stdout", to allow using the infoLogger interface
@@ -269,15 +274,15 @@ achieved on CentOS 7 with e.g. (as root):
   There is a built-in protection in the logging API to avoid message floods. If a client tries to send more than 500 messages in one second, or more than 1000 messages in one minute, further messages are redirected to a local file in /tmp. When the number of messages in this overflow file exceeds 1000 (or if can't be created), further messages are dropped. Normal behavior resumes when the message rate is reduced below 10 messages per minute. Some warning messages are logged by the library itself when this situation occurs.
   
   Constructor of the InfoLogger accepts an optional string parameter, used to override some defaults.
-  The same settings can also be defined using the INFOLOGGER_OPTIONS environment variable.
+  The same settings can also be defined using the O2_INFOLOGGER_OPTIONS environment variable.
     
   The order of evaluation is done in this order: constructor options, environment variable options, configuration file.
   Each step may overwrite what was set by the previous one.
   
   The option string consists of a comma-separated list of key=value pairs, e.g "param1=value1, param2=value2".
   The configuration parameters accepted in this option string are:
-   - outputMode: the main output mode of the library. As accepted by INFOLOGGER_MODE. Default: infoLoggerD.
-   - outputModeFallback: the fallback output mode of the library. As accepted by INFOLOGGER_MODE. Default: stdout. The fallback mode is selected on initialization only (not later at runtime), if the main mode fails on first attempt.
+   - outputMode: the main output mode of the library. As accepted by O2_INFOLOGGER_MODE. Default: infoLoggerD.
+   - outputModeFallback: the fallback output mode of the library. As accepted by O2_INFOLOGGER_MODE. Default: stdout. The fallback mode is selected on initialization only (not later at runtime), if the main mode fails on first attempt.
    - verbose: 0 or 1. Default: 0. If 1, extra information is printed on stdout, e.g. to report the selected output.
    - floodProtection: 0 or 1. Default: 1. Enable(1)/disable(0) the message flood protection.
 

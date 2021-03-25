@@ -8,8 +8,10 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#define INFOLOGGER_DEFAULT_CONFIG_PATH "/etc/infoLogger.cfg"
-#define INFOLOGGER_ENV_CONFIG_PATH "INFOLOGGER_CONFIG"
+#define INFOLOGGER_DEFAULT_CONFIG_PATH "/etc/o2.d/infologger/infoLogger.cfg"
+#define INFOLOGGER_ENV_CONFIG_PATH "O2_INFOLOGGER_CONFIG"
+#define INFOLOGGER_ENV_OPTIONS "O2_INFOLOGGER_OPTIONS"
+#define INFOLOGGER_ENV_MODE "O2_INFOLOGGER_MODE"
 
 // name of the section where to find parameters
 #define INFOLOGGER_CONFIG_SECTION_NAME_ADMIN "admin"

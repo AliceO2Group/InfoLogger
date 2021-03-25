@@ -15,7 +15,7 @@ This app is still fully supported, although there is also a newer [web-based O2 
 Start the infoBrowser from the command line, in a X-Windows enabled environment.
 Typically:
 
-`/opt/o2-InfoLogger/bin/infoBrowser`
+`/opt/o2-InfoLogger/bin/o2-infologger-browser`
 
 
 Command-line options:
@@ -27,7 +27,7 @@ Command-line options:
 -l level     : defines a predefined filter on startup (use same string as found in select box)
 -admin       : enables admin commands for messages archival
 -prefs file  : loads on startup a preference file saved previously from the Display menu (geometry, filters, online state)
--z file      : provides path to configuration file (by default: /etc/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
+-z file      : provides path to configuration file (by default: /etc/o2.d/infologger/infoLogger.cfg, or from environment variable O2_INFOLOGGER_CONFIG if set)
 ```
 
 # GUI

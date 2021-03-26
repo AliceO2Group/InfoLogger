@@ -441,7 +441,7 @@ install(PROGRAMS src/infoLoggerTester.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RE
 install(PROGRAMS newMysql.sh DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME o2-infologger-newdb)
 
 # service files
-set(SERVICE_SRCS infoLoggerD.service infoLoggerServer.cfg)
+set(SERVICE_SRCS infoLoggerD.service infoLoggerServer.service)
 set(SERVICE_NAMES o2-infologger-daemon.service o2-infologger-server.service)
 foreach (f n IN ZIP_LISTS SERVICE_SRCS SERVICE_NAMES)
   install(FILES ${f} DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/o2.d/infologger/systemd/ RENAME ${n} PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)

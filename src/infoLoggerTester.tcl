@@ -22,7 +22,7 @@ proc addError {errmsg} {
 
 if {[catch {
 
-  set configFile "/etc/infoLogger.cfg"
+  set configFile "/etc/o2.d/infologger/infoLogger.cfg"
   catch {
     set configFile $env(INFOLOGGER_CONFIG)
   }

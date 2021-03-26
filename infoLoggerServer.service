@@ -1,12 +1,12 @@
 [Unit]
-Description=infoLoggerServer, central logging server
+Description=O2 infoLoggerServer, central logging server
 Requires=mariadb.service
 After=network.target mariadb.service
 
 [Service]
 Type=forking
 TimeoutSec=5
-ExecStart=/opt/o2-modules/bin/infoLoggerServer -z file:/etc/infoLogger.cfg
+ExecStart=o2-infologger-server -z file:/etc/o2.d/infologger/infoLogger.cfg
 ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
 GuessMainPID=1
 Restart=always

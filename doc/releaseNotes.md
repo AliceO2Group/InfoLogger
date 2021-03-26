@@ -90,3 +90,4 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## next version
 - doxygen doc cleanup
+- Adapted to follow o2-flp conventions: renaming of executables, libraries, services, paths.

@@ -3,7 +3,7 @@
 ####################################
 
 # cmake settings
-CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.17.0 FATAL_ERROR)
 cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 
 # define project
@@ -50,7 +50,7 @@ find_package(SWIG 3.0.12)
 # flag to build only client library
 #set(INFOLOGGER_BUILD_LIBONLY 1)
 if(INFOLOGGER_BUILD_LIBONLY) 
-  message("Enabling libInfologger only.") 
+  message("Enabling library only.") 
 else()
   message("Enabling all InfoLogger modules.")
 endif()
@@ -137,7 +137,7 @@ add_library (InfoLogger SHARED
   ${INFOLOGGER_LIB_OBJECTS}
 )
 set_target_properties(InfoLogger PROPERTIES
-  OUTPUT_NAME InfoLogger
+  OUTPUT_NAME O2Infologger
 )
 target_include_directories(InfoLogger
   INTERFACE
@@ -193,7 +193,7 @@ add_library (libInfoLogger-static STATIC
   ${INFOLOGGER_LIB_OBJECTS}
 )
 set_target_properties(libInfoLogger-static PROPERTIES
-  OUTPUT_NAME InfoLogger
+  OUTPUT_NAME O2Infologger
 )
 target_include_directories(libInfoLogger-static
   INTERFACE
@@ -205,15 +205,15 @@ target_link_libraries(libInfoLogger-static pthread)
 
 # executable: log (command line tool to inject log messages)
 add_executable(
-  log
+  o2-infologger-log
   src/log.cxx  
 )
 target_link_libraries(
-  log
+  o2-infologger-log
   libInfoLogger-static
 )
 target_include_directories(
-  log
+  o2-infologger-log
   PRIVATE
   ${COMMON_STANDALONE_INCLUDE_DIRS}
 )
@@ -221,7 +221,7 @@ target_include_directories(
 
 # executable: infoLoggerD
 add_executable(
-  infoLoggerD
+  o2-infologger-daemon
   src/infoLoggerD.cxx
   $<TARGET_OBJECTS:objInfoLoggerTransport>
   $<TARGET_OBJECTS:objCommonConfiguration>
@@ -229,11 +229,11 @@ add_executable(
   $<TARGET_OBJECTS:objCommonDaemon>
 )
 target_link_libraries(
-  infoLoggerD
+  o2-infologger-daemon
   pthread        
 )
 target_include_directories(
-  infoLoggerD
+  o2-infologger-daemon
   PRIVATE
   ${COMMON_STANDALONE_INCLUDE_DIRS}
 )
@@ -244,7 +244,7 @@ if(MYSQL_FOUND)
   add_definitions(-DWITH_MYSQL)
 endif()
 add_executable(
-  infoLoggerServer
+  o2-infologger-server
   $<TARGET_OBJECTS:objInfoLoggerTransport>
   $<TARGET_OBJECTS:objCommonConfiguration>
   $<TARGET_OBJECTS:objCommonSimpleLog>
@@ -262,14 +262,14 @@ add_executable(
   $<$<BOOL:${MYSQL_FOUND}>:src/InfoLoggerDispatchSQL.cxx>
 )
 target_include_directories(
-  infoLoggerServer
+  o2-infologger-server
   PRIVATE
   ${INFOLOGGER_INCLUDE_DIRS_PUBLIC}
   ${COMMON_STANDALONE_INCLUDE_DIRS}
   ${MYSQL_INCLUDE_DIRS}
 )
 target_link_libraries(
-  infoLoggerServer
+  o2-infologger-server
   pthread
   ${MYSQL_LIBRARIES}
 )
@@ -277,19 +277,19 @@ target_link_libraries(
 
 # executable: infoLoggerAdminDB
 add_executable(
-        infoLoggerAdminDB
+        o2-infologger-admindb
         $<TARGET_OBJECTS:objCommonConfiguration>
         $<TARGET_OBJECTS:objCommonSimpleLog>
         src/infoLoggerAdminDB.cxx
 )
 target_include_directories(
-        infoLoggerAdminDB
+        o2-infologger-admindb
         PRIVATE
         ${COMMON_STANDALONE_INCLUDE_DIRS}
         ${MYSQL_INCLUDE_DIRS}
 )
 target_link_libraries(
-        infoLoggerAdminDB
+        o2-infologger-admindb
         ${MYSQL_LIBRARIES}
 )
 
@@ -386,28 +386,31 @@ set(TEST_SRCS
   test/testInfoLogger.c
   test/testInfoLogger.cxx
   test/testInfoLoggerPerf.cxx
-  test/testInfoLoggerDB.cxx  
+  test/testInfoLoggerDB.cxx
 )
-foreach (f ${TEST_SRCS})
-  get_filename_component(test_name ${f} NAME)
-  string(REGEX REPLACE ".cxx" "" test_name ${test_name})
-  set(exe "${test_name}.exe")
-  message ("${exe}")
+set(TEST_EXES
+  libc
+  lib
+  perf
+  db
+)
+foreach (f n IN ZIP_LISTS TEST_SRCS TEST_EXES)
+  set(exe "o2-infologger-test-${n}")
   add_executable(${exe} ${f} ${INFOLOGGER_LIB_OBJECTS})
   target_link_libraries(${exe} InfoLogger)
   target_include_directories(${exe} PRIVATE ${COMMON_STANDALONE_INCLUDE_DIRS} src)
-  add_test(NAME ${test_name} COMMAND ${exe})
+  add_test(NAME "test-${n}" COMMAND ${exe})
 endforeach()
 
 target_include_directories(
-  testInfoLoggerDB.exe
+  o2-infologger-test-db
   PRIVATE
   ${INFOLOGGER_INCLUDE_DIRS_PUBLIC}
   ${COMMON_STANDALONE_INCLUDE_DIRS}
   ${MYSQL_INCLUDE_DIRS}
 )
 target_link_libraries(
-  testInfoLoggerDB.exe
+  o2-infologger-test-db
   pthread
   ${MYSQL_LIBRARIES}
 )
@@ -422,7 +425,7 @@ endif()
 
 
 # Install
-set (INSTALL_TARGETS log infoLoggerD infoLoggerServer infoLoggerAdminDB libInfoLogger-static)
+set (INSTALL_TARGETS o2-infologger-log o2-infologger-daemon o2-infologger-server o2-infologger-admindb libInfoLogger-static)
 
 # Install has undefined behavior for properties with EXLUDE_FROM_ALL property set
 # Here we want to skip such targets
@@ -433,9 +436,23 @@ foreach (t ${INSTALL_TARGETS})
   endif()
 endforeach()
 
-install(PROGRAMS src/infoBrowser.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME infoBrowser)
-install(PROGRAMS src/infoLoggerTester.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME infoLoggerTester)
-install(PROGRAMS newMysql.sh DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(PROGRAMS src/infoBrowser.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME o2-infologger-browser)
+install(PROGRAMS src/infoLoggerTester.tcl DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME o2-infologger-tester)
+install(PROGRAMS newMysql.sh DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME o2-infologger-newdb)
+
+# service files
+set(SERVICE_SRCS infoLoggerD.service infoLoggerServer.service)
+set(SERVICE_NAMES o2-infologger-daemon.service o2-infologger-server.service)
+foreach (f n IN ZIP_LISTS SERVICE_SRCS SERVICE_NAMES)
+  install(FILES ${f} DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/o2.d/infologger/systemd/ RENAME ${n} PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+endforeach()
+
+# sample config files
+FILE(GLOB CFG_FILES *.cfg)
+foreach (f ${CFG_FILES})
+  install(FILES ${f} DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/o2.d/infologger/ PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+endforeach()
+
 
 #####################################
 endif()

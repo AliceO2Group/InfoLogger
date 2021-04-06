@@ -12,7 +12,7 @@
 # -l level     : defines a predefined filter on startup (use same string as found in select box)
 # -admin       : enables admin commands for messages archival
 # -prefs file  : loads on startup a preference file saved previously from the Display menu (geometry, filters, online state)
-# -z file      : provides path to configuration file (by default: /etc/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
+# -z file      : provides path to configuration file (by default: /etc/o2.d/infologger/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
 # 
 # requires tcl/tk 8.4 (panedwindow widget)
 #
@@ -57,7 +57,7 @@ set onlineserver(timer) ""
 
 set maxmess 10000
 
-set configFile "/etc/infoLogger.cfg"
+set configFile "/etc/o2.d/infologger/infoLogger.cfg"
 
 catch {
   set configFile $env(INFOLOGGER_CONFIG)

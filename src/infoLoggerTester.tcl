@@ -22,7 +22,7 @@ proc addError {errmsg} {
 
 if {[catch {
 
-  set configFile "/etc/infoLogger.cfg"
+  set configFile "/etc/o2.d/infologger/infoLogger.cfg"
   catch {
     set configFile $env(INFOLOGGER_CONFIG)
   }
@@ -173,7 +173,7 @@ if {[catch {
   # inject message
   puts -nonewline "Test message injection:        "
   set status 0
-  if {[catch {exec /opt/o2-InfoLogger/bin/log -s Debug -oFacility=test "$testString"} results]} {
+  if {[catch {exec /opt/o2-InfoLogger/bin/o2-infologger-log -s Debug -oFacility=test "$testString"} results]} {
    if {[lindex $::errorCode 0] eq "CHILDSTATUS"} {
       set status [lindex $::errorCode 2]
    } else {

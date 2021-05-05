@@ -91,3 +91,6 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v2.0.0 - 06/04/2021
 - doxygen doc cleanup
 - Adapted to follow o2-flp conventions: renaming of executables, libraries, services, paths.
+
+## v2.0.1 - 05/05/2021
+- fix reconnect timeout in stdout fallback mode (now 5s).

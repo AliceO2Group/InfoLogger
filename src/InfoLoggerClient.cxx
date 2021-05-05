@@ -283,7 +283,7 @@ void InfoLoggerClient::reconnect() {
         } else {
           if (isVerbose) log.info("reconnect failed");
         }
-        reconnectTimer.reset(cfg.reconnectTimeout);
+        reconnectTimer.reset(cfg.reconnectTimeout*1000000.0);
       }
     }
     usleep(200000);

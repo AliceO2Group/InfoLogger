@@ -9,11 +9,32 @@
 // or submit itself to any jurisdiction.
 
 #include <InfoLogger/InfoLogger.hxx>
+
+// optionnaly, use the helper macros
+#include <InfoLogger/InfoLoggerMacros.hxx>
+      
 using namespace AliceO2::InfoLogger;
 int main()
 {
+  // create handle to infologger system
   InfoLogger theLog;
 
+  // or, alternatively, to start infologger library in debug mode on stdout
+  // (can also be done at runtime by setting environment O2_INFOLOGGER_MODE)
+  // outputMode can be one of stdout, debug, infoLoggerD, ...
+  // InfoLogger theLog("outputMode=debug");
+
+  // optionnaly, customize some of the "static" fields
+  // to be applied to all messages
+  InfoLoggerContext theLogContext;
+  theLogContext.setField(InfoLoggerContext::FieldName::Facility, "myTestFacility");
+  theLog.setContext(theLogContext);
+
+  // log a message
   theLog.log("infoLogger message test");
+    
+  // log a warning with code 1234 for developers
+  theLog.log(LogWarningDevel_(1234), "this is a test warning message");
+  
   return 0;
 }

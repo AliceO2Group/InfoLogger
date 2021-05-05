@@ -275,7 +275,7 @@ target_link_libraries(
 )
 
 
-# executable: infoLoggerAdminDB
+# executable: o2-infologger-admindb
 add_executable(
         o2-infologger-admindb
         $<TARGET_OBJECTS:objCommonConfiguration>
@@ -420,7 +420,8 @@ target_link_libraries(
 # exclude modules requiring optional dependencies not found
 if(NOT MYSQL_FOUND)
   message("MySQL not found, some infoLogger modules are disabled for this build")
-  set_target_properties(infoLoggerAdminDB PROPERTIES EXCLUDE_FROM_ALL 1)
+  set_target_properties(o2-infologger-admindb PROPERTIES EXCLUDE_FROM_ALL 1)
+  set_target_properties(o2-infologger-test-db PROPERTIES EXCLUDE_FROM_ALL 1)
 endif()
 
 

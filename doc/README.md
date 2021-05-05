@@ -182,7 +182,7 @@ The InfoLogger library allows to inject messages directly from programs, as show
  
  * When using the C++ API, it is recommended to use the macros defined in InfoLoggerMacros.hxx to have the full context defined (severity, level, errno, source file/line) for each message in a compact way.
  
- * Some example calls are available in [the source code](/test/testInfoLogger.cxx)
+ * Some example calls are available in the source code: [1](/example/exampleLog.cxx) [2](/test/testInfoLogger.cxx)
  
  * There is the possibility to easily redirect FairLogger messages (see InfoLoggerFMQ.hxx) and process stdout/stderr to infologger (see InfoLogger.hxx setStandardRedirection())
    without changing the code from where they are issued. Although practical to get all output in InfoLogger, the messages captured this way are injected with a reduced number of tags,

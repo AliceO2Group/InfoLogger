@@ -94,3 +94,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.0.1 - 05/05/2021
 - fix reconnect timeout in stdout fallback mode (now 5s).
+
+## v2.1.0 - 11/05/2021
+- API: added auto-mute feature for potentially verbose/repetitive messages. To be enabled message per message, using an AutoMuteToken (c++ only, see InfoLogger.hxx and testInfoLogger.cxx).

@@ -1110,7 +1110,67 @@ void InfoLogger::filterReset() {
   mPimpl->filterDiscardLevel = InfoLogger::undefinedMessageOption.level;
 }
 
+int InfoLogger::log(AutoMuteToken &limit, const char* message, ...) { 
+  if (mPimpl->magicTag != InfoLoggerMagicNumber) {
+    return __LINE__;
+  }
 
+  unsigned int n = ++limit.count; // number of messages so far
+  auto now= std::chrono::steady_clock::now(); // current clock
+
+  // start interval timer
+  if (n == 1) {
+    limit.t0 = now;
+    limit.ndiscarded = 0;
+  }  
+  // end of interval flag
+  bool endOfInterval = ((n > 1) && ((std::chrono::duration_cast<std::chrono::seconds>(now - limit.t0)).count() >= limit.interval));
+
+  // discard when number of messages exceeded in interval
+  if ((n>limit.maxMsg) && (!endOfInterval)) {
+    limit.ndiscarded++;
+    limit.ndiscardedtotal++;
+    limit.t1 = now;
+    return -1;
+  }
+  
+  #define LOG_MUTE_PREFIX "[auto-mute] "
+  
+  if (endOfInterval) {
+    // report once per interval about excess logs
+    log(LOG_MUTE_PREFIX "%lu similar messages discarded since last sample (total: %u / %u)", limit.ndiscarded, limit.ndiscardedtotal, n-1);
+    if ((limit.ndiscarded == 0) || ((std::chrono::duration_cast<std::chrono::seconds>(now - limit.t1)).count() >= limit.interval)) {
+       // no message discarded / no message at all for one period, reset full count
+      limit.count = 1;
+      log(limit.logOptions, LOG_MUTE_PREFIX "It was quiet for a while, restoring full logging for similar messages");
+      limit.ndiscardedtotal = 0;
+    }
+    // reset period
+    limit.ndiscarded = 0;
+    limit.t0 = now;
+  }
+  
+  // log message
+  // forward variable list of arguments to logV method
+  int err;
+  va_list ap;
+  va_start(ap, message);
+  err = mPimpl->logV(limit.logOptions, mPimpl->currentContext, message, ap);
+  va_end(ap);
+  
+  if (!endOfInterval) {
+    // warn on limit on first excess
+    if ( n == limit.maxMsg) {
+      log(limit.logOptions, LOG_MUTE_PREFIX "Verbosity threshold exceeded (%u msg < %u s), discarding next similar messages", n, limit.interval);
+      limit.t0 = now;
+      limit.ndiscarded = 0;
+      limit.ndiscardedtotal = 0;
+    }
+  }
+  limit.t1 = now;
+
+  return err;
+}
 
 // end of namespace
 } // namespace InfoLogger

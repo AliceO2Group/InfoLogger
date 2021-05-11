@@ -72,5 +72,27 @@ int main()
   theLog.log(LogInfoDevel, "Info message with severity filter - you should see this");
   theLog.filterReset();
   theLog.log(LogDebugDevel, "Debug message with severity filter - you should see this again");
+  
+  // message verbosity control with auto-mute
+  const int limitN = 5; // max number of messages ...
+  const int limitT = 3; // ... for given time interval
+  theLog.log("Will now test auto-mute: limit = %d msg / %d s", limitN, limitT);
+  // define a static variable token, and pass it to all relevant log() calls
+  static InfoLogger::AutoMuteToken msgLimit(LogInfoDevel_(1234), limitN, limitT);  
+  // a couple of loops to show behavior
+  for (int j=0; j<2; j++) {
+    const int nmsg = 20 * limitN;
+    const float msgRate = 10;
+    theLog.log("Injecting %d msgs at %.2f Hz", nmsg, msgRate);
+    for (int i=1; i<= nmsg; i++) {
+      theLog.log(msgLimit, "This is message loop %d", i);
+      usleep((int)(1000000/msgRate));
+    }
+    const int pauseTime = limitT+1;
+    theLog.log("Pause %d s", pauseTime);
+    usleep(pauseTime*1000000);
+  }
+  theLog.log(msgLimit, "Final message test for auto-mute");
+  theLog.log("End of test");  
   return 0;
 }

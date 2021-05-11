@@ -26,6 +26,8 @@
 #include <list>
 #include <utility>
 #include <type_traits>
+#include <atomic>
+#include <chrono>
 
 // here are some macros to help including source code info in infologger messages
 // to be used to quickly specify "infoLoggerMessageOption" argument in some logging functions
@@ -248,6 +250,36 @@ class InfoLogger
     -1,                  // sourceLine
   };
 
+  // Token used to control the flow of messages.
+  // Allows auto-mute when defined amount of messages using same token in a period of time is exceeded.
+  //
+  // Constructor parameters:
+  // logOptions: Logging options used for the log calls associated to this token.
+  // maxMsg: Maximum number of messages for the selected time interval, triggering auto-mute.
+  // interval: Time interval (duration in seconds) used for counting the number of messages.
+  struct AutoMuteToken {
+    public:
+    AutoMuteToken(const InfoLogger::InfoLoggerMessageOption vLogOptions, unsigned int vMaxMsg = 10, unsigned int vInterval = 5) {
+      count = 0;
+      logOptions = vLogOptions;
+      maxMsg = vMaxMsg;
+      interval = vInterval;
+    };
+    ~AutoMuteToken() {
+    };
+    
+    protected:
+    friend class InfoLogger;
+    InfoLogger::InfoLoggerMessageOption logOptions; // options used for associated logs
+    unsigned int maxMsg; // maximum number of messages for the selected time interval
+    unsigned int interval; // duration of interval (seconds)
+    std::atomic<unsigned int> count; // number of messages so far in interval
+    std::chrono::time_point<std::chrono::steady_clock> t0; // time of beginning of interval
+    std::chrono::time_point<std::chrono::steady_clock> t1; // time of previous message
+    unsigned int ndiscarded; // number of messages discarded in last interval
+    unsigned int ndiscardedtotal; // number of messages discarded since beginning of verbose phase    
+  };
+
   /// Convert a string to an infologger severity
   /// \param text  NUL-terminated word to convert to InfoLogger severity type. Current implementation is not exact-match, it takes closest based on first-letter value
   /// \return      Corresponding severity (InfoLogger::Undefined if no match found)
@@ -261,12 +293,29 @@ class InfoLogger
   static int setMessageOption(const char* fieldName, const char* fieldValue, InfoLoggerMessageOption& output);
 
   /// extended log function, with all extra fields, including a specific context
-  /// \return         0 on success, an error code otherwise (but never throw exceptions)..
+  /// \return         0 on success, an error code otherwise (but never throw exceptions).
   int log(const InfoLoggerMessageOption& options, const InfoLoggerContext& context, const char* message, ...) __attribute__((format(printf, 4, 5)));
 
   /// extended log function, with all extra fields, using default context
-  /// \return         0 on success, an error code otherwise (but never throw exceptions)..
+  /// \return         0 on success, an error code otherwise (but never throw exceptions).
   int log(const InfoLoggerMessageOption& options, const char* message, ...) __attribute__((format(printf, 3, 4)));
+
+  /// extended log function, with all extra fields, using default context
+  /// with automatic message muting, according to the usage of the token parameter provided.
+  /// Auto-mute occurs when defined amount of messages using same token in a period of time is exceeded.
+  /// The token parameter defines the limits for this maximum verbosity, and keeps internal count of usage.
+  /// The token should be the same variable used between consecutive calls for a given type of messages,
+  /// typically a static variable properly initialized with desired settings, close to the log call(s) to be controlled.
+  ///
+  ///
+  /// Auto-mute behavior is as follows:
+  /// - the time interval starts on the first message, and is reset on the next message after an interval completed. (it is not equal to "X seconds before last message").
+  /// - when the number of messages counted in an interval exceeds the threshold, auto-mute triggers ON: next messages (with this token) are discarded
+  /// - when auto-mute is on, one message is still printed for each time interval, with statistics about the number of discarded messages -> the logging rate is effectively limited to a couple of messages per interval
+  /// - the auto-mute triggers off when there was no message received for a duration equal to the interval time. (this is equal to "X seconds before last message").
+  /// 
+  /// \return         0 on success, an error code otherwise (but never throw exceptions).
+  int log(AutoMuteToken &token, const char* message, ...) __attribute__((format(printf, 3, 4)));
 
   //////////////////////////
   // iostream-like interface

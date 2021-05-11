@@ -233,6 +233,14 @@ The InfoLogger library allows to inject messages directly from programs, as show
  * InfoLogger library is also available for: Tcl, Python, Go, Node.js.
    It allows to log message from scripting languages. A simplified subset of the InfoLogger C++ API is made available through SWIG-generated modules.
    Details of the functions accessible from the scripting interface are provided in [a separate document](scriptingAPI.md).
+
+ * C++ API provides a mean to automatically control / reduce the verbosity of some log messages.
+   Auto-mute occurs when a defined amount of messages using the same token in a period of time is exceeded.
+   The token parameter defines the limits for this maximum verbosity (max messages + time interval), and keeps internal count of usage.
+   * the time interval starts on the first message, and is reset on the next message after an interval completed. (it is not equal to "X seconds before last message").
+   * when the number of messages counted in an interval exceeds the threshold, auto-mute triggers ON: next messages (with this token) are discarded.
+   * when auto-mute is ON, one message is still printed for each time interval, with statistics about the number of discarded messages. The logging rate is effectively limited to a couple of messages per interval.
+   * the auto-mute triggers OFF when there was no message received for a duration equal to the interval time. (this is equal to "X seconds before last message").
    
 
 

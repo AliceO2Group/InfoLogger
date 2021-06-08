@@ -36,7 +36,7 @@ It shows the steps involved for a standard [CERN CentOS 7 (CC7)](http://linux.we
 It was tested fine on machines installed with the default 'desktop recommended setup' selected during CERN PXE-boot setup phase.
 Some minor tweaks might be needed on different systems.
 
-Infologger RPM packages can be installed through a yum repository (e.g. the [O2/FLP yum repository](https://alice-flp.docs.cern.ch/kb/yum))
+Infologger RPM packages can be installed through a yum repository (e.g. the [O2/FLP yum repository](https://alice-flp.docs.cern.ch/Advanced/KB/yum/))
 At the moment, everything is bundled in a single RPM named o2-InfoLogger-standalone, containing all components described above.
 To quickly test the infoLogger API, the installation of this RPM is enough, the InfoLogger library will use stdout as fallback if
 the central services are not available, so one can play with basic functionality without setting up the full infoLoggerD/infoLoggerServer/database chain.

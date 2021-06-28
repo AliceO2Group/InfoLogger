@@ -1142,7 +1142,9 @@ int InfoLogger::log(AutoMuteToken &limit, const char* message, ...) {
     if ((limit.ndiscarded == 0) || ((std::chrono::duration_cast<std::chrono::seconds>(now - limit.t1)).count() >= limit.interval)) {
        // no message discarded / no message at all for one period, reset full count
       limit.count = 1;
-      log(limit.logOptions, LOG_MUTE_PREFIX "It was quiet for a while, restoring full logging for similar messages");
+      if (limit.ndiscarded != 0) {
+        log(limit.logOptions, LOG_MUTE_PREFIX "It was quiet for a while, restoring full logging for similar messages");
+      }
       limit.ndiscardedtotal = 0;
     }
     // reset period

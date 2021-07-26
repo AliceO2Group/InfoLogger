@@ -24,6 +24,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 using namespace AliceO2::InfoLogger;
 
@@ -34,8 +36,12 @@ void print_usage()
   printf("Options: \n");
   printf("  -s [severity]    Possible values: Info (default), Error, Fatal, Warning, Debug.\n");
   printf("  -o[key]=[value]  Set a message field. Valid keys: context (Facility, Role, System, Detector, Partition, Run) and message options (Severity, Level, ErrorCode, SourceFile, SourceLine).\n");
-  printf("  -x               If set, reads data coming on stdin line by line.\n");
+  printf("  -x               If set, read data coming on stdin line by line.\n");
   printf("                   and transmit them as messages (1 line = 1 message).\n");
+  printf("  -f [file]        Same as -x, but from a file.\n");
+  printf("  -c               When -f selected, create a FIFO (mkfifo) to read from.\n");
+  printf("  -l               When -f selected, loop over file continuously.\n");
+  printf("  -v               Verbose mode (file operations, etc).\n");
   printf("  -h               This help.\n");
 }
 
@@ -145,7 +151,12 @@ pid_t findPipeProcess()
 int main(int argc, char** argv)
 {
 
-  int optFromStdin = 0; // 1 if logging from stdin, 0 when taking input from command line
+  int optFromFile = 0; // 1 if logging from a file (stdin or pipe), 0 when taking input from command line
+  int inputFd = -1; // file descriptor used for input, if any
+  std::string inputPath = ""; // path to file to read from, if any
+  bool createFifo = 0; // if set, create a FIFO
+  bool loopInput = 0; // if set, loop on file (useful for fifo mode)
+  bool verbose = 0; // if set, prints messages about file operations
 
   InfoLogger::InfoLoggerMessageOption msgOptions = InfoLogger::undefinedMessageOption;
   msgOptions.severity = InfoLogger::Severity::Info;
@@ -157,7 +168,7 @@ int main(int argc, char** argv)
   char option;
 
   // read options
-  while ((option = getopt(argc, argv, "s:xo:h")) != -1) {
+  while ((option = getopt(argc, argv, "s:xo:hf:clv")) != -1) {
     switch (option) {
 
       case 's': {
@@ -171,7 +182,8 @@ int main(int argc, char** argv)
       } break;
 
       case 'x': {
-        optFromStdin = 1;
+        optFromFile = 1;
+        inputFd = fileno(stdin);
         // try to find process sending messages to stdin
         pid_t pid = findPipeProcess();
         if (pid != 0) {
@@ -192,6 +204,23 @@ int main(int argc, char** argv)
         configFile=optarg;
         break;
 */
+
+      case 'c': {
+        createFifo = 1;
+      } break;
+
+      case 'l': {
+        loopInput = 1;
+      } break;
+
+      case 'v': {
+        verbose = 1;
+      } break;
+
+      case 'f': {
+        inputPath = optarg;
+	optFromFile = 1;
+      } break;
 
       case 'h':
         print_usage();
@@ -221,25 +250,83 @@ int main(int argc, char** argv)
 
   // todo: catch exceptions
 
-  // also read from stdin if option set */
-  if (optFromStdin) {
-    LineBuffer lb; // buffer for input lines
-    std::string msg;
-    int eof;
+  // also read from file if option set */
+  if (optFromFile) {
 
-    // read lines from stdin until EOF, and send them as log messages
-    for (;;) {
-      eof = lb.appendFromFileDescriptor(fileno(stdin), -1);
-      for (;;) {
-        if (lb.getNextLine(msg)) {
-          // no line left
-          break;
-        }
-        //infoLogger_msg_xt(UNDEFINED_STRING,UNDEFINED_INT,UNDEFINED_INT,facility,severity,level,msg);
-        theLog->log(msgOptions, msgContext, "%s", msg.c_str());
+    if (createFifo) {
+      bool isOk = 0;
+      int err = 0;
+      if (mkfifo(inputPath.c_str(), 0666)) {
+        err = errno;
+	if (err == EEXIST) {
+	  // is the existing file a fifo ?
+	  struct stat statbuf;
+	  if (stat(inputPath.c_str(), &statbuf) == 0) {
+	    if (S_ISFIFO(statbuf.st_mode)) {
+	      // the FIFO already exists
+	      isOk = 1;
+	    }
+	  }
+	}
+      } else {
+        if (verbose) printf("FIFO %s created\n", inputPath.c_str());
+        isOk = 1;
       }
-      if (eof)
+      if (!isOk) {
+        printf("Failed to create FIFO %s : %s\n", inputPath.c_str(), strerror(err));
+        return -1;
+      }
+    }
+
+    for (;;) {
+
+      if (inputFd < 0) {
+	inputFd = open(inputPath.c_str(), O_RDONLY);
+	if (inputFd < 0) {
+	  printf("Failed to open %s : %s\n", inputPath.c_str(), strerror(errno));
+	  return -1;
+	}
+	if (verbose) printf("Input file opened = %d\n",inputFd);
+      }
+
+      LineBuffer lb; // buffer for input lines
+      std::string msg;
+      int eof;
+
+      // read lines from stdin until EOF, and send them as log messages
+      for (;;) {
+	eof = lb.appendFromFileDescriptor(inputFd, -1);
+	for (;;) {
+          if (lb.getNextLine(msg)) {
+            // no line left
+            break;
+          }
+          //infoLogger_msg_xt(UNDEFINED_STRING,UNDEFINED_INT,UNDEFINED_INT,facility,severity,level,msg);
+          theLog->log(msgOptions, msgContext, "%s", msg.c_str());
+	}
+	if (eof)
+          break;
+      }
+
+      if (inputFd>0) {
+        if (verbose) printf("Input file closed\n");
+	close(inputFd);
+	inputFd = -1;
+      }
+
+      if (!loopInput) {
         break;
+      }
+    }
+
+  }
+
+  // remove fifo after use
+  if (createFifo) {
+    if (unlink(inputPath.c_str())) {
+      printf("Failed to remove %s\n", inputPath.c_str());
+    } else {
+      if (verbose) printf("FIFO %s removed\n", inputPath.c_str());
     }
   }
 

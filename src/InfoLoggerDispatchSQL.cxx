@@ -265,11 +265,42 @@ int InfoLoggerDispatchSQLImpl::customLoop()
 int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMessageList> lmsg)
 {
   // procedure for dropped messages and keep count of them
-  auto returnDroppedMessage = [&](const char* message) {
+  auto returnDroppedMessage = [&](const char* message, infoLog_msg_t* m) {
     // log bad message content (truncated)
     const int maxLen = 200;
+
+    // verbose logging of the other fields
+    std::string logDetails;
+    for (int i = 0; i < nFields - 1; i++) {
+      logDetails += protocols[0].fields[i].name;
+      logDetails += "=";
+      if (!m->values[i].isUndefined) {
+	switch (protocols[0].fields[i].type) {
+          case infoLog_msgField_def_t::ILOG_TYPE_STRING:
+	    if (m->values[i].value.vString != nullptr) {
+	      std::string ss = m->values[i].value.vString;
+	      logDetails += ss.substr(0,maxLen);
+	      if (ss.length() > maxLen) {
+	        logDetails += "...";
+	      }
+	    }
+            break;
+          case infoLog_msgField_def_t::ILOG_TYPE_INT:
+            logDetails += std::to_string(m->values[i].value.vInt);
+            break;
+          case infoLog_msgField_def_t::ILOG_TYPE_DOUBLE:
+            logDetails += std::to_string(m->values[i].value.vDouble);
+            break;
+          default:
+            break;
+	}
+      }
+      logDetails += " ";
+    }
+
     int msgLen = (int)strlen(message);
     theLog->error("Dropping message (%d bytes): %.*s%s", msgLen, maxLen, message, (msgLen > maxLen) ? "..." : "");
+    theLog->error("                 %s", logDetails.c_str());
     msgDroppedCount++;
     return 0; // remove message from queue
   };
@@ -347,7 +378,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
         theLog->error("mysql_stmt_bind() failed: %s", mysql_error(db));
         theLog->error("message: %s", msg);
         // if can not bind, message malformed, drop it
-        return returnDroppedMessage(msg);
+        return returnDroppedMessage(msg, m);
       }
 
       // Do the insertion
@@ -355,7 +386,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
         theLog->error("mysql_stmt_exec() failed: (%d) %s", mysql_errno(db), mysql_error(db));
         // column too long
         if (mysql_errno(db) == ER_DATA_TOO_LONG) {
-          return returnDroppedMessage(msg);
+          return returnDroppedMessage(msg, m);
         }
         // retry with new connection - usually it means server was down
         disconnectDB();

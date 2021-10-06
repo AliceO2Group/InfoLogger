@@ -48,6 +48,14 @@ int main()
   theLog.log({ InfoLogger::Severity::Info, 123, 456, __FILE__, __LINE__ }, "infoLogger message test with source code info");
   theLog.log(LOGINFO(123), "infoLogger message test with source code info");
 
+  // example use of context
+  InfoLoggerContext ctxt({{InfoLoggerContext::FieldName::Facility, std::string("test1")}});
+  theLog.log({{}},ctxt,"infoLogger message - facility test1");
+
+  // reuse a context and overwrite some fields
+  theLog.log({{}},InfoLoggerContext(ctxt,{{InfoLoggerContext::FieldName::Facility, std::string("test2")}}),"infoLogger message - facility test2");
+
+  // c++ style
   theLog << "another test message " << InfoLogger::endm;
   theLog << InfoLogger::Severity::Error << "another (stream error) message " << InfoLogger::endm;
   theLog << InfoLogger::Severity::Warning << "another (stream warning) message " << InfoLogger::endm;

@@ -39,7 +39,7 @@ void print_usage()
   printf("  -x               If set, read data coming on stdin line by line.\n");
   printf("                   and transmit them as messages (1 line = 1 message).\n");
   printf("  -f [file]        Same as -x, but from a file.\n");
-  printf("  -c               When -f selected, create a FIFO (mkfifo) to read from.\n");
+  printf("  -c               When -f selected, create a FIFO (mkfifo) to read from. It is removed after use.\n");
   printf("  -l               When -f selected, loop over file continuously.\n");
   printf("  -v               Verbose mode (file operations, etc).\n");
   printf("  -h               This help.\n");

@@ -102,6 +102,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - minor cosmetics for auto-mute feature.
 
 ## v2.2.0 - 06/10/2021
-- Added option for o2-infologger-log to collect logs from a named pipe (multiple clients possible). Pipe can be created (e.g. `mkfifo /tmp/log-pipe`) and listened to continuously. e.g. `o2-infologger-log -f /tmp/log-pipe -c -l `.
+- Added option for o2-infologger-log to collect logs from a named pipe (multiple clients possible). Pipe can be created and listened to continuously. e.g. `o2-infologger-log -f /tmp/log-pipe -c -l`.
 - API:
   - Added InfoLoggerContext light copy constructor, with fields overwrite. See example use in <../test/testInfoLogger.cxx>.

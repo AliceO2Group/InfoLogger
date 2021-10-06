@@ -30,6 +30,23 @@ InfoLoggerContext::InfoLoggerContext(const std::list<std::pair<FieldName, const 
   setField(listOfKeyValuePairs);
 }
 
+InfoLoggerContext::InfoLoggerContext(const InfoLoggerContext &sourceContext, const std::list<std::pair<FieldName, const std::string&>>& listOfKeyValuePairs)
+{
+  // members initialization from source context
+  facility = sourceContext.facility;
+  role = sourceContext.role;
+  system = sourceContext.system;
+  detector = sourceContext.detector;
+  partition = sourceContext.partition;
+  run = sourceContext.run;
+  processId = sourceContext.processId;
+  hostName = sourceContext.hostName;
+  userName = sourceContext.userName;
+
+  // now set fields provided as arguments
+  setField(listOfKeyValuePairs);
+}
+
 InfoLoggerContext::~InfoLoggerContext()
 {
 }

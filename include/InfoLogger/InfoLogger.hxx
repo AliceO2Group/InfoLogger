@@ -80,6 +80,12 @@ class InfoLoggerContext final
   /// \param listOfKeyValuePairs      A list of fieldName / value pairs to be set. Fields which were set automatically from environment are overwritten.
   InfoLoggerContext(const std::list<std::pair<FieldName, const std::string&>>& listOfKeyValuePairs);
 
+  /// Create new context.
+  /// The context is created as a copy of an existing context.
+  /// Additionnaly, listed fields are set with provided value.
+  /// \param listOfKeyValuePairs      A list of fieldName / value pairs to be set. Fields which were set from copy source are overwritten.
+  InfoLoggerContext(const InfoLoggerContext &sourceContext, const std::list<std::pair<FieldName, const std::string&>>& listOfKeyValuePairs);
+
   /// Update context with default values
   /// All fields are cleared with default values.
   void reset();

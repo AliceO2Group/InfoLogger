@@ -185,6 +185,7 @@ class InfoLogger::Impl
     numberOfMessages = 0;
     currentStreamMessage.clear();
     currentStreamOptions = undefinedMessageOption;
+    currentStreamToken = nullptr;
     client = nullptr;
 
     floodReset();
@@ -395,6 +396,7 @@ class InfoLogger::Impl
   int numberOfMessages;                         //< number of messages received by this object
   std::string currentStreamMessage;             //< temporary variable to store message when concatenating << operations, until "endm" is received
   InfoLoggerMessageOption currentStreamOptions; //< temporary variable to store message options when concatenating << operations, until "endm" is received
+  InfoLogger::AutoMuteToken *currentStreamToken;//< temporary variable to store AutoMuteToken when concatenating << operations, until "endm" is received
 
   InfoLoggerContext currentContext;
 
@@ -900,9 +902,14 @@ InfoLogger& InfoLogger::operator<<(InfoLogger::StreamOps op)
 
   // end of message: flush current buffer in a single message
   if (op == endm) {
-    log(mPimpl->currentStreamOptions, "%s", mPimpl->currentStreamMessage.c_str());
+    if (mPimpl->currentStreamToken != nullptr) {
+      log(*mPimpl->currentStreamToken, "%s", mPimpl->currentStreamMessage.c_str());
+    } else {
+      log(mPimpl->currentStreamOptions, "%s", mPimpl->currentStreamMessage.c_str());
+    }
     mPimpl->currentStreamMessage.clear();
     mPimpl->currentStreamOptions = undefinedMessageOption;
+    mPimpl->currentStreamToken = nullptr;
   }
   return *this;
 }
@@ -916,6 +923,12 @@ InfoLogger& InfoLogger::operator<<(const InfoLogger::Severity severity)
 InfoLogger& InfoLogger::operator<<(const InfoLogger::InfoLoggerMessageOption options)
 {
   mPimpl->currentStreamOptions = options;
+  return *this;
+}
+
+InfoLogger& InfoLogger::operator<<(InfoLogger::AutoMuteToken * const token)
+{
+  mPimpl->currentStreamToken = token;
   return *this;
 }
 

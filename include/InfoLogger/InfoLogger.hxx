@@ -346,6 +346,10 @@ class InfoLogger
   /// Specialized << version to set message options
   InfoLogger& operator<<(const InfoLogger::InfoLoggerMessageOption options);
 
+  /// Specialized << version to set AutoMuteToken (by reference)
+  /// NB: this overwrites InfoLoggerMessageOption / Severity if set.
+  InfoLogger& operator<<(InfoLogger::AutoMuteToken * const token);
+
   /// Log a message using the << operator, like for std::cout.
   /// All messages must be ended with the InfoLogger::StreamOps::endm tag.
   /// Severity/options can be set at any point in the stream (before endm). Severity set to Info by default.

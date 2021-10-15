@@ -88,6 +88,7 @@ int main()
   theLog.log("Will now test auto-mute: limit = %d msg / %d s", limitN, limitT);
   // define a static variable token, and pass it to all relevant log() calls
   static InfoLogger::AutoMuteToken msgLimit(LogInfoDevel_(1234), limitN, limitT);  
+  theLog << &msgLimit << "This is message loop 0 (c++ style)" << InfoLogger::endm;
   // a couple of loops to show behavior
   for (int j=0; j<2; j++) {
     const int nmsg = 20 * limitN;

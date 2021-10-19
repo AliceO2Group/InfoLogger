@@ -452,6 +452,41 @@ class InfoLogger::Impl
     floodFile_msg_drop=0;
   }
   
+  // message statistics
+  static const unsigned int numberOfSeverities = 5;
+  std::atomic<unsigned long> messageCountPerSeverity[numberOfSeverities + 1] = {};
+
+  int getIndexFromSeverity(InfoLogger::Severity s) {
+    switch(s) {
+      case InfoLogger::Severity::Undefined: // undefined counted as 'info', as in defaultMsg
+      case InfoLogger::Severity::Info:
+        return 1;
+      case InfoLogger::Severity::Error:
+        return 2;
+      case InfoLogger::Severity::Fatal:
+        return 3;
+      case InfoLogger::Severity::Warning:
+        return 4;
+      case InfoLogger::Severity::Debug:
+        return 5;
+    }
+    return 0;
+  }
+
+  unsigned long getMessageCount(InfoLogger::Severity severity) {
+    // when severity "undefined", return the grand total
+    if (severity == InfoLogger::Severity::Undefined) {
+      return messageCountPerSeverity[0].load();
+    }
+    return messageCountPerSeverity[getIndexFromSeverity(severity)].load();
+  }
+
+  void resetMessageCount() {
+    for (int i=0; i<=numberOfSeverities; i++) {
+      messageCountPerSeverity[i] = 0;
+    }
+  }
+
 };
 
 void InfoLogger::Impl::refreshDefaultMsg()
@@ -594,6 +629,11 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
   if (context.userName.length() > 0) {
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_username, String, context.userName.c_str());
   }
+
+  // message stats: after filter, before flood protection
+  // NB: "Undefined" to be counted as "Info", as in defaultMsg. Translated correctly by getIndexFromSeverity.
+  messageCountPerSeverity[0]++;
+  messageCountPerSeverity[getIndexFromSeverity(options.severity)]++;
 
   if (flood_protection) {
 
@@ -1186,6 +1226,14 @@ int InfoLogger::log(AutoMuteToken &limit, const char* message, ...) {
   limit.t1 = now;
 
   return err;
+}
+
+unsigned long InfoLogger::getMessageCount(InfoLogger::Severity severity) {
+  return mPimpl->getMessageCount(severity);
+}
+
+void InfoLogger::resetMessageCount() {
+  mPimpl->resetMessageCount();
 }
 
 // end of namespace

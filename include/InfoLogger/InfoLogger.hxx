@@ -379,6 +379,13 @@ class InfoLogger
   /// Reset defined filters.
   /// All messages are then kept and handled normally.
   void filterReset();
+
+  /// Get current messages count for a given severity (use 'Undefined' for any)
+  /// Messages are counted after filter, and before flood protection.
+  unsigned long getMessageCount(InfoLogger::Severity severity);
+
+  /// Reset counters of messages
+  void resetMessageCount();
   
   ///////////////////////
   /// internals

@@ -108,3 +108,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.3.0 - 15/10/2021
 - Added possibility to use an AutoMuteToken in the c++ stream operator.
+
+## v2.4.0 - 19/10/2021
+- Added getMessageCount() / resetMessageCount() to keep track of count of messages, by severity.

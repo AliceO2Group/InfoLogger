@@ -52,10 +52,10 @@ int main()
 
   // example use of context
   InfoLoggerContext ctxt({{InfoLoggerContext::FieldName::Facility, std::string("test1")}});
-  theLog.log({{InfoLogger::Severity::Info}},ctxt,"infoLogger message - facility test1");
+  theLog.log({InfoLogger::Severity::Info},ctxt,"infoLogger message - facility test1");
 
   // reuse a context and overwrite some fields
-  theLog.log({{InfoLogger::Severity::Info}},InfoLoggerContext(ctxt,{{InfoLoggerContext::FieldName::Facility, std::string("test2")}}),"infoLogger message - facility test2");
+  theLog.log({InfoLogger::Severity::Info},InfoLoggerContext(ctxt,{{InfoLoggerContext::FieldName::Facility, std::string("test2")}}),"infoLogger message - facility test2");
 
   // c++ style
   theLog << "another test message " << InfoLogger::endm;

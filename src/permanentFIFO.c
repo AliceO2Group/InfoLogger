@@ -415,8 +415,9 @@ int ct_load(int fd, struct circular_table* t, unsigned long id)
      - keep only non-ack data
      - reassign id numbers starting from zero
    It is required that the fifo is not in use at the time this function is called.
+   When doBackup set, existing fifo files removed (saved to timestamped name) and fresh ones created.
 */
-int permFIFO_file_clean(char* path)
+int permFIFO_file_clean(char* path, int doBackup)
 {
   char *f1, *f2, *f3;
   int fd1, fd3;
@@ -431,8 +432,20 @@ int permFIFO_file_clean(char* path)
 
   /* retrieve filenames associated to FIFO */
   permFIFO_getFileName(path, &f1, &f2, &f3);
+  
+  if (doBackup) {
+      char backupName[256];
+      unsigned int bTime = (unsigned int)time(NULL);
+      slog(SLOG_INFO, "Backup suffix = %d", bTime);
+      snprintf(backupName,sizeof(backupName), "%s.%u", f1, bTime);
+      rename(f1, backupName);
+      snprintf(backupName,sizeof(backupName), "%s.%u", f2, bTime);
+      rename(f2, backupName);
+      snprintf(backupName,sizeof(backupName), "%s.%u", f3, bTime);
+      rename(f3, backupName);
+  }
 
-  for (;;) {
+  for (int retry = 0; retry < 3; retry++) {
     if (stat(f1, &statbuf)) {
       /* file does not exists */
       if (stat(f2, &statbuf)) {
@@ -461,7 +474,14 @@ int permFIFO_file_clean(char* path)
       unlink(f3);
 
       /* read file header */
-      if (read(fd1, &hm, sizeof(hm)) != sizeof(hm))
+      bytes = read(fd1, &hm, sizeof(hm));
+      if (bytes == 0) {
+        /* file empty, remove and create new one */
+	close(fd1);
+	unlink(f1);
+	continue;
+      }
+      if ( bytes != sizeof(hm))
         return 5;
       if (hm.tag != FIFO_FILE_TAG)
         return 6;
@@ -629,7 +649,12 @@ struct permFIFO* permFIFO_new(int size, char* path)
 
   if (path != NULL) {
     /* first clean FIFO file */
-    err = permFIFO_file_clean(path);
+    err = permFIFO_file_clean(path, 0);
+    if (err) {
+      slog(SLOG_ERROR, "FIFO file cleaning failed : error %d", err);
+      slog(SLOG_ERROR, "FIFO file backup and create fresh");
+      err = permFIFO_file_clean(path, 1);
+    }
     if (err) {
       slog(SLOG_ERROR, "FIFO file cleaning failed : error %d", err);
       return NULL;
@@ -1074,7 +1099,7 @@ int test1()
 
   printf("Path=%s\n", path);
   printf("FIFO file dump  : %d\n", permFIFO_file_dump(path));
-  printf("FIFO file clean : %d\n", permFIFO_file_clean(path));
+  printf("FIFO file clean : %d\n", permFIFO_file_clean(path, 0));
   printf("FIFO file dump  : %d\n", permFIFO_file_dump(path));
 
   fifo = ct_new(10);
@@ -1375,7 +1400,7 @@ int test6()
   }
   permFIFO_destroy(f);
 
-  permFIFO_file_clean(path);
+  permFIFO_file_clean(path, 0);
   printf("FIFO file dump  : %d\n", permFIFO_file_dump(path));
   return 0;
 }

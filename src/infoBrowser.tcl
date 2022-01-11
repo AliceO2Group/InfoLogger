@@ -528,6 +528,17 @@ proc select_level {} {
 # archive commands
 #############################
 
+proc getTableCount { tableName } {
+  set maxtablesize 5000000
+
+  set nl 0
+  set nl [mysqlquery "select count(*) from $tableName LIMIT ROWS EXAMINED $maxtablesize"]
+  if {$nl==""} {
+    set nl "over $maxtablesize"
+  }
+  return $nl
+}
+
 proc select_archive {} {
   if {[winfo exists .logselect]} {return}
 
@@ -544,10 +555,8 @@ proc select_archive {} {
   scrollbar .logselect.scrolly -orient vertical -command ".logselect.listbox yview" -width 10
     
   global defaultlogfile
-
-  set nl 0
-    set nl [mysqlquery "select count(*) from $defaultlogfile"]
-
+  set nl [getTableCount $defaultlogfile]
+  
   .logselect.listbox insert end "Latest logs                  (${nl} messages)"
   global lpath
   set lpath {}
@@ -560,7 +569,7 @@ proc select_archive {} {
       set s [split $n "_"]
       if {[llength $s] != 9} {continue}
       set d "[lindex $s 4]/[lindex $s 3]/[lindex $s 2] [lindex $s 6]:[lindex $s 7]:[lindex $s 8]"
-      set nl [mysqlquery "select count(*) from $f"]
+      set nl [getTableCount $f]
       .logselect.listbox insert end "$d     (${nl} messages)"
       lappend lpath $f
     }

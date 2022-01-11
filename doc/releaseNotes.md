@@ -114,3 +114,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.4.1 - 26/10/2021
 - Added a cleanup/retry in case of corrupted cache of infoLoggerD, to allow immediate restart. The corrupted files are saved and available for later debugging.
+
+## v2.4.2 - 11/01/2022
+- Do not count number of messages for large tables (>5M rows) in Archive Select menu. Would otherwise be very long.

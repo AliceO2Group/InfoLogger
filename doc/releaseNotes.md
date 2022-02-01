@@ -117,3 +117,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.4.2 - 11/01/2022
 - Do not count number of messages for large tables (>5M rows) in Archive Select menu. Would otherwise be very long.
+
+## v2.4.3 - 01/02/2022
+- infoBrowser configuration: added parameter "queryLimit" to change the maximum number of messages returned by a query. Default is 10000.

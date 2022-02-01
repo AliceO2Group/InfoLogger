@@ -135,6 +135,7 @@ if {$configFile!=""} {
     serverHost 1 loghost "$default_loghost" \
     serverPortTx 1 logport "$default_logport" \
     configName 1 configName "$configFile" \
+    queryLimit 1 maxmess "$maxmess" \
   ] {
     set $varname $defval
     if {[catch { set $varname $cfgvals($keyname) }]} {   

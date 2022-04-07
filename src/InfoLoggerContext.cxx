@@ -75,8 +75,8 @@ void InfoLoggerContext::refresh()
   processId = (int)getpid();
 
   // host name
-  char hostNameTmp[256] = "";
-  if (!gethostname(hostNameTmp, sizeof(hostNameTmp))) {
+  static char hostNameTmp[256] = "";
+  if (hostNameTmp[0] == '\0' && !gethostname(hostNameTmp, sizeof(hostNameTmp))) {
     // take short name only, not domain
     char* dotptr;
     dotptr = strchr(hostNameTmp, '.');
@@ -86,8 +86,7 @@ void InfoLoggerContext::refresh()
   }
 
   // user name
-  struct passwd* passent;
-  passent = getpwuid(getuid());
+  static struct passwd* passent = getpwuid(getuid());
   if (passent != NULL) {
     userName = passent->pw_name;
   }
@@ -95,26 +94,25 @@ void InfoLoggerContext::refresh()
   // read from runtime environment other fields
   // todo: or from other place...
 
-  const char* confEnv = nullptr;
-  confEnv = getenv("O2_ROLE");
-  if (confEnv != NULL) {
-    role = confEnv;
+  static const char* confEnv1 = getenv("O2_ROLE");
+  if (confEnv1 != NULL) {
+    role = confEnv1;
   }
-  confEnv = getenv("O2_SYSTEM");
-  if (confEnv != NULL) {
-    system = confEnv;
+  static const char *confEnv2 = getenv("O2_SYSTEM");
+  if (confEnv2 != NULL) {
+    system = confEnv2;
   }
-  confEnv = getenv("O2_DETECTOR");
-  if (confEnv != NULL) {
-    detector = confEnv;
+  static const char *confEnv3 = getenv("O2_DETECTOR");
+  if (confEnv3 != NULL) {
+    detector = confEnv3;
   }
-  confEnv = getenv("O2_PARTITION");
-  if (confEnv != NULL) {
-    partition = confEnv;
+  static const char *confEnv4 = getenv("O2_PARTITION");
+  if (confEnv4 != NULL) {
+    partition = confEnv4;
   }
-  confEnv = getenv("O2_RUN");
-  if (confEnv != NULL) {
-    run = atoi(confEnv);
+  static const char *confEnv5 = getenv("O2_RUN");
+  if (confEnv5 != NULL) {
+    run = atoi(confEnv5);
     if (run <= 0) {
       run = -1;
     }

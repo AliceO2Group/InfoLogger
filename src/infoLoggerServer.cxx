@@ -17,6 +17,7 @@
 #include "infoLoggerMessageDecode.h"
 #include "InfoLoggerMessageList.h"
 #include "InfoLoggerDispatch.h"
+#include "InfoLoggerMessageHelper.h"
 
 #include "ConfigInfoLoggerServer.h"
 
@@ -214,6 +215,13 @@ Daemon::LoopStatus InfoLoggerServer::doLoop()
       unsigned int nThreads = dispatchEnginesDB.size();
       unsigned int nTry = 1;
       int pushOk = 0;
+
+      // distribute message based on timestamp
+      // to try keeping messages inserted in same order when parallel insert
+      InfoLoggerMessageHelper h;
+      unsigned char * tptr= (unsigned char *) &msgList->msg->values[h.ix_timestamp].value.vDouble;
+      dbRoundRobinIx = (tptr[0] + tptr[1] + tptr[2] + tptr[3] + tptr[4] + tptr[5] + tptr[6] + tptr[7]) % nThreads;
+
       for (; nTry <= nThreads * 3; nTry++) {
         int err = dispatchEnginesDB[dbRoundRobinIx]->pushMessage(msgList);
         dbRoundRobinIx++;

@@ -120,3 +120,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.4.3 - 01/02/2022
 - infoBrowser configuration: added parameter "queryLimit" to change the maximum number of messages returned by a query. Default is 10000.
+
+## v2.4.4 - 09/05/2022
+- changed algorithm of DB threads message distribution, now based on timestamp to help keeping multi-line split messages in same order.

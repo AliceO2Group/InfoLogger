@@ -376,6 +376,14 @@ class InfoLogger
   /// Messages with undefined level are never filtered out.
   void filterDiscardLevel(int excludeLevel);
 
+  /// Defines a file where discarded messages are saved
+  /// path: path to file. If null, discarding to file is disabled.
+  /// rotateMaxBytes: Maximum file size, after which a new file is created. If zero, no limit.
+  /// rotateMaxFiles: Maximum number of files to keep (including the "current" file). If zero, no limit.
+  /// rotateNow: If non-zero, the file is immediately rotated (independently of its size), otherwise it is appended.
+  /// Returns 0 on success, or an error code.
+  int filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes = 0, unsigned int rotateMaxFiles = 0, unsigned int rotateNow = 0);
+
   /// Reset defined filters.
   /// All messages are then kept and handled normally.
   void filterReset();

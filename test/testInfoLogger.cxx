@@ -83,7 +83,17 @@ int main()
   theLog.log(LogInfoDevel, "Info message with severity filter - you should see this");
   theLog.filterReset();
   theLog.log(LogDebugDevel, "Debug message with severity filter - you should see this again");
-  
+
+  #define PATH_LOGS_DISCARDED "/tmp/logsdiscarded.txt"
+  theLog.log(LogInfoDevel, "Discarding messages to file " PATH_LOGS_DISCARDED);
+  theLog.filterDiscardLevel(InfoLogger::Level::Devel);
+  theLog.filterDiscardDebug(1);
+  theLog.filterDiscardSetFile(PATH_LOGS_DISCARDED);
+  theLog.log(LogInfoDevel, "Devel message with level filter - you should see this only in file");
+  theLog.log(LogDebugDevel, "Debug message with severity filter - you should see this only in file");
+  theLog.log(LogErrorDevel, "Devel error message with level filter - you should see this only in file");
+  theLog.filterReset();
+
   // message verbosity control with auto-mute
   const int limitN = 5; // max number of messages ...
   const int limitT = 3; // ... for given time interval

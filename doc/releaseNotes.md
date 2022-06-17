@@ -1,4 +1,4 @@
-# InfoLogger release notes
+rsion# InfoLogger release notes
 
 This file describes the main feature changes for each InfoLogger released version.
 
@@ -123,3 +123,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.4.4 - 09/05/2022
 - changed algorithm of DB threads message distribution, now based on timestamp to help keeping multi-line split messages in same order.
+
+## v2.5.0 - 17/06/2022
+- added InfoLogger::filterDiscardSetFile(), to allow saving to local file the messages that would be discarded with filterDiscard(...) settings.

@@ -417,6 +417,8 @@ class InfoLogger::Impl
   
   bool filterDiscardDebug = false;  // when set, messages with debug severity are dropped
   int filterDiscardLevel = InfoLogger::undefinedMessageOption.level; // when set, messages with higher level (>=) are dropped
+  bool filterDiscardFileEnabled = false; // when set, discarded messages go to file
+  SimpleLog filterDiscardFile; // file object where to save discarded messages
   
   // message flood prevention
   // constants
@@ -549,14 +551,19 @@ int InfoLogger::Impl::pushMessage(InfoLogger::Severity severity, const char* mes
 
 int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const InfoLoggerContext& context, const char* messageBody, bool noFlood)
 {
+  bool discardMessage = 0;
+
   // check if message passes local filter criteria, if any
   if (filterDiscardDebug && (options.severity == InfoLogger::Severity::Debug)) {
-    return 1;
+    discardMessage = 1;
   }
   if ((filterDiscardLevel != undefinedMessageOption.level)
        && (options.level != undefinedMessageOption.level)
        && (options.level >= filterDiscardLevel)) {
-      return 1;
+      discardMessage = 1;
+  }
+  if ((discardMessage) && (!filterDiscardFileEnabled)) {
+    return 1;
   }
   
   infoLog_msg_t msg = defaultMsg;
@@ -628,6 +635,28 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
   }
   if (context.userName.length() > 0) {
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_username, String, context.userName.c_str());
+  }
+
+  // handling of messages to be discarded to file
+  if (discardMessage) {
+    char buffer[LOG_MAX_SIZE];
+    msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Simple);
+
+    switch (options.severity) {
+      case (InfoLogger::Severity::Fatal):
+      case (InfoLogger::Severity::Error):
+        filterDiscardFile.error("%s", buffer);
+        break;
+      case (InfoLogger::Severity::Warning):
+        filterDiscardFile.warning("%s", buffer);
+        break;
+      case (InfoLogger::Severity::Info):
+      case (InfoLogger::Severity::Debug):
+      default:
+        filterDiscardFile.info("%s", buffer);
+        break;
+    }
+    return 1;
   }
 
   // message stats: after filter, before flood protection
@@ -1157,6 +1186,16 @@ void InfoLogger::filterDiscardDebug(bool enable) {
 
 void InfoLogger::filterDiscardLevel(int excludeLevel) {
   mPimpl->filterDiscardLevel = excludeLevel;
+}
+
+int InfoLogger::filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes, unsigned int rotateMaxFiles, unsigned int rotateNow) {
+  mPimpl->filterDiscardFileEnabled = false;
+  int err = mPimpl->filterDiscardFile.setLogFile(path, rotateMaxBytes, rotateMaxFiles, rotateNow);
+  if (!err) {
+    mPimpl->filterDiscardFileEnabled = true;
+    //mPimpl->filterDiscardFile.setOutputFormat(SimpleLog::FormatOption::ShowMessage);
+  }
+  return err;
 }
 
 void InfoLogger::filterReset() {

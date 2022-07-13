@@ -126,3 +126,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.5.0 - 17/06/2022
 - added InfoLogger::filterDiscardSetFile(), to allow saving to local file the messages that would be discarded with filterDiscard(...) settings.
+
+## v2.5.1 - 13/07/2022
+- do not try to log to file if the path is empty.

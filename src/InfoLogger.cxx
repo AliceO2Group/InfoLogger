@@ -1191,9 +1191,8 @@ void InfoLogger::filterDiscardLevel(int excludeLevel) {
 int InfoLogger::filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes, unsigned int rotateMaxFiles, unsigned int rotateNow) {
   mPimpl->filterDiscardFileEnabled = false;
   int err = mPimpl->filterDiscardFile.setLogFile(path, rotateMaxBytes, rotateMaxFiles, rotateNow);
-  if (!err) {
+  if (!err && path != nullptr && path[0] != '\0') {
     mPimpl->filterDiscardFileEnabled = true;
-    //mPimpl->filterDiscardFile.setOutputFormat(SimpleLog::FormatOption::ShowMessage);
   }
   return err;
 }

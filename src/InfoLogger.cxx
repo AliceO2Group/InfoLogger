@@ -210,8 +210,8 @@ class InfoLogger::Impl
         } else if (it.first == "verbose") {
           verbose = atoi(it.second.c_str());
         } else if (it.first == "floodProtection") {
-	  flood_protection = atoi(it.second.c_str());
-	} else {
+          flood_protection = atoi(it.second.c_str());
+        } else {
           // unknown option
           printf("Unknown infoLogger option %s\n",it.first.c_str());
           throw __LINE__;
@@ -247,9 +247,9 @@ class InfoLogger::Impl
       }
       if (verbose) {
         printf("Using output mode %s\n", getStringFromMode(currentMode.mode));
-	if (!flood_protection) {
+        if (!flood_protection) {
           printf("Flood protection disabled\n");
-	}
+        }
       }
 
       if (currentMode.mode == OutputMode::file) {
@@ -418,6 +418,7 @@ class InfoLogger::Impl
   bool filterDiscardDebug = false;  // when set, messages with debug severity are dropped
   int filterDiscardLevel = InfoLogger::undefinedMessageOption.level; // when set, messages with higher level (>=) are dropped
   bool filterDiscardFileEnabled = false; // when set, discarded messages go to file
+  bool filterDiscardFileIgnoreDebug = false; // when set, debug messages even when discarded and filterDiscardFileEnabled=true do not go to file
   SimpleLog filterDiscardFile; // file object where to save discarded messages
   
   // message flood prevention
@@ -641,6 +642,10 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
   if (discardMessage) {
     char buffer[LOG_MAX_SIZE];
     msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Simple);
+
+    if(options.severity == InfoLogger::Severity::Debug && filterDiscardFileIgnoreDebug) {
+      return 1;
+    }
 
     switch (options.severity) {
       case (InfoLogger::Severity::Fatal):
@@ -1188,11 +1193,14 @@ void InfoLogger::filterDiscardLevel(int excludeLevel) {
   mPimpl->filterDiscardLevel = excludeLevel;
 }
 
-int InfoLogger::filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes, unsigned int rotateMaxFiles, unsigned int rotateNow) {
+int InfoLogger::filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes, unsigned int rotateMaxFiles, unsigned int rotateNow, bool ignoreDebug) {
   mPimpl->filterDiscardFileEnabled = false;
   int err = mPimpl->filterDiscardFile.setLogFile(path, rotateMaxBytes, rotateMaxFiles, rotateNow);
   if (!err && path != nullptr && path[0] != '\0') {
     mPimpl->filterDiscardFileEnabled = true;
+    if (ignoreDebug) {
+      mPimpl->filterDiscardFileIgnoreDebug = ignoreDebug;
+    }
   }
   return err;
 }

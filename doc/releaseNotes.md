@@ -1,4 +1,4 @@
-rsion# InfoLogger release notes
+# InfoLogger release notes
 
 This file describes the main feature changes for each InfoLogger released version.
 

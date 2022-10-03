@@ -381,8 +381,9 @@ class InfoLogger
   /// rotateMaxBytes: Maximum file size, after which a new file is created. If zero, no limit.
   /// rotateMaxFiles: Maximum number of files to keep (including the "current" file). If zero, no limit.
   /// rotateNow: If non-zero, the file is immediately rotated (independently of its size), otherwise it is appended.
+  /// ignoreDebug: do not store debug messages in the file if set to true.
   /// Returns 0 on success, or an error code.
-  int filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes = 0, unsigned int rotateMaxFiles = 0, unsigned int rotateNow = 0);
+  int filterDiscardSetFile(const char *path, unsigned long rotateMaxBytes = 0, unsigned int rotateMaxFiles = 0, unsigned int rotateNow = 0, bool ignoreDebug = false);
 
   /// Reset defined filters.
   /// All messages are then kept and handled normally.

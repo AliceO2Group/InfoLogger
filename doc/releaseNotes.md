@@ -129,3 +129,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.5.1 - 13/07/2022
 - do not try to log to file if the path is empty.
+
+## v2.5.2 - 03/10/2022
+- added optional parameter to InfoLogger::filterDiscardSetFile(), to ignore debug messages when set.

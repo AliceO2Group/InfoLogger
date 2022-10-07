@@ -194,6 +194,7 @@ font create filterfont -family Arial -size 9 -weight bold
 font create timefont -family Arial -size 9 -weight bold
 font create buttonfont -family Arial -size 9 -weight bold
 font create titlefont -family Arial -size 10 -weight bold
+font create messagesfont -family monospace -size 9
 
 ##############################
 # menu
@@ -949,7 +950,7 @@ proc show_messages {} {
   global log_fields
   global log_visible_fields
   global log_fields_def_size
-    
+  global messagesfont
   if {[winfo exists .messages.pw]} {destroy .messages.pw}
   
   global version_ok
@@ -966,7 +967,7 @@ proc show_messages {} {
   foreach item $log_visible_fields {
     frame .messages.pw.frame_$item 
     label .messages.pw.frame_$item.label -text "$item"
-    listbox .messages.pw.frame_$item.listbox -listvariable log_val_$item -yscrollcommand ".messages.sb set" -xscrollcommand ".messages.pw.frame_$item.scroll set"  -selectmode extended -selectbackground yellow -selectforeground black -exportselection no 
+    listbox .messages.pw.frame_$item.listbox -listvariable log_val_$item -yscrollcommand ".messages.sb set" -xscrollcommand ".messages.pw.frame_$item.scroll set"  -selectmode extended -selectbackground yellow -selectforeground black -exportselection no -font messagesfont
     scrollbar .messages.pw.frame_$item.scroll -orient horizontal -command ".messages.pw.frame_$item.listbox xview" -width 10
 
     set pwidth "[expr 8*[lindex $log_fields_def_size [lsearch $log_fields $item]]]"

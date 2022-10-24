@@ -379,7 +379,7 @@ class InfoLogger
   /// Defines a file where discarded messages are saved
   /// path: path to file. If null, discarding to file is disabled.
   /// rotateMaxBytes: Maximum file size, after which a new file is created. If zero, no limit.
-  /// rotateMaxFiles: Maximum number of files to keep (including the "current" file). If zero, no limit.
+  /// rotateMaxFiles: Maximum number of files to keep (including the "current" file). If zero, no limit. If one, a single file is created and cleared immediately, and messages are discarded after reaching rotateMaxBytes.
   /// rotateNow: If non-zero, the file is immediately rotated (independently of its size), otherwise it is appended.
   /// ignoreDebug: do not store debug messages in the file if set to true.
   /// Returns 0 on success, or an error code.

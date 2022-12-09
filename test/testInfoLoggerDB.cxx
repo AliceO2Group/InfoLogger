@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h>
 
 #if LIBMYSQL_VERSION_ID >= 80000
 typedef bool my_bool;

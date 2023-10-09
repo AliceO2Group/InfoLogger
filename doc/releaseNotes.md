@@ -135,3 +135,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.5.3 - 24/10/2022
 - Common/SimpleLog update: fiterDiscardSetFile / rotateMaxFiles parameter: If one, a single file is created and cleared immediately, and messages are discarded after reaching rotateMaxBytes.
+
+## v2.5.4 - 09/10/2023
+- Updated InfoLoggerFMQ.hxx with new FMQ severities.

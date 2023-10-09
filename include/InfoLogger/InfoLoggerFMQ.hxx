@@ -42,6 +42,7 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
       // translate FMQ metadata
       AliceO2::InfoLogger::InfoLogger::InfoLogger::Severity severity = AliceO2::InfoLogger::InfoLogger::Severity::Undefined;
       int level = AliceO2::InfoLogger::InfoLogger::undefinedMessageOption.level;
+      const char *prefix = NULL;
 
       if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::nolog)) {
         // discard
@@ -50,13 +51,23 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Fatal;
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::error)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Error;
+      } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::alarm)) {
+        severity = AliceO2::InfoLogger::InfoLogger::Severity::Info;
+        prefix = "Alarm";
+      } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::important)) {
+        severity = AliceO2::InfoLogger::InfoLogger::Severity::Info;
+        prefix = "Important";
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::warn)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Warning;
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::state)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Info;
         level = 10;
+        prefix = "State";
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::info)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Info;
+      } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::detail)) {
+        severity = AliceO2::InfoLogger::InfoLogger::Severity::Info;
+        level = 10;
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::debug)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Debug;
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::debug1)) {
@@ -83,7 +94,11 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
         metadata.file.c_str(),
         atoi(metadata.line.c_str())
       };
-      theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());
+      if (prefix == NULL) {
+        theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());
+      } else {
+        theLogPtr->log(opt, ctx, "FMQ: %s - %s", prefix, content.c_str());
+      }
     });
 
   fair::Logger::SetCustomSeverity(INFOLOGGER_FMQ_SINK_NAME, fair::Logger::GetConsoleSeverity());

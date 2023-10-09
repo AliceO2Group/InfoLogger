@@ -15,8 +15,6 @@
 
 #include <InfoLogger/InfoLogger.h>
 
-#define _BSD_SOURCE
-
 #include <stdio.h>
 #include <unistd.h>
 

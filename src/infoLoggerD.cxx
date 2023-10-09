@@ -147,7 +147,7 @@ int checkDirAndCreate(const char* dir, SimpleLog* log = NULL)
   }
 
   // check directory tree
-  int i, j;
+  unsigned int i, j;
   for (i = strlen(dir); i >= 0; i--) {
     if (dir[i] == '/') {
       if (i > 0) {
@@ -157,6 +157,9 @@ int checkDirAndCreate(const char* dir, SimpleLog* log = NULL)
       }
       break;
     }
+  }
+  if (i >= PATH_MAX) {
+    return -1;
   }
   for (j = 0; j < i; j++) {
     path[j] = dir[j];

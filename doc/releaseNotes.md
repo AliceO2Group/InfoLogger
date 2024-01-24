@@ -138,3 +138,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.5.4 - 09/10/2023
 - Updated InfoLoggerFMQ.hxx with new FMQ severities.
+
+## v2.6.0 - 24/01/2024
+- Updated SWIG version requirement to allow generation of Python3 bindings.

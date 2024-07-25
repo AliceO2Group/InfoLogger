@@ -34,6 +34,8 @@
 #include <thread>
 #include <memory>
 #include <functional>
+#include <queue>
+#include <mutex>
 
 #include "InfoLoggerMessageHelper.h"
 #include "Common/LineBuffer.h"
@@ -166,6 +168,26 @@ int infoLoggerLogDebug(InfoLoggerHandle handle, const char* message, ...)
   va_end(ap);
   return err;
 }
+
+
+// function to convert severities to a priority number (high priority = small number)
+int getIdFromSeverity(InfoLogger::Severity s) {
+  switch (s) {
+    case InfoLogger::Severity::Fatal :
+      return 1;
+    case InfoLogger::Severity::Error :
+      return 2;
+    case InfoLogger::Severity::Warning :
+      return 3;
+    case InfoLogger::Severity::Info :
+      return 4;
+    case InfoLogger::Severity::Debug :
+      return 5;
+    default:
+      return 6;
+  }
+}
+
 
 /////////////////////////////////////////////////////////
 
@@ -420,7 +442,18 @@ class InfoLogger::Impl
   bool filterDiscardFileEnabled = false; // when set, discarded messages go to file
   bool filterDiscardFileIgnoreDebug = false; // when set, debug messages even when discarded and filterDiscardFileEnabled=true do not go to file
   SimpleLog filterDiscardFile; // file object where to save discarded messages
+
+  // history
+  unsigned int historyMessagesToKeep = 0;
+  bool historyRotate = false;
+  int historyFilterSeverity = -1;
+  int historyFilterLevel = -1;
+  std::queue<std::string> historyMessages; // messages currently in history queue
+  std::mutex historyMutex; // lock to avoid concurrent calls on history functions 
   
+  // error code conversion table
+  std::vector<std::pair<int, std::string>> errorCodesTable; // first: error code, second: description
+
   // message flood prevention
   // constants
   bool flood_protection = 1;         // if set, flood protection mechanism enabled
@@ -787,6 +820,32 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
     msgHelper.MessageToText(&msg, buffer, sizeof(buffer), InfoLoggerMessageHelper::Format::Debug);
     puts(buffer);
   }
+
+  // keep history
+  std::unique_lock<std::mutex> lock(historyMutex);
+  if (historyMessagesToKeep > 0) {
+    if (historyRotate || (historyMessagesToKeep > historyMessages.size())) {
+      if ((getIdFromSeverity(options.severity) <= historyFilterSeverity) && (options.level <= historyFilterLevel)) {
+        std::string summary;
+	summary += "code "+ std::to_string(options.errorCode);
+	if (options.errorCode != undefinedMessageOption.errorCode) {
+	  for(const auto &p: errorCodesTable) {
+	    if (p.first == options.errorCode) {
+              summary += " : " + p.second;
+	      break;
+	    }
+	  }
+	  summary += " - ";
+	}
+	summary += messageBody;
+        historyMessages.push(std::move(summary));
+	if (historyRotate && (historyMessagesToKeep > historyMessages.size())) {
+	  historyMessages.pop();
+	}
+      }
+    }
+  }
+
   return 0;
 }
 
@@ -1281,6 +1340,37 @@ unsigned long InfoLogger::getMessageCount(InfoLogger::Severity severity) {
 void InfoLogger::resetMessageCount() {
   mPimpl->resetMessageCount();
 }
+
+void InfoLogger::historyReset(unsigned int messagesToKeep, bool rotate, InfoLogger::Severity filterSeverity, InfoLogger::Level filterLevel) {
+  std::unique_lock<std::mutex> lock(mPimpl->historyMutex);
+  mPimpl->historyMessagesToKeep = messagesToKeep;
+  mPimpl->historyRotate = rotate;
+  mPimpl->historyFilterSeverity = getIdFromSeverity(filterSeverity);
+  mPimpl->historyFilterLevel = (int)filterLevel;
+  mPimpl->historyMessages = {}; // clear queue
+}
+
+void InfoLogger::historyGetSummary(std::vector<std::string> &summary) {
+  std::unique_lock<std::mutex> lock(mPimpl->historyMutex);
+  summary.clear();
+  summary.reserve(mPimpl->historyMessages.size());
+  while (!mPimpl->historyMessages.empty())
+  {
+    summary.push_back(std::move(mPimpl->historyMessages.front()));
+    mPimpl->historyMessages.pop();
+  }
+}
+
+void InfoLogger::registerErrorCodes(const std::vector<std::pair<int, std::string>> errorCodes, bool clear) {
+  std::unique_lock<std::mutex> lock(mPimpl->historyMutex);
+  if (clear) {
+    mPimpl->errorCodesTable.clear();
+  }
+  for(const auto &c: errorCodes) {
+    mPimpl->errorCodesTable.push_back({c.first, c.second});
+  }
+}
+
 
 // end of namespace
 } // namespace InfoLogger

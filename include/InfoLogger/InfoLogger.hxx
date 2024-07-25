@@ -29,6 +29,7 @@
 #include <type_traits>
 #include <atomic>
 #include <chrono>
+#include <vector>
 
 // here are some macros to help including source code info in infologger messages
 // to be used to quickly specify "infoLoggerMessageOption" argument in some logging functions
@@ -396,6 +397,33 @@ class InfoLogger
   /// Reset counters of messages
   void resetMessageCount();
   
+
+  /// Functions to keep an history of messages
+
+  /// Reset history
+  /// This function enables storing next log messages injected in a buffer (eg for later error reporting). Existing history is cleared.
+  /// parameters:
+  /// messagesToKeep: number of messages stored in buffer
+  /// rotate: if set, newer messages overwrite stored messages stored in buffer (i.e. history keeps latest messages). By default, history keeps first messages.
+  /// filterSeverity: messages with lower severity are not stored in history.
+  /// filterLevel: messages with lower level are not stored in history.
+  void historyReset(unsigned int messagesToKeep = 0, bool rotate = false, InfoLogger::Severity filterSeverity = InfoLogger::Severity::Error, InfoLogger::Level filterLevel = InfoLogger::Level::Support);
+
+  /// Get a summary of messages stored in history buffer.
+  /// The buffer is not cleared (use historyReset to do so).
+  /// Each message is a simplified text.
+  /// parameters:
+  /// summary: a variable where to store a copy of the messages currently available in history buffer
+  /// returns: 0 on success
+  void historyGetSummary(std::vector<std::string> &summary);
+
+  /// Function to register a table converting error codes to a meaningful text.
+  /// Used for formatting message summary.
+  /// parameters:
+  /// errorCodes: a vector of key-value pairs. First is the error code, second is a text description
+  /// clear: if set, existing table is cleared. Otherwise, it is appended (in this case, duplication of codes is not checked. First one found is used).
+  void registerErrorCodes(const std::vector<std::pair<int, std::string>> errorCodes, bool clear = 0);
+
   ///////////////////////
   /// internals
   ///////////////////////

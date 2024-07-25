@@ -25,6 +25,23 @@ int main()
 {
   InfoLogger theLog;
 
+  if (0) {
+    theLog.historyReset(2);
+    theLog.registerErrorCodes({{123, "error"}, {124, "fatal"}});
+    theLog.log(LogInfoSupport_(100), "test info");
+    theLog.log(LogErrorSupport_(123), "test error 123");
+    theLog.log(LogInfoDevel_(100), "test info");
+    theLog.log(LogFatalSupport_(124), "test fatal 124");
+    std::vector<std::string> m;
+    theLog.historyGetSummary(m);
+    printf("log summary:\n");
+    for(const auto&s: m) {
+      printf("  %s\n",s.c_str());
+    }
+    printf("\n");
+    return 0;
+  }
+
   theLog.log("infoLogger message test");
   printf("Message on stdout (initial stdout)\n");
   theLog.setStandardRedirection(1);

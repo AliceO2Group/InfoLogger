@@ -141,3 +141,7 @@ This file describes the main feature changes for each InfoLogger released versio
 
 ## v2.6.0 - 24/01/2024
 - Updated SWIG version requirement to allow generation of Python3 bindings.
+
+## v2.7.0 - 25/07/2024
+- Added functions to keep a history of latest log messages: see historyReset() and historyGetSummary().
+- Added function to register error codes descriptions to format message summaries in history.

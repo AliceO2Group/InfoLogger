@@ -145,3 +145,8 @@ This file describes the main feature changes for each InfoLogger released versio
 ## v2.7.0 - 25/07/2024
 - Added functions to keep a history of latest log messages: see historyReset() and historyGetSummary().
 - Added function to register error codes descriptions to format message summaries in history.
+
+## v2.7.1 - 16/08/2024
+- o2-infologger-adminDb:
+  - added interactive confirmation prompt when clearing/deleting non-empty tables, unless option '-o noWarning' is set.
+  - added command '-c status' to display status information about infoLogger database content (number of tables, number of rows, data size).

@@ -23,13 +23,14 @@
 #include <iomanip>
 #include <ctime>
 #include <sstream>
+#include <vector>
 
 void printUsage()
 {
   printf("Usage: infoLoggerAdminDB ...\n");
-  printf("  -c command : action to execute. One of archive (archive main table and create new one), create (create main table), clear (delete main table content), destroy (destroy all tables, including archives), list (show existing message tables)\n");
+  printf("  -c command : action to execute. One of archive (archive main table and create new one), create (create main table), clear (delete main table content), destroy (destroy all tables, including archives), list (show existing message tables), status (show database content info)\n");
   printf("  [-z pathToConfigurationFile] : sets which configuration to use. By default %s\n", INFOLOGGER_DEFAULT_CONFIG_PATH);
-  printf("  [-o optionName] : enable options not set by default. Possible values: partitioning (create new tables with partition by day)\n");
+  printf("  [-o optionName] : enable options not set by default. Possible values: partitioning (create new tables with partition by day), noWarning (disable interactive confirmation in delete operations).\n");
   printf("  [-h] : print this help\n");
 }
 
@@ -49,6 +50,9 @@ int main(int argc, char* argv[])
   bool optList = 0;         // list current tables
   bool optNone = 0;         // no command specified - test DB access only
   bool optShowCreate = 0;   // print command used to create table
+  bool optStatus = 0;       // get a summary of database content
+  bool optStatusMore = 0;   // print a summary of database content
+  bool optNoWarning = 0;    // when set, there is no warning/interactive confirmation when data to be deleted
 
   // configure log output
   log.setOutputFormat(SimpleLog::FormatOption::ShowSeverityTxt | SimpleLog::FormatOption::ShowMessage);
@@ -78,8 +82,11 @@ int main(int argc, char* argv[])
         std::string optString = optarg;
         if (optString == "partitioning") {
           optPartitioning = 1;
+        } else if (optString == "noWarning") {
+          optNoWarning = 1;
         } else {
           log.error("Wrong option %s", optString.c_str());
+	  return -1;
         }
       } break;
 
@@ -95,12 +102,17 @@ int main(int argc, char* argv[])
     optCreate = 1;
   } else if (command == "clear") {
     optDelete = 1;
+    optStatus = 1;
   } else if (command == "destroy") {
     optDestroy = 1;
+    optStatus = 1;
   } else if (command == "list") {
     optList = 1;
   } else if (command == "showCreate") {
     optShowCreate = 1;
+  } else if (command == "status") {
+    optStatus = 1;
+    optStatusMore = 1;
   } else if (command == "") {
     optNone = 1;
   } else {
@@ -144,7 +156,70 @@ int main(int argc, char* argv[])
     return 0;
   }
 
+  // info on current database content
+  struct infoTable {
+    std::string name;
+    unsigned long rows;
+    unsigned long size;
+  };
+  std::vector<infoTable> tables;
+  unsigned long long totalTables = 0; // number of tables
+  unsigned long long totalRows = 0; // number of rows
+  unsigned long long totalBytes = 0; // number of bytes
+  unsigned long long mainRows = 0; // number of messages in main table
+  unsigned long long mainBytes = 0; // number of bytes in main table
+
   // execute command(s)
+  if (optStatus) {
+    std::string sqlQuery = "select TABLE_NAME,TABLE_ROWS,DATA_LENGTH from information_schema.TABLES where table_name like '" INFOLOGGER_TABLE_MESSAGES "%' order by table_name";
+    if (mysql_query(&db, sqlQuery.c_str())) {
+      log.error("Failed to execute %s\n%s", sqlQuery.c_str(), mysql_error(&db));
+      return -1;
+    }
+    MYSQL_RES* res;
+    res = mysql_store_result(&db);
+    if (res == NULL) {
+      log.error("Failed to retrieve results from query %s", sqlQuery.c_str());
+      return -1;
+    }
+    const int numFields = 3;
+    if (mysql_num_fields(res) != numFields) {
+      log.error("Failed to retrieve %d fields from query %s", numFields, sqlQuery.c_str());
+      return -1;
+    }
+    MYSQL_ROW row;
+    for (int n=0;;n++) {
+      row = mysql_fetch_row(res);
+      if (row == NULL) {
+        break;
+      }
+      for (int i=0; i<numFields; i++) {
+	if (row[i] == NULL) {
+          log.error("No field[%d] in row %d returned for query %s", i, n, sqlQuery.c_str());
+          return -1;
+	}
+      }
+      unsigned long long nRows = strtoul(row[1], NULL, 10);
+      unsigned long long nBytes = strtoul(row[2], NULL, 10);
+      tables.push_back({row[0], nRows, nBytes});
+      totalTables++;
+      totalRows += nRows;
+      totalBytes += nBytes;
+      if (!strcmp(row[0], INFOLOGGER_TABLE_MESSAGES)) {
+	mainRows = nRows;
+	mainBytes = nBytes;
+      }
+    }
+    mysql_free_result(res);
+    if (optStatusMore) {
+      log.info("Found following tables:");
+      for (const auto &i: tables) {
+	log.info("  %s : %lu rows, %lu bytes", i.name.c_str(), i.rows, i.size);	
+      }
+      log.info("Total: %llu tables, %llu rows, %llu bytes", totalTables, totalRows, totalBytes);
+    }
+  }
+
   if (optList) {
     // list all messages tables
     std::string sqlQuery = "show tables like '" INFOLOGGER_TABLE_MESSAGES "%'";
@@ -174,8 +249,27 @@ int main(int argc, char* argv[])
     mysql_free_result(res);
   }
 
+  auto confirm = [&]() {
+    if (!optNoWarning) {
+      log.info("Please confirm: type 'yes'");
+      char buf[5]="";
+      fgets(buf, 5, stdin);
+      if (strcmp("yes\n", buf)) {
+        log.info("Operation aborted %s",buf);
+	return 0;
+      }
+    }
+    return 1;
+  };
+
   if (optDelete) {
     log.info("Delete main table content");
+    if ((mainRows)&&(!optNoWarning)) {
+      log.warning("This table is not empty ! %llu rows (%llu bytes) will be deleted", mainRows, mainBytes);
+      if (!confirm()) {
+	return -1;
+      }
+    }
     std::string sqlQuery = "truncate table " INFOLOGGER_TABLE_MESSAGES;
     if (mysql_query(&db, sqlQuery.c_str())) {
       log.error("Failed to execute %s\n%s", sqlQuery.c_str(), mysql_error(&db));
@@ -185,7 +279,12 @@ int main(int argc, char* argv[])
 
   if (optDestroy) {
     log.info("Destroy all tables");
-
+    if ((totalRows)&&(!optNoWarning)) {
+      log.warning("The tables are not empty ! %llu tables %llu rows (%llu bytes) will be deleted", totalTables, totalRows, totalBytes);
+      if (!confirm()) {
+	return -1;
+      }
+    }
     // destroy all messages tables
     std::string sqlQuery = "show tables like '" INFOLOGGER_TABLE_MESSAGES "%'";
     if (mysql_query(&db, sqlQuery.c_str())) {

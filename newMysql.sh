@@ -27,6 +27,9 @@ FORCE_REDO=0
 # if set, SQL queries & output printed
 SQL_DEBUG=0
 
+# if set, recreate user accounts unless access to db already ok (existing ones will be deleted, including their privileges)
+SQL_RECREATE_USER=1
+
 # where are we running now
 HERE=`hostname -f`
 
@@ -240,9 +243,11 @@ for CONFIG in "${EXTRA_CONFIG[@]}"; do
   fi
   
   for QHOST in "%" "localhost" "${HERE}"; do
-    mysqlExecute "drop user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
-    mysqlExecute "create user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
-    mysqlExecute "set password for  \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\" = PASSWORD(\"${EXTRA_PWD[$CONFIG]}\");"
+    if [ "$SQL_RECREATE_USER" == "1" ]; then
+      mysqlExecute "drop user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
+      mysqlExecute "create user \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
+      mysqlExecute "set password for  \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\" = PASSWORD(\"${EXTRA_PWD[$CONFIG]}\");"
+    fi
     mysqlExecute "grant ${EXTRA_PRIVILEGE[$CONFIG]} on $INFOLOGGER_DB_NAME.* to \"${EXTRA_USER[$CONFIG]}\"@\"${QHOST}\";"
   done
 done

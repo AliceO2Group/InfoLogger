@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 
   // connect database
   if (mysql_real_connect(&db, dbHost.c_str(), dbUser.c_str(), dbPwd.c_str(), dbName.c_str(), 0, NULL, 0) != 0) {
-    log.info("Database connected");
+    log.info("Database %s @ %s connected", dbName.c_str(), dbHost.c_str());
   } else {
     log.error("Failed to connect database : %s", mysql_error(&db));
     return -1;
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 
   // execute command(s)
   if (optStatus) {
-    std::string sqlQuery = "select TABLE_NAME,TABLE_ROWS,DATA_LENGTH from information_schema.TABLES where table_name like '" INFOLOGGER_TABLE_MESSAGES "%' order by table_name";
+    std::string sqlQuery = "select TABLE_NAME,TABLE_ROWS,DATA_LENGTH from information_schema.TABLES where table_name like '" INFOLOGGER_TABLE_MESSAGES "%' and table_schema like '" + dbName + "' order by table_name";
     if (mysql_query(&db, sqlQuery.c_str())) {
       log.error("Failed to execute %s\n%s", sqlQuery.c_str(), mysql_error(&db));
       return -1;

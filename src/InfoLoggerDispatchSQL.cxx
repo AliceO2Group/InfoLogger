@@ -28,8 +28,8 @@ typedef bool my_bool;
 class InfoLoggerDispatchSQLImpl
 {
  public:
-  SimpleLog* theLog;                 // handle for logging
   ConfigInfoLoggerServer* theConfig; // struct with config parameters
+  InfoLoggerDispatchSQL* parent;
 
   void start();
   void stop();
@@ -67,7 +67,7 @@ void InfoLoggerDispatchSQLImpl::start()
 {
 
   // log DB params
-  theLog->info("Using DB %s@%s:%s", theConfig->dbUser.c_str(), theConfig->dbHost.c_str(), theConfig->dbName.c_str());
+  parent->logInfo("Using DB %s@%s:%s", theConfig->dbUser.c_str(), theConfig->dbHost.c_str(), theConfig->dbName.c_str());
 
   // prepare insert query from 1st protocol definition
   // e.g. INSERT INTO messages(severity,level,timestamp,hostname,rolename,pid,username,system,facility,detector,partition,run,errcode,errLine,errsource) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) */
@@ -101,20 +101,20 @@ void InfoLoggerDispatchSQLImpl::start()
     }
   }
   sql_insert += ")";
-  theLog->info("insert query = %s", sql_insert.c_str());
+  parent->logInfo("insert query = %s", sql_insert.c_str());
   if (errLine) {
-    theLog->error("Failed to initialize db query: error %d", errLine);
+    parent->logError("Failed to initialize db query: error %d", errLine);
   }
 
   // try to connect DB
   // done automatically in customloop
 }
 
-InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, SimpleLog* log) : InfoLoggerDispatch(config, log)
+InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, SimpleLog* log, std::string prefix) : InfoLoggerDispatch(config, log, prefix)
 {
   dPtr = std::make_unique<InfoLoggerDispatchSQLImpl>();
-  dPtr->theLog = log;
   dPtr->theConfig = config;
+  dPtr->parent = this;
   dPtr->start();
 
   // enable customloop callback
@@ -124,7 +124,7 @@ InfoLoggerDispatchSQL::InfoLoggerDispatchSQL(ConfigInfoLoggerServer* config, Sim
 void InfoLoggerDispatchSQLImpl::stop()
 {
   disconnectDB();
-  theLog->info("DB thread insert count = %llu, delayed msg count = %llu, dropped msg count = %llu", insertCount, msgDelayedCount, msgDroppedCount);
+  parent->logInfo("DB thread insert count = %llu, delayed msg count = %llu, dropped msg count = %llu", insertCount, msgDelayedCount, msgDroppedCount);
 }
 
 InfoLoggerDispatchSQL::~InfoLoggerDispatchSQL()
@@ -156,18 +156,18 @@ int InfoLoggerDispatchSQLImpl::connectDB()
       // init mysql handle
       db = mysql_init(db);
       if (db == NULL) {
-        theLog->error("mysql_init() failed");
+        parent->logError("mysql_init() failed");
         return 1;
       }
     }
-
+    parent->logInfo("DB connecting: %s@%s:%s", theConfig->dbUser.c_str(), theConfig->dbHost.c_str(), theConfig->dbName.c_str());
     if (mysql_real_connect(db, theConfig->dbHost.c_str(), theConfig->dbUser.c_str(), theConfig->dbPassword.c_str(), theConfig->dbName.c_str(), 0, NULL, 0)) {
-      theLog->info("DB connected");
+      parent->logInfo("DB connected");
       dbIsConnected = 1;
       dbConnectTrials = 0;
     } else {
       if (dbConnectTrials == 0) { // log only first attempt
-        theLog->error("DB connection failed: %s", mysql_error(db));
+        parent->logError("DB connection failed: %s", mysql_error(db));
       }
       dbConnectTrials++;
       return 1;
@@ -176,13 +176,13 @@ int InfoLoggerDispatchSQLImpl::connectDB()
     // create prepared insert statement
     stmt = mysql_stmt_init(db);
     if (stmt == NULL) {
-      theLog->error("mysql_stmt_init() failed: %s", mysql_error(db));
+      parent->logError("mysql_stmt_init() failed: %s", mysql_error(db));
       disconnectDB();
       return -1;
     }
 
     if (mysql_stmt_prepare(stmt, sql_insert.c_str(), sql_insert.length())) {
-      theLog->error("mysql_stmt_prepare() failed: %s", mysql_error(db));
+      parent->logError("mysql_stmt_prepare() failed: %s", mysql_error(db));
       disconnectDB();
       return -1;
     }
@@ -202,7 +202,7 @@ int InfoLoggerDispatchSQLImpl::connectDB()
           bind[i].buffer_type = MYSQL_TYPE_DOUBLE;
           break;
         default:
-          theLog->error("undefined field type %d", protocols[0].fields[i].type);
+          parent->logError("undefined field type %d", protocols[0].fields[i].type);
           errline = __LINE__;
           break;
       }
@@ -230,7 +230,7 @@ int InfoLoggerDispatchSQLImpl::disconnectDB()
     db = NULL;
   }
   if (dbIsConnected) {    
-    theLog->info("DB disconnected");
+    parent->logInfo("DB disconnected");
   }
   dbIsConnected = 0;
   return 0;
@@ -247,11 +247,11 @@ int InfoLoggerDispatchSQLImpl::customLoop()
     if (commitNumberOfMsg) {
       if (commitTimer.isTimeout()) {
         if (mysql_query(db, "COMMIT")) {
-          theLog->error("DB transaction commit failed: %s", mysql_error(db));
+          parent->logError("DB transaction commit failed: %s", mysql_error(db));
           commitEnabled = 0;
         } else {
           if (commitDebug) {
-            theLog->info("DB commit - %d msgs", commitNumberOfMsg);
+            parent->logInfo("DB commit - %d msgs", commitNumberOfMsg);
           }
         }
         commitNumberOfMsg = 0;
@@ -299,8 +299,8 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
     }
 
     int msgLen = (int)strlen(message);
-    theLog->error("Dropping message (%d bytes): %.*s%s", msgLen, maxLen, message, (msgLen > maxLen) ? "..." : "");
-    theLog->error("                 %s", logDetails.c_str());
+    parent->logError("Dropping message (%d bytes): %.*s%s", msgLen, maxLen, message, (msgLen > maxLen) ? "..." : "");
+    parent->logError("                 %s", logDetails.c_str());
     msgDroppedCount++;
     return 0; // remove message from queue
   };
@@ -350,12 +350,12 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
     if (commitEnabled) {
       if (commitNumberOfMsg == 0) {
         if (mysql_query(db, "START TRANSACTION")) {
-          theLog->error("DB start transaction failed: %s", mysql_error(db));
+          parent->logError("DB start transaction failed: %s", mysql_error(db));
           commitEnabled = 0;
           return returnDelayedMessage();
         } else {
           if (commitDebug) {
-            theLog->info("DB transaction started");
+            parent->logInfo("DB transaction started");
           }
         }
         commitTimer.reset(commitTimeout);
@@ -375,15 +375,15 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
 
       // update bind variables
       if (mysql_stmt_bind_param(stmt, bind)) {
-        theLog->error("mysql_stmt_bind() failed: %s", mysql_error(db));
-        theLog->error("message: %s", msg);
+        parent->logError("mysql_stmt_bind() failed: %s", mysql_error(db));
+        parent->logError("message: %s", msg);
         // if can not bind, message malformed, drop it
         return returnDroppedMessage(msg, m);
       }
 
       // Do the insertion
       if (mysql_stmt_execute(stmt)) {
-        theLog->error("mysql_stmt_exec() failed: (%d) %s", mysql_errno(db), mysql_error(db));
+        parent->logError("mysql_stmt_exec() failed: (%d) %s", mysql_errno(db), mysql_error(db));
         // column too long
         if (mysql_errno(db) == ER_DATA_TOO_LONG) {
           return returnDroppedMessage(msg, m);
@@ -398,7 +398,7 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
 
       if (commitDebug) {
         if (insertCount % 1000 == 0) {
-          theLog->info("insert count = %llu", insertCount);
+          parent->logInfo("insert count = %llu", insertCount);
         }
       }
     }

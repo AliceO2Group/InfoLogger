@@ -150,3 +150,10 @@ This file describes the main feature changes for each InfoLogger released versio
 - o2-infologger-adminDb:
   - added interactive confirmation prompt when clearing/deleting non-empty tables, unless option '-o noWarning' is set.
   - added command '-c status' to display status information about infoLogger database content (number of tables, number of rows, data size).
+
+## v2.7.2 - 26/09/2024
+- o2-infologger-daemon: improved handling of large number of connections.
+  - fixed message flood of "accept() failed" errors when reaching maximum number allowed file descriptors. A single message is now reported when condition occurs, and then when it is cleared. Reaching system limits of max number of descriptors is now handled gracefuly and recovers fine. NB: loop of accept() failures was still occuring even after remote process dead, because fds content are buffered to avoid message loss.
+  - upgraded to o2-Common v1.6.3, which fixes unclosed file descriptor when rotating log files (which was contributing to trigger issue above, increasing number of fds in use).
+  - added startup checks to verify compatibility of rxMaxConnections with max number of file descriptors allowed by system. If needed, tries to increase the limit. If it does not work, rxMaxConnections is automatically reduced to a lower value.
+  - increased default value of rxMaxConnections from 1024 to 2048. This is the number of concurrent clients allowed to connect to o2-infologger-daemon. Can be changed in configuration file.

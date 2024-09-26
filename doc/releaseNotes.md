@@ -157,3 +157,4 @@ This file describes the main feature changes for each InfoLogger released versio
   - upgraded to o2-Common v1.6.3, which fixes unclosed file descriptor when rotating log files (which was contributing to trigger issue above, increasing number of fds in use).
   - added startup checks to verify compatibility of rxMaxConnections with max number of file descriptors allowed by system. If needed, tries to increase the limit. If it does not work, rxMaxConnections is automatically reduced to a lower value.
   - increased default value of rxMaxConnections from 1024 to 2048. This is the number of concurrent clients allowed to connect to o2-infologger-daemon. Can be changed in configuration file.
+- o2-infologger-server: improved logging per thread/database.

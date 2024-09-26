@@ -15,8 +15,9 @@
 // class InfoLoggerDispatch implementation
 ///////////////////////////////////////////
 
-InfoLoggerDispatch::InfoLoggerDispatch(ConfigInfoLoggerServer* vConfig, SimpleLog* vLog)
+InfoLoggerDispatch::InfoLoggerDispatch(ConfigInfoLoggerServer* vConfig, SimpleLog* vLog, std::string vLogPrefix)
 {
+  logPrefix = vLogPrefix;
   input = std::make_unique<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>>(vConfig->dbDispatchQueueSize);
   if (vLog != NULL) {
     theLog = vLog;
@@ -85,6 +86,33 @@ int InfoLoggerDispatchPrint::customMessageProcess(std::shared_ptr<InfoLoggerMess
 {
   infoLog_msg_print(msg->msg);
   return 0;
+}
+
+void InfoLoggerDispatch::logInfo(const char* message, ...) {
+  char buffer[1024] = "";
+  va_list ap;
+  va_start(ap, message);
+  vsnprintf(buffer,sizeof(buffer), message, ap);
+  va_end(ap);
+  theLog->info("%s%s", logPrefix.c_str(), buffer);
+}
+
+void InfoLoggerDispatch::logError(const char* message, ...) {
+  char buffer[1024] = "";
+  va_list ap;
+  va_start(ap, message);
+  vsnprintf(buffer,sizeof(buffer), message, ap);
+  va_end(ap);
+  theLog->error("%s%s", logPrefix.c_str(), buffer);
+}
+
+void InfoLoggerDispatch::logWarning(const char* message, ...) {
+  char buffer[1024] = "";
+  va_list ap;
+  va_start(ap, message);
+  vsnprintf(buffer,sizeof(buffer), message, ap);
+  va_end(ap);
+  theLog->warning("%s%s", logPrefix.c_str(), buffer);
 }
 
 /////////////////////////////////////////////////

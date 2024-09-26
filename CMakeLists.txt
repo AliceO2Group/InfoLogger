@@ -22,7 +22,7 @@ endif()
 # global compilation options
 enable_language(C)
 enable_language(CXX)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -65,7 +65,7 @@ endif()
 include(ExternalProject)
 externalproject_add (Common-standalone
   GIT_REPOSITORY "https://github.com/AliceO2Group/Common.git"
-  GIT_TAG "v1.6.1"
+  GIT_TAG "v1.6.3"
   LOG_DOWNLOAD 1
   UPDATE_COMMAND ""
   PATCH_COMMAND ""

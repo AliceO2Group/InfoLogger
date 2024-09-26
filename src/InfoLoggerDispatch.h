@@ -31,7 +31,7 @@ class InfoLoggerDispatch
 {
 
  public:
-  InfoLoggerDispatch(ConfigInfoLoggerServer* theConfig = NULL, SimpleLog* theLog = NULL);
+  InfoLoggerDispatch(ConfigInfoLoggerServer* theConfig = NULL, SimpleLog* theLog = NULL, std::string theLogPrefix = "");
   virtual ~InfoLoggerDispatch();
 
   // todo: define settings: non-blocking, etc
@@ -46,11 +46,16 @@ class InfoLoggerDispatch
 
   //    virtual customDispatch...
 
+  void logInfo(const char* message, ...) __attribute__((format(printf, 2, 3)));
+  void logError(const char* message, ...) __attribute__((format(printf, 2, 3)));
+  void logWarning(const char* message, ...) __attribute__((format(printf, 2, 3)));
+
  protected:
   std::unique_ptr<AliceO2::Common::Fifo<std::shared_ptr<InfoLoggerMessageList>>> input;
   std::unique_ptr<AliceO2::Common::Thread> dispatchThread;
   SimpleLog* theLog;
   SimpleLog defaultLog;
+  std::string logPrefix; // a string appended to each log
 
   ConfigInfoLoggerServer* theConfig;
 
@@ -82,7 +87,7 @@ class InfoLoggerDispatchSQLImpl;
 class InfoLoggerDispatchSQL : public InfoLoggerDispatch
 {
  public:
-  InfoLoggerDispatchSQL(ConfigInfoLoggerServer* theConfig, SimpleLog* theLog);
+  InfoLoggerDispatchSQL(ConfigInfoLoggerServer* theConfig, SimpleLog* theLog, std::string prefix);
   ~InfoLoggerDispatchSQL();
   int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
   int customLoop();

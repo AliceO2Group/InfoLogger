@@ -137,7 +137,7 @@ InfoLoggerServer::InfoLoggerServer(int argc, char* argv[]) : Daemon(argc, argv)
 #ifdef WITH_MYSQL
           log.info("SQL DB initialization");
           for (int i = 0; i < configInfoLoggerServer.dbNThreads; i++) {
-            dispatchEnginesDB.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer, &log));
+            dispatchEnginesDB.push_back(std::make_unique<InfoLoggerDispatchSQL>(&configInfoLoggerServer, &log, "[DB main #" + std::to_string(i+1) + "] "));
           }
 #else
           log.error("Not built with MySQL support - can not enable DB");

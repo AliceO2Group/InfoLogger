@@ -40,6 +40,8 @@
 #include <limits.h>
 
 #include <list>
+#include <filesystem>
+#include <sys/resource.h>
 
 #include <Common/Daemon.h>
 #include <Common/SimpleLog.h>
@@ -67,7 +69,7 @@ class ConfigInfoLoggerD
   std::string localLogDirectory = "/tmp/infoLoggerD";         // local directory to be used for log storage, whenever necessary
   std::string rxSocketPath = INFOLOGGER_DEFAULT_LOCAL_SOCKET; // name of socket used to receive log messages from clients
   int rxSocketInBufferSize = -1;                              // size of socket receiving buffer. -1 will leave to sys default.
-  int rxMaxConnections = 1024;                                // maximum number of incoming connections
+  int rxMaxConnections = 2048;                                // maximum number of incoming connections
 
   // settings for remote infoLoggerServer access
   std::string serverHost = "localhost";                // IP name to connect infoLoggerServer
@@ -217,6 +219,8 @@ class InfoLoggerD : public Daemon
   TR_client_handle hCx = nullptr; // handle to server transport
 
   FILE* logOutput = nullptr; // handle to local log file where to copy incoming messages, if configured to do so
+
+  bool stateAcceptFailed = 0; // flag to keep track accept() failing, and avoid flooding log output with errors in case of e.g. reaching max number of open files
 };
 
 // list of extra keys accepted on the command line (-o key=value entries)
@@ -373,6 +377,58 @@ InfoLoggerD::InfoLoggerD(int argc, char* argv[]) : Daemon(argc, argv, nullptr, E
         // todo: open a log file!
       }
 
+      // check consistency of settings for max number of incoming connections
+      if (1) {
+        log.info("Checking resources for rxMaxConnections = %d", configInfoLoggerD.rxMaxConnections);
+	long fileDescriptorCount = 0;
+	long fileDescriptorMax = 0;
+	struct rlimit rlim;
+	bool limitOk = 0;
+	try {
+	  fileDescriptorCount = std::distance(std::filesystem::directory_iterator("/proc/self/fd"), std::filesystem::directory_iterator{});
+	  log.info("At the moment, having %ld files opened", fileDescriptorCount);
+	}
+	catch(...) {
+	}
+	// iterate a couple of time to get/set rlimit if needed
+	for (int i=0; i<2; i++) {
+	  int err = getrlimit(RLIMIT_NOFILE, &rlim);
+	  if (err) {
+            log.error("getrlimit() failed: %s", strerror(errno));
+	    break;
+	  }
+	  fileDescriptorMax = (long) rlim.rlim_cur;
+	  log.info("getrlimit(): soft = %lu, hard = %lu", (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
+	  if (fileDescriptorCount + configInfoLoggerD.rxMaxConnections > (long)rlim.rlim_cur) {
+            log.info("Current limits are not compatible with rxMaxConnections = %d", configInfoLoggerD.rxMaxConnections);
+
+	    // trying to increase limits once
+            if (i) break;
+	    rlim.rlim_cur = (unsigned long)(fileDescriptorCount + configInfoLoggerD.rxMaxConnections + 1);
+	    log.info("Trying to increase limit to %ld", (long)rlim.rlim_cur);
+	    if (rlim.rlim_cur > rlim.rlim_max) {
+	      rlim.rlim_cur = rlim.rlim_max;
+	    }
+	    err = setrlimit(RLIMIT_NOFILE, &rlim);
+	    if (err) {
+              log.error("setrlimit() failed: %s", strerror(errno));
+	      break;
+	    }
+	  } else {
+	    log.info("Limits ok, should be able to cope with %d max connections", configInfoLoggerD.rxMaxConnections);
+	    limitOk = 1;
+	    break;
+	  }
+	}
+        if (!limitOk) {
+          configInfoLoggerD.rxMaxConnections = fileDescriptorMax - fileDescriptorCount - 1;
+	  if (configInfoLoggerD.rxMaxConnections <= 0) {
+            configInfoLoggerD.rxMaxConnections = 1;
+	  }
+	  log.info("Reducing rxMaxConnections to %d", configInfoLoggerD.rxMaxConnections);
+        }
+      }
+
       isInitialized = 1;
       log.info("infoLoggerD started");
     }
@@ -496,8 +552,15 @@ Daemon::LoopStatus InfoLoggerD::doLoop()
       socklen_t socketAddressLen = sizeof(socketAddress);
       int tmpSocket = accept(rxSocket, (struct sockaddr*)&socketAddress, &socketAddressLen);
       if (tmpSocket == -1) {
-        log.error("accept() failed: %s", strerror(errno));
+        if (!stateAcceptFailed) {
+          stateAcceptFailed = 1;
+	  log.error("accept() failed: %s", strerror(errno));
+	}
       } else {
+        if (stateAcceptFailed) {
+          log.info("accept() failure now recovered");
+          stateAcceptFailed = 0;
+	}
         if (((int)clients.size() >= configInfoLoggerD.rxMaxConnections) && (configInfoLoggerD.rxMaxConnections > 0)) {
           log.warning("Closing new client, maximum number of connections reached (%d)", configInfoLoggerD.rxMaxConnections);
           close(tmpSocket);

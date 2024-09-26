@@ -158,3 +158,4 @@ This file describes the main feature changes for each InfoLogger released versio
   - added startup checks to verify compatibility of rxMaxConnections with max number of file descriptors allowed by system. If needed, tries to increase the limit. If it does not work, rxMaxConnections is automatically reduced to a lower value.
   - increased default value of rxMaxConnections from 1024 to 2048. This is the number of concurrent clients allowed to connect to o2-infologger-daemon. Can be changed in configuration file.
 - o2-infologger-server: improved logging per thread/database.
+- o2-infologger-newdb: added option to skip user creation

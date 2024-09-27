@@ -25,3 +25,11 @@ InfoLoggerMessageList::~InfoLoggerMessageList()
   infoLog_msg_destroy(msg); // destroy list (ok with null)
 }
 
+unsigned long InfoLoggerMessageList::size()
+{
+  unsigned long nMsg = 0;
+  for (infoLog_msg_t* m = this->msg; m != nullptr; m = m->next) {
+    nMsg++;
+  }
+  return nMsg;
+}

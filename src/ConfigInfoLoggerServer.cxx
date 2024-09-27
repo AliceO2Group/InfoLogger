@@ -34,6 +34,8 @@ void ConfigInfoLoggerServer::readFromConfigFile(ConfigFile& config)
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbNThreads", dbNThreads);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbDispatchQueueSize", dbDispatchQueueSize);
 
+  config.getOptionalValue<std::string>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".dbReplica", dbReplica);
+
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".serverPortTx", serverPortTx);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".maxClientsTx", maxClientsTx);
 }

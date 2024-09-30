@@ -159,3 +159,6 @@ This file describes the main feature changes for each InfoLogger released versio
   - increased default value of rxMaxConnections from 1024 to 2048. This is the number of concurrent clients allowed to connect to o2-infologger-daemon. Can be changed in configuration file.
 - o2-infologger-server: improved logging per thread/database.
 - o2-infologger-newdb: added option to skip user creation
+
+# v2.7.3 - 30/09/2024
+- o2-infologger-daemon: removed limitation of 1024 connections (was because of hard limit in select() system call, replaced now by poll()).

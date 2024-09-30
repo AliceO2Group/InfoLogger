@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/poll.h>
 
 #include <sys/stat.h>
 #include <string.h>
@@ -197,6 +198,7 @@ int checkDirAndCreate(const char* dir, SimpleLog* log = NULL)
 typedef struct {
   int socket;
   std::string buffer; // currently pending data
+  int pollIx; // index of client in poll structure
 } t_clientConnection;
 
 class InfoLoggerD : public Daemon
@@ -214,6 +216,8 @@ class InfoLoggerD : public Daemon
 
   unsigned long long numberOfMessagesReceived = 0;
   std::list<t_clientConnection> clients;
+  struct pollfd *fds = nullptr;  // array for poll()
+  int nfds = 0;  // size of array
 
   TR_client_configuration cfgCx;  // config for transport
   TR_client_handle hCx = nullptr; // handle to server transport
@@ -451,6 +455,9 @@ InfoLoggerD::~InfoLoggerD()
   for (auto c : clients) {
     close(c.socket);
   }
+  if (fds) {
+    free(fds);
+  }
   if (hCx != nullptr) {
     TR_client_stop(hCx);
   }
@@ -462,28 +469,37 @@ Daemon::LoopStatus InfoLoggerD::doLoop()
     return LoopStatus::Error;
   }
 
-  fd_set readfds;
-  FD_ZERO(&readfds);
-  FD_SET(rxSocket, &readfds);
-  int nfds = rxSocket;
-  for (auto client : clients) {
-    FD_SET(client.socket, &readfds);
-    if (client.socket > nfds) {
-      nfds = client.socket;
+  bool updateFds = false; // raise this flag to renew structure (change in client list)
+  if (fds == nullptr)  {
+    // create new poll structure based on current list of clients
+    size_t sz = sizeof(struct pollfd) * (clients.size() + 1);
+    fds = (struct pollfd *)malloc(sz);
+    if (fds == nullptr) {
+      return LoopStatus::Error;
+    }
+    memset(fds, 0, sz);
+    nfds = 1;
+    fds[0].fd = rxSocket;
+    fds[0].events = POLLIN;
+
+    for (auto &client : clients) {
+      if (client.socket<0) continue;
+      fds[nfds].fd = client.socket;
+      fds[nfds].events = POLLIN;
+      fds[nfds].revents = 0;
+      client.pollIx = nfds; // keep index of fds for this client, to be able to check poll result
+      nfds++;
     }
   }
-  nfds++;
 
-  struct timeval selectTimeout;
-  selectTimeout.tv_sec = 1;
-  selectTimeout.tv_usec = 0;
-
-  if (select(nfds, &readfds, NULL, NULL, &selectTimeout) > 0) {
+  // poll with 1 second timeout
+  if (poll(fds, nfds, 1000) > 0) {
 
     // check existing clients
     int cleanupNeeded = 0;
     for (auto& client : clients) {
-      if (FD_ISSET(client.socket, &readfds)) {
+      if (client.socket<0) continue;
+      if ((client.pollIx >= 0) && (fds[client.pollIx].revents)) {
         char newData[1024000]; // never read more than 10k at a time... allows to round-robin through clients
         int bytesRead = read(client.socket, newData, sizeof(newData));
         if (bytesRead > 0) {
@@ -544,10 +560,11 @@ Daemon::LoopStatus InfoLoggerD::doLoop()
     if (cleanupNeeded) {
       clients.remove_if([](t_clientConnection& c) { return (c.socket == -1); });
       log.info("%d clients disconnected, now having %d/%d", cleanupNeeded, (int)clients.size(), configInfoLoggerD.rxMaxConnections);
+      updateFds = 1;
     }
 
     // handle new connection requests
-    if (FD_ISSET(rxSocket, &readfds)) {
+    if (fds[0].revents) {
       struct sockaddr_un socketAddress;
       socklen_t socketAddressLen = sizeof(socketAddress);
       int tmpSocket = accept(rxSocket, (struct sockaddr*)&socketAddress, &socketAddressLen);
@@ -574,8 +591,16 @@ Daemon::LoopStatus InfoLoggerD::doLoop()
           newClient.buffer.clear();
           clients.push_back(newClient);
           log.info("New client: %d/%d", (int)clients.size(), configInfoLoggerD.rxMaxConnections);
+	  updateFds = 1;
         }
       }
+    }
+
+    if (updateFds) {
+      if (fds != nullptr) {
+        free(fds);
+      }
+      fds = nullptr;
     }
   }
 

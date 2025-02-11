@@ -91,8 +91,8 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
         severity,
         level,
         AliceO2::InfoLogger::InfoLogger::undefinedMessageOption.errorCode,
-        metadata.file.c_str(),
-        atoi(metadata.line.c_str())
+        metadata.file,
+        atoi(std::string(metadata.line.data(), metadata.line.size()).c_str())
       };
       if (prefix == NULL) {
         theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());

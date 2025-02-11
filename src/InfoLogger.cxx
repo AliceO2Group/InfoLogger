@@ -629,13 +629,7 @@ int InfoLogger::Impl::pushMessage(const InfoLoggerMessageOption& options, const 
   }
   if (options.sourceFile != undefinedMessageOption.sourceFile) {
     // trim directory path to keep it short
-    const char *shortName=options.sourceFile;
-    for (int i=(int)strlen(options.sourceFile)-1; i>=0; i--) {
-      if (options.sourceFile[i]=='/') {
-        shortName=&options.sourceFile[i+1];
-        break;
-      }
-    }
+    const char* shortName = &options.sourceFile[options.sourceFile.rfind('/') + 1];
     InfoLoggerMessageHelperSetValue(msg, msgHelper.ix_errsource, String, shortName);
   }
   if (options.sourceLine != undefinedMessageOption.sourceLine) {

@@ -242,19 +242,16 @@ class InfoLogger
     InfoLogger::Severity severity;
     int level;
     int errorCode;
-    const char* sourceFile;
+    std::string_view sourceFile;
     int sourceLine;
   };
-
-  // make sure options are a POD struct
-  static_assert(std::is_pod<InfoLoggerMessageOption>::value, "struct InfoLoggerMessageOption is not POD");
 
   /// Definition of a constant, to be used for corresponding fields when not defined
   static constexpr InfoLoggerMessageOption undefinedMessageOption = {
     Severity::Undefined, // severity
     -1,                  // level
     -1,                  // errorCode
-    nullptr,             // sourceFile
+    std::string_view(),  // sourceFile
     -1,                  // sourceLine
   };
 

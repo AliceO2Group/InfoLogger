@@ -45,6 +45,8 @@ class ConfigInfoLoggerServer
   int dbNThreads = 1;                // number of insert threads
   int dbDispatchQueueSize = 10000;   // max number of messages buffered in memory before DB insert
 
+  std::string dbReplica = "";        // path to a infologgerserver config file, from which the database settings are read and to which a copy of the messages will be stored
+
   // settings for infoBrowser clients
   int serverPortTx = INFOLOGGER_DEFAULT_SERVER_TX_PORT;
   int maxClientsTx = 100;

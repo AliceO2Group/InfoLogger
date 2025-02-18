@@ -23,6 +23,13 @@ using namespace AliceO2::InfoLogger;
 
 int main()
 {
+  if (0) {
+    InfoLogger theLog("verbose=1");
+    theLog.log("infoLogger message test");
+    sleep(1);
+    return 0;
+  }
+
   InfoLogger theLog;
 
   if (0) {

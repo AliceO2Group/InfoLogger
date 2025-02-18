@@ -21,6 +21,7 @@ class InfoLoggerMessageList
   InfoLoggerMessageList(TR_file* rawMessageList);
   ~InfoLoggerMessageList();
   infoLog_msg_t* msg;
+  unsigned long size(); // return number of messages in list
 };
 
 // _INFOLOGGER_MESSAGE_LIST_H

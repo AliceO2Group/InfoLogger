@@ -162,3 +162,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 # v2.7.3 - 30/09/2024
 - o2-infologger-daemon: removed limitation of 1024 connections (was because of hard limit in select() system call, replaced now by poll()).
+
+# v2.8.0 - 18/02/2024
+- API : adapted InfoLoggerFMQ.hxx for compatibility with FairLogger 2.1.0

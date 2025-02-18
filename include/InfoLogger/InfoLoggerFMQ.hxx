@@ -12,7 +12,7 @@
 #ifndef INFOLOGGER_INFOLOGGERFMQ_HXX
 #define INFOLOGGER_INFOLOGGERFMQ_HXX
 
-#include <fairmq/FairMQLogger.h>
+#include <Logger.h>
 #include <InfoLogger/InfoLogger.hxx>
 
 #define INFOLOGGER_FMQ_SINK_NAME "infoLogger"
@@ -49,6 +49,9 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
         return;
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::fatal)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Fatal;
+      } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::critical)) {
+        severity = AliceO2::InfoLogger::InfoLogger::Severity::Error;
+        prefix = "Critical";
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::error)) {
         severity = AliceO2::InfoLogger::InfoLogger::Severity::Error;
       } else if (metadata.severity_name == fair::Logger::SeverityName(fair::Severity::alarm)) {
@@ -91,8 +94,8 @@ void setFMQLogsToInfoLogger(AliceO2::InfoLogger::InfoLogger* logPtr = nullptr)
         severity,
         level,
         AliceO2::InfoLogger::InfoLogger::undefinedMessageOption.errorCode,
-        metadata.file.c_str(),
-        atoi(metadata.line.c_str())
+        std::string(metadata.file).c_str(),
+        atoi(std::string(metadata.line).c_str())
       };
       if (prefix == NULL) {
         theLogPtr->log(opt, ctx, "FMQ: %s", content.c_str());

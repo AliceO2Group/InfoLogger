@@ -165,3 +165,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 # v2.8.0 - 18/02/2025
 - API : adapted InfoLoggerFMQ.hxx for compatibility with FairLogger 2.1.0
+
+# v2.8.1 - 19/02/2025
+- InfoLoggerFMQ.hxx fix

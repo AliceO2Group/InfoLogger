@@ -168,3 +168,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 # v2.8.1 - 19/02/2025
 - InfoLoggerFMQ.hxx fix
+
+# v2.8.2 - 20/02/2025
+- InfoLoggerFMQ.hxx fix (wrong include path)

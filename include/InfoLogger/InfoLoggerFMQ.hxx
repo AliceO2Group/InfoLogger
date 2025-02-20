@@ -12,7 +12,7 @@
 #ifndef INFOLOGGER_INFOLOGGERFMQ_HXX
 #define INFOLOGGER_INFOLOGGERFMQ_HXX
 
-#include <Logger.h>
+#include <fairmq/FairMQLogger.h>
 #include <InfoLogger/InfoLogger.hxx>
 
 #define INFOLOGGER_FMQ_SINK_NAME "infoLogger"

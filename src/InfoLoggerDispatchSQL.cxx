@@ -384,8 +384,13 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
       // Do the insertion
       if (mysql_stmt_execute(stmt)) {
         parent->logError("mysql_stmt_exec() failed: (%d) %s", mysql_errno(db), mysql_error(db));
+	unsigned int err = mysql_errno(db);
         // column too long
-        if (mysql_errno(db) == ER_DATA_TOO_LONG) {
+        if ( err == ER_DATA_TOO_LONG) {
+          return returnDroppedMessage(msg, m);
+        }
+        // column with wrong value
+        if ( err == ER_TRUNCATED_WRONG_VALUE_FOR_FIELD) {
           return returnDroppedMessage(msg, m);
         }
         // retry with new connection - usually it means server was down

@@ -268,7 +268,7 @@ int InfoLoggerMessageHelper::MessageToText(infoLog_msg_t* msg, char* buffer, int
           }
         }
       }
-      appendString(buffer, bufferSize, &ix, strBuf.c_str());
+      appendString(buffer, bufferSize, &ix, "%s", strBuf.c_str());
       break;
 
     default:

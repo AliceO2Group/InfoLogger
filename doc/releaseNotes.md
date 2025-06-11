@@ -171,3 +171,6 @@ This file describes the main feature changes for each InfoLogger released versio
 
 # v2.8.2 - 20/02/2025
 - InfoLoggerFMQ.hxx fix (wrong include path)
+
+# v2.8.3 - 11/06/2025
+- Compilation / security fix. (string handling)

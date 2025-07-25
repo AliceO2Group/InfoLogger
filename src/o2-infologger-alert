@@ -4,11 +4,16 @@
 # v1.0.0   24/06/2025 - initial release
 # v1.1.0   30/06/2025 - updated log message fields
 # v1.1.1   03/07/2025 - updated MFT rules
+# v1.2.0   25/07/2025 - adding info on the log message triggering the alert
+#                     - extra option to dump the rules
+#                     - adding info about example message timestamp for each rule
+
 
 set cfg(TelegrafSocket) "/tmp/telegraf.sock"
 set cfg(TelegrafBucket) "InfologgerAlerts"
-set cfg(RunWithoutDeps) 0
+set cfg(RunWithoutDeps) 1
 set cfg(InfoLoggerConfigFile) "/etc/o2.d/infologger/infoLogger.cfg"
+set cfg(DumpRules) 0
 
 
 
@@ -28,6 +33,9 @@ while {[set opt [lindex $argv $x]] != ""} {
    -z {
         set configFile [lindex $argv [expr $x + 1]]
         incr x   
+   }
+   -i {
+        set cfg(DumpRules) 1
    }
  }
  incr x
@@ -139,7 +147,7 @@ doLog "Starting infoLoggerAlarmGenerator - pid [pid]"
 ###############
 # internal vars
 
-set subsecond_decimal 0
+set subsecond_decimal 3
 set subsecond_decimal_l 0
 
 # display message with configured log fields
@@ -469,7 +477,7 @@ if {0} {
       #puts "$m"
 
       global alarms      
-      foreach {id doc description test onN onT offN offT} $alarms {
+      foreach {id doc description test onN onT offN offT exampleTime} $alarms {
         set status [expr $test]
 	if {$status} {
 	  #exec /opt/o2-InfoLogger/bin/o2-infologger-log -oLevel=1 -oSeverity=Error "Alarm $id - $doc"
@@ -480,7 +488,7 @@ if {0} {
 	  global alTlast alState alTimeout alCount
 	  if (!$alState($id)) {
 	     doLog "*** Alarm $id firing"
-             #sendMetric $id 1
+	     doLogIlg $id "Alarm $id triggered by message at $lastt_str_t on $v_hostname: $m"
 	  } else {
 	     doLog "*** Alarm $id still active"	  
 	  }
@@ -606,7 +614,7 @@ set alarms {}
 
 
 
-proc registerAlarm {id description doc test} {
+proc registerAlarm {id description doc test example} {
   global alarms
   
   set onN 1
@@ -614,7 +622,7 @@ proc registerAlarm {id description doc test} {
   set offN 0
   set offT 10
   
-  foreach {vid vdoc vdescription vtest vonN vonT voffN voffT} $alarms {
+  foreach {vid vdoc vdescription vtest vonN vonT voffN voffT vExampleTime} $alarms {
     if {$id == $vid} {
       doLog "Failed to register alarm - duplicate id $id $doc $test"
       return -1
@@ -622,7 +630,7 @@ proc registerAlarm {id description doc test} {
   }
   
   
-  lappend alarms $id $doc $description $test $onN $onT $offN $offT
+  lappend alarms $id $doc $description $test $onN $onT $offN $offT $example
   set tFirst($id) -1
   set tLast($id) -1
   set tN($id) 0
@@ -677,7 +685,7 @@ registerAlarm \
 	  [string match "Non-contiguous*" $field(Message)] ||
 	  [string match "Equipment * seems inconsistent" $field(Message)]
 	)
-	}
+	} ""
 		
 }
 # END disabled alarms
@@ -687,7 +695,7 @@ registerAlarm \
 registerAlarm \
 	19002 \
 	"MFT mft-stf-decoder link cruID error" \
-	"Urgent: Call MFT on-call before doing a log entry" \
+	"URGENT: Call MFT on-call : error - link cruID:* feeID:0x---" \
 	{
 	($field(Detector) == "MFT")
 	&& ($field(System) == "DPL")
@@ -696,7 +704,8 @@ registerAlarm \
 	  [string match "link cruID:*" $field(Message)] ||
 	  [string match "feeID:0x*" $field(Message)]
 	)	
-	}	
+	} \
+	"2025-07-02 21:02"
 
 # ex: 2025-06-04 01:11
 # /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Non-contiguous XXX"
@@ -711,7 +720,8 @@ registerAlarm \
 	&& (
 	  [string match "Non-contiguous*" $field(Message)]
 	)
-	}
+	} \
+	"2025-06-04 01:11"
 
 # ex: 2025-06-05 18:32
 # /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX seems inconsistent from expected XXX"
@@ -726,7 +736,8 @@ registerAlarm \
 	&& (
 	  [string match "Equipment * seems inconsistent from expected*" $field(Message)]
 	)
-	}
+	} \
+	"2025-06-05 18:32"
 
 # ex: 2025-06-05 18:32
 # /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX inconsistent link idsXXX"
@@ -741,7 +752,8 @@ registerAlarm \
 	&& (
 	  [string match "Equipment * inconsistent link ids*" $field(Message)]
 	)
-	}
+	} \
+	"2025-06-05 18:32"
 
 registerAlarm \
 	23001 \
@@ -753,7 +765,8 @@ registerAlarm \
 	&& (
 	  [string match "test message for fake alert" $field(Message)]
 	)
-	}
+	} \
+	""
 	
 
 
@@ -780,10 +793,17 @@ proc sendMetric {id value} {
 
 
 set listAlarms {}
-foreach {id doc description test onN onT offN offT} $alarms {
+foreach {id doc description test onN onT offN offT exampleTime} $alarms {
   lappend listAlarms $id
 }
 doLog "Registered alarms: $listAlarms"
+
+if {$cfg(DumpRules)} {
+  foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+    puts "| $id | $description | $doc | detector | system | facility | errcode | rule1<BR>rule2 | $exampleTime | PROD |"
+  }
+  exit 0
+}
 
 
 doOnline
@@ -798,7 +818,7 @@ while {1} {
   #doLog "loop"
   set now [clock seconds]
   global alarms
-  foreach {id doc description test onN onT offN offT} $alarms {
+  foreach {id doc description test onN onT offN offT exampleTime} $alarms {
     if ($alState($id)) {
       if {$now >= [expr $alTlast($id) + $offT]} {
         doLogIlg ${id} "Alarm ${id} cleared after timeout."

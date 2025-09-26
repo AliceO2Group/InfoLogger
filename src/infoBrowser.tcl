@@ -10,9 +10,12 @@
 # -p partition : defines a predefined filter on startup
 # -f facility  : defines a predefined filter on startup
 # -l level     : defines a predefined filter on startup (use same string as found in select box)
+# -tmin time   : defines a predefined filter on startup
+# -tmax time   : defines a predefined filter on startup
 # -admin       : enables admin commands for messages archival
 # -prefs file  : loads on startup a preference file saved previously from the Display menu (geometry, filters, online state)
 # -z file      : provides path to configuration file (by default: /etc/o2.d/infologger/infoLogger.cfg, or from environment variable INFOLOGGER_CONFIG if set)
+# -query       : execute query on startup
 # 
 # requires tcl/tk 8.4 (panedwindow widget)
 #
@@ -20,6 +23,7 @@
 #                   Protocol v1.4
 #                   Updated default configuration settings to split from DATE
 # 24/11/2020  SC  - Added extended display preferences save/load
+# 21/08/2025  SC  - Added startup options: tmin, tmax, query
 ################################################################
 
 # infoBrowser version
@@ -2342,6 +2346,11 @@ proc mysqlquery {query} {
 
 # by default, will start in online mode
 set goOnline 1
+set goQuery 0
+
+# wait for the window to be visible
+# (can take some time remotely)
+tkwait visibility .menubar
 
 # process command line arguments
 set x 0
@@ -2387,7 +2396,29 @@ while {[set opt [lindex $argv $x]] != ""} {
         set vfilter_level_arg [lindex $argv [expr $x + 1]]
         incr x
         setFilterLevelByName $vfilter_level_arg
-   }   
+   }
+   -tmin {
+        set t [lindex $argv [expr $x + 1]]
+        incr x
+	set box .select.time.vstart
+	if {[winfo exists $box]} {
+          $box delete 0 end
+	  $box insert 0 $t
+	}
+   }
+   -tmax {
+        set t [lindex $argv [expr $x + 1]]
+        incr x
+	set box .select.time.vend
+	if {[winfo exists $box]} {
+          $box delete 0 end
+	  $box insert 0 $t
+	}
+   }
+   -query {
+     set goOnline 0
+     set goQuery 1
+   }
    -admin {
       set adminExecOk 1
       # look for admin executable in path or same dir as this script
@@ -2429,3 +2460,6 @@ if {$goOnline} {
   doOnline
 }
 
+if {$goQuery} {
+  doQuery
+}

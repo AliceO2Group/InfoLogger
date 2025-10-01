@@ -7,15 +7,18 @@
 # v1.2.0   25/07/2025 - adding info on the log message triggering the alert
 #                     - extra option to dump the rules
 #                     - adding info about example message timestamp for each rule
-
+# v1.3.0   21/08/2025 - adding debug mode
+#                     - quoting all rules comparisons for better debug display
+#		      - filter out self log messages
+#                     - extra rules
 
 set cfg(TelegrafSocket) "/tmp/telegraf.sock"
 set cfg(TelegrafBucket) "InfologgerAlerts"
 set cfg(RunWithoutDeps) 1
 set cfg(InfoLoggerConfigFile) "/etc/o2.d/infologger/infoLogger.cfg"
 set cfg(DumpRules) 0
-
-
+set cfg(Debug) 1
+set cfg(LogFacility) "ilg/alert"
 
 
 ####################
@@ -79,7 +82,8 @@ proc logResetFields {} {
   global logContext
   global defaultLevel
   global defaultSeverity
-  $logContext setField "Facility" "ilg/alert"
+  global cfg
+  $logContext setField "Facility" $cfg(LogFacility)
   $logContext setField "System" "FLP"
   $logContext setField "Level" "$defaultLevel"
   $logContext setField "Severity" "$defaultSeverity"
@@ -333,6 +337,8 @@ set server_fd -1
 
 # process an event on the socket
 proc server_event {} {
+  global cfg
+
   global server_fd
   global n_msgs
   global n_msgs_war
@@ -377,7 +383,9 @@ proc server_event {} {
       }
       set v1 [lindex $item 0]
 
-     #puts "online msg=${msg}(end of msg)"
+     if {$cfg(Debug)} {
+       puts "online msg=${msg}(end of msg)"
+     }
 
       if {[string equal $v1 "*${log_protocol_version}"]} {
 
@@ -457,7 +465,7 @@ if {0} {
       lappend l_Message $m
 }
 
-      set field(Severity) "$ss"
+      set field(Severity) "$v_severity"
       set field(Timestamp) "$tval"
       set field(Level) $v_level
       set field(Host) $v_hostname
@@ -476,27 +484,35 @@ if {0} {
 
       #puts "$m"
 
-      global alarms      
-      foreach {id doc description test onN onT offN offT exampleTime} $alarms {
-        set status [expr $test]
-	if {$status} {
-	  #exec /opt/o2-InfoLogger/bin/o2-infologger-log -oLevel=1 -oSeverity=Error "Alarm $id - $doc"
-	  incr tN($id)
-	  set tLast($id) $tval
-	  #puts "$id match"
-	  
-	  global alTlast alState alTimeout alCount
-	  if (!$alState($id)) {
-	     doLog "*** Alarm $id firing"
-	     doLogIlg $id "Alarm $id triggered by message at $lastt_str_t on $v_hostname: $m"
-	  } else {
-	     doLog "*** Alarm $id still active"	  
+      if {$v_facility != $cfg(LogFacility)} {
+        # filter out own messages
+	global alarms
+	foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+          set status [expr $test]
+	  if {$cfg(Debug)} {
+	    puts "  $id -> $status"
+	    #puts "  $test"
+	    #puts "  == $field(Message)"
+	    puts "[subst -nocommands -nobackslashes $test]"
 	  }
-  	  set alTlast($id) [clock seconds]
-	  set alState($id) 1	  
+	  if {$status} {
+	    #exec /opt/o2-InfoLogger/bin/o2-infologger-log -oLevel=1 -oSeverity=Error "Alarm $id - $doc"
+	    incr tN($id)
+	    set tLast($id) $tval
+	    #puts "$id match"
+
+	    global alTlast alState alTimeout alCount
+	    if (!$alState($id)) {
+	       doLog "*** Alarm $id firing"
+	       doLogIlg $id "Alarm $id triggered by message at $lastt_str_t on $v_hostname: $m"
+	    } else {
+	       doLog "*** Alarm $id still active"
+            }
+	    set alTlast($id) [clock seconds]
+	    set alState($id) 1
+	  }
 	}
       }
-
 
       incr n_msgs
 
@@ -650,45 +666,8 @@ proc registerAlarm {id description doc test example} {
 
 
 
-# register an alarm
-# params: id, doc/link, boolean condition, threshold ON (N / time), threshold OFF (N / time)
-
-# BEGIN disabled alarms
-if {0} {
-registerAlarm        \
-	1            \
-	"Alarm 1"    \
-	"no action"  \
-	{ ($field(Detector) == "TST") }
-
-registerAlarm        \
-	2            \
-	"Alarm 2"    \
-	"no action"  \
-	{ ($field(Detector) == "MFT") }
-
-registerAlarm        \
-	3            \
-	"Alarm 3"    \
-	"no action"  \
-	{ ($field(Detector) == "TST") && ([string first "dropped" $field(Message)]>=0)}
-
-registerAlarm \
-	19001 \
-	"MFT FLP readout warnings" \
-	"Call MFT on-call" \
-	{
-	($field(Detector) == "MFT")
-	&& ($field(Facility) == "readout")
-	&& ($field(ErrCode) == 3004)
-	&& (
-	  [string match "Non-contiguous*" $field(Message)] ||
-	  [string match "Equipment * seems inconsistent" $field(Message)]
-	)
-	} ""
-		
-}
-# END disabled alarms
+####################################################################
+# alarms definitions
 
 
 # ex: 2025-07-02 21:02
@@ -697,12 +676,12 @@ registerAlarm \
 	"MFT mft-stf-decoder link cruID error" \
 	"URGENT: Call MFT on-call : error - link cruID:* feeID:0x---" \
 	{
-	($field(Detector) == "MFT")
-	&& ($field(System) == "DPL")
-	&& ($field(Facility) == "mft-stf-decoder")
+	("$field(Detector)" == "MFT")
+	&& ("$field(System)" == "DPL")
+	&& ("$field(Facility)" == "mft-stf-decoder")
 	&& (
-	  [string match "link cruID:*" $field(Message)] ||
-	  [string match "feeID:0x*" $field(Message)]
+	  [string match "link cruID:*" "$field(Message)"] ||
+	  [string match "feeID:0x*" "$field(Message)"]
 	)	
 	} \
 	"2025-07-02 21:02"
@@ -714,11 +693,11 @@ registerAlarm \
 	"MFT FLP readout warnings" \
 	"Call MFT on-call : error - non-contiguous timeframe IDs" \
 	{
-	($field(Detector) == "MFT")
-	&& ($field(Facility) == "readout")
-	&& ($field(ErrCode) == 3004)
+	("$field(Detector)" == "MFT")
+	&& ("$field(Facility)" == "readout")
+	&& ("$field(ErrCode)" == 3004)
 	&& (
-	  [string match "Non-contiguous*" $field(Message)]
+	  [string match "Non-contiguous*" "$field(Message)"]
 	)
 	} \
 	"2025-06-04 01:11"
@@ -730,11 +709,11 @@ registerAlarm \
 	"MFT FLP readout warnings" \
 	"Call MFT on-call : error - orbit seems inconsistent" \
 	{
-	($field(Detector) == "MFT")
-	&& ($field(Facility) == "readout")
-	&& ($field(ErrCode) == 3004)
+	("$field(Detector)" == "MFT")
+	&& ("$field(Facility)" == "readout")
+	&& ("$field(ErrCode)" == 3004)
 	&& (
-	  [string match "Equipment * seems inconsistent from expected*" $field(Message)]
+	  [string match "Equipment * seems inconsistent from expected*" "$field(Message)"]
 	)
 	} \
 	"2025-06-05 18:32"
@@ -746,11 +725,11 @@ registerAlarm \
 	"MFT FLP readout warnings" \
 	"Call MFT on-call : error - inconsistent link IDs" \
 	{
-	($field(Detector) == "MFT")
-	&& ($field(Facility) == "readout")
-	&& ($field(ErrCode) == 3004)
+	("$field(Detector)" == "MFT")
+	&& ("$field(Facility)" == "readout")
+	&& ("$field(ErrCode)" == 3004)
 	&& (
-	  [string match "Equipment * inconsistent link ids*" $field(Message)]
+	  [string match "Equipment * inconsistent link ids*" "$field(Message)"]
 	)
 	} \
 	"2025-06-05 18:32"
@@ -760,17 +739,102 @@ registerAlarm \
 	"This is a test alert" \
 	"This is a fake alert for testing purposes. Do not take it into consideration." \
 	{
-	($field(Detector) == "TST")
-	&& ($field(Facility) == "test")
+	("$field(Detector)" == "TST")
+	&& ("$field(Facility)" == "test")
 	&& (
-	  [string match "test message for fake alert" $field(Message)]
+	  [string match "test message for fake alert" "$field(Message)"]
 	)
 	} \
 	""
+
+#ex: 2025-07-30 13:41 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oSeverity="E" -oFacility=readout -oDetector=TOF -oErrorCode=3241 "Equipment equipment-roc-4 : first HB orbit of link 2 is different from first link(9): 0x1B34660 != 0x58095A60"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout" -d "TOF" -tmin "2025-07-30 13:41 CEST" -tmax "2025-07-30 13:42 CEST" -s "E F" -query
+
+registerAlarm \
+        21001 \
+        "TOF FLP readout fatal" \
+        "Restart the run, if it happens again call TOF on-call: first HB orbit mismatch." \
+        {
+           ("$field(ErrCode)" == "3241")
+	&& ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "TOF")
+        && ("$field(Facility)" == "readout")
+        && (
+	  [string match "Equipment * first HB orbit * different *" "$field(Message)"]
+	)
+        } \
+        "2025-07-30 13:41"
+
+
+
+
+#ex: 2025-06-05 18:32 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=readout -oDetector=ITS -oSeverity=E -oErrorCode=3241 "Equipment equipment-roc-1 : first HB orbit of link 15 is different from first link(0): 0x1FEB32A0 != 0x1E43060"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout" -d "ITS" -tmin "2025-06-05 18:32 CEST" -tmax "2025-06-05 18:33 CEST" -s "E F" -query
+
+registerAlarm \
+        17001 \
+        "ITS FLP readout fatal" \
+        "Call ITS on-call, as the next run is extremely likely to fail again for the same reason: first HB orbit mismatch." \
+        {
+           ("$field(ErrCode)" == "3241")
+	&& ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "ITS")
+        && ("$field(Facility)" == "readout")
+        && (
+	  [string match "Equipment * first HB orbit * different *" "$field(Message)"]
+	)
+        } \
+        "2025-06-05 18:32"
+
 	
+#ex: 2025-08-19 23:49 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=task/ITSFEE -oDetector=ITS -oSeverity=E -oSystem=QC "RAWPARSER: Incomplete HBF - jump in packet counter 213 to 215 (1 total RawParser errors)"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "task/ITSFEE" -d "ITS" -tmin "2025-08-19 23:49 CEST" -tmax "2025-08-19 23:50 CEST" -s "E F" -query
+
+registerAlarm \
+        17003 \
+        "ITS FLP QC errors" \
+        "If it appears right at SOR, call ITS on-call. Otherwise create a bookkeeping entry." \
+        {
+           ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "ITS")
+	&& ("$field(Facility)" == "task/ITSFEE")
+        && ("$field(System)" == "QC")
+        && (
+          [string match "RAWPARSER: Incomplete HBF - jump in packet counter *" "$field(Message)"]
+          )
+        } \
+        "2025-08-19 23:49"
+
+
+#ex: 2025-08-20 04:45 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=readout-proxy -oDetector=ITS -oSeverity=E -oSystem=DPL "INVALID runNumber / tfCounter: runNumber 0, tfCounter 0, FMQ runNumber 565476 for msgidx 0: ???/INFORMATION/0 part 0 of 1  payload 0"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout-proxy" -d "ITS" -tmin "2025-08-20 04:45 CEST" -tmax "2025-08-20 04:46 CEST" -s "E F" -query
+
+registerAlarm \
+        17004 \
+        "ITS FLP DPL errors" \
+        "If it appears at EOR, please ignore. Otherwise create a bookkeeping entry and call ITS on-call." \
+        {
+           ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "ITS")
+	&& ("$field(Facility)" == "readout-proxy")
+        && ("$field(System)" == "DPL")
+        && (
+          [string match "INVALID runNumber / tfCounter*" "$field(Message)"]
+          )
+        } \
+        "2025-08-20 04:45"
 
 
 
+
+
+
+
+####################################################################
 
 
 set metricFd [open "|socat - UNIX-SENDTO:$cfg(TelegrafSocket)" "w"]

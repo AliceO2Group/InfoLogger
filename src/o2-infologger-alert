@@ -11,6 +11,7 @@
 #                     - quoting all rules comparisons for better debug display
 #		      - filter out self log messages
 #                     - extra rules
+# v1.3.1   01/10/2025 - adding detector field in alert message
 
 set cfg(TelegrafSocket) "/tmp/telegraf.sock"
 set cfg(TelegrafBucket) "InfologgerAlerts"
@@ -63,6 +64,7 @@ proc doLogIlg {errcode msg} {
   }
   
   $logContext setField "ErrorCode" "$errcode"
+  $logContext setField "Detector" "[getDetectorFromAlertId $errcode]"
   $logHandle log $logContext "$msg"
   doLog "$msg"
   logResetFields
@@ -667,6 +669,42 @@ proc registerAlarm {id description doc test example} {
 
 
 ####################################################################
+# detectors definitions
+# give for each detector the range of alert ids assigned
+# alert Ids range = id * 1000 + 1 -> id * 1000 + 999
+set detectorIds {
+  11 CTP
+  12 EMC
+  13 FDD
+  14 FT0
+  15 FV0
+  16 HMP
+  17 ITS
+  18 MCH
+  19 MFT
+  20 MID
+  21 TOF
+  22 TPC
+  23 TST
+  24 TRD
+  25 ZDC
+  30 FLP
+  31 EPN
+}
+
+proc getDetectorFromAlertId {id} {
+  global detectorIds
+  set id1 [expr $id / 1000]
+  foreach {i d} $detectorIds {
+    if {$i == $id1} {
+      return $d
+    }
+  }
+  return ""
+}
+
+
+####################################################################
 # alarms definitions
 
 
@@ -674,7 +712,7 @@ proc registerAlarm {id description doc test example} {
 registerAlarm \
 	19002 \
 	"MFT mft-stf-decoder link cruID error" \
-	"URGENT: Call MFT on-call : error - link cruID:* feeID:0x---" \
+	"URGENT: Call MFT on-call : error - link cruID:--- feeID:0x---" \
 	{
 	("$field(Detector)" == "MFT")
 	&& ("$field(System)" == "DPL")
@@ -687,7 +725,7 @@ registerAlarm \
 	"2025-07-02 21:02"
 
 # ex: 2025-06-04 01:11
-# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Non-contiguous XXX"
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Non-contiguous XXX"
 registerAlarm \
 	19003 \
 	"MFT FLP readout warnings" \
@@ -703,7 +741,7 @@ registerAlarm \
 	"2025-06-04 01:11"
 
 # ex: 2025-06-05 18:32
-# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX seems inconsistent from expected XXX"
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX seems inconsistent from expected XXX"
 registerAlarm \
 	19004 \
 	"MFT FLP readout warnings" \
@@ -719,7 +757,7 @@ registerAlarm \
 	"2025-06-05 18:32"
 
 # ex: 2025-06-05 18:32
-# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX inconsistent link idsXXX"
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX inconsistent link idsXXX"
 registerAlarm \
 	19005 \
 	"MFT FLP readout warnings" \
@@ -734,6 +772,8 @@ registerAlarm \
 	} \
 	"2025-06-05 18:32"
 
+
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=TST "test message for fake alert"
 registerAlarm \
 	23001 \
 	"This is a test alert" \
@@ -864,7 +904,7 @@ doLog "Registered alarms: $listAlarms"
 
 if {$cfg(DumpRules)} {
   foreach {id doc description test onN onT offN offT exampleTime} $alarms {
-    puts "| $id | $description | $doc | detector | system | facility | errcode | rule1<BR>rule2 | $exampleTime | PROD |"
+    puts "| $id | $description | $doc | [getDetectorFromAlertId $id] | system | facility | errcode | rule1<BR>rule2 | $exampleTime | PROD |"
   }
   exit 0
 }

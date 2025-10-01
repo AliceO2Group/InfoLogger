@@ -19,7 +19,7 @@ set cfg(TelegrafBucket) "InfologgerAlerts"
 set cfg(RunWithoutDeps) 1
 set cfg(InfoLoggerConfigFile) "/etc/o2.d/infologger/infoLogger.cfg"
 set cfg(DumpRules) 0
-set cfg(Debug) 1
+set cfg(Debug) 0
 set cfg(LogFacility) "ilg/alert"
 
 

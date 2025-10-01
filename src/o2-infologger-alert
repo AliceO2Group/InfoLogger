@@ -12,6 +12,7 @@
 #		      - filter out self log messages
 #                     - extra rules
 # v1.3.1   01/10/2025 - adding detector field in alert message
+#                     - extra rules
 
 set cfg(TelegrafSocket) "/tmp/telegraf.sock"
 set cfg(TelegrafBucket) "InfologgerAlerts"
@@ -869,6 +870,24 @@ registerAlarm \
         "2025-08-20 04:45"
 
 
+#ex: 2025-05-05 15:00 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=readout -oDetector=TPC -oSeverity=E -oErrorCode=3241 "Equipment equipment-roc-1 : first HB orbit of link 0 is different from first link(15): 0x0 != 0x446FE40"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout" -d "TPC" -tmin "2025-05-05 15:00 CEST" -tmax "2025-05-05 15:01 CEST" -s "E F" -query
+
+registerAlarm \
+        22001 \
+        "TPC FLP readout fatal" \
+        "Restart the run, if it happens again call TPC on-call: first HB orbit mismatch." \
+        {
+           ("$field(ErrCode)" == "3241")
+	&& ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "TPC")
+        && ("$field(Facility)" == "readout")
+        && (
+	  [string match "Equipment * first HB orbit * different *" "$field(Message)"]
+	)
+        } \
+        "2025-05-05 15:00"
 
 
 

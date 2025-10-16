@@ -13,6 +13,8 @@
 #                     - extra rules
 # v1.3.1   01/10/2025 - adding detector field in alert message
 #                     - extra rules
+# v1.3.2   16/10/2025 - adding run + environment field in alert message
+#                     - generate SQL query for each alert
 
 set cfg(TelegrafSocket) "/tmp/telegraf.sock"
 set cfg(TelegrafBucket) "InfologgerAlerts"
@@ -64,6 +66,7 @@ proc doLogIlg {errcode msg} {
     return
   }
   
+  logSetFieldsForId $errcode
   $logContext setField "ErrorCode" "$errcode"
   $logContext setField "Detector" "[getDetectorFromAlertId $errcode]"
   $logHandle log $logContext "$msg"
@@ -82,6 +85,7 @@ set defaultLevel 11
 set defaultSeverity "I"
 proc logResetFields {} {
   global logHandle
+  if {$logHandle == ""} {return}
   global logContext
   global defaultLevel
   global defaultSeverity
@@ -91,6 +95,22 @@ proc logResetFields {} {
   $logContext setField "Level" "$defaultLevel"
   $logContext setField "Severity" "$defaultSeverity"
   $logContext setField "ErrorCode" ""
+  $logContext setField "Run" ""
+  $logContext setField "Partition" ""
+  $logContext setField "Detector" ""
+}
+
+proc logSetFieldsForId {id} {
+  global logHandle
+  if {$logHandle == ""} {return}
+  global logContext
+  if {$id == ""} {return}
+  global alFieldsFirst
+  set venv $alFieldsFirst($id)
+  if {[llength $venv] == 3} {
+    $logContext setField "Run" "[lindex $venv 0]"
+    $logContext setField "Partition" "[lindex $venv 1]"
+  }
 }
 
 if {[catch {
@@ -504,15 +524,17 @@ if {0} {
 	    set tLast($id) $tval
 	    #puts "$id match"
 
-	    global alTlast alState alTimeout alCount
+	    global alTlast alState alTimeout alCount alFieldsFirst
 	    if (!$alState($id)) {
 	       doLog "*** Alarm $id firing"
+	       set alFieldsFirst($id) [list "$v_run" "$v_partition" "$v_detector"]
 	       doLogIlg $id "Alarm $id triggered by message at $lastt_str_t on $v_hostname: $m"
 	    } else {
 	       doLog "*** Alarm $id still active"
             }
 	    set alTlast($id) [clock seconds]
 	    set alState($id) 1
+	    incr alCount($id)
 	  }
 	}
       }
@@ -631,7 +653,23 @@ proc doOnline {} {
 
 set alarms {}
 
+proc clearAlarm {id} {
+  # reset fields associated to an alarm
 
+  # time of last time the condition was detected
+  # current state of alarm
+  # timeout before resetting alarm
+  # count number of messages matched
+  # alFieldsFirst: keep track of ILG message fields of the message triggering the alert
+
+  global alTlast alState alTimeout alCount alSent alFieldsFirst
+  set alTlast($id) -1
+  set alState($id) 0
+  set alTimeout($id) 30
+  set alCount($id) 0
+  set alSent($id) 0
+  set alFieldsFirst($id) {}
+}
 
 proc registerAlarm {id description doc test example} {
   global alarms
@@ -650,21 +688,8 @@ proc registerAlarm {id description doc test example} {
   
   
   lappend alarms $id $doc $description $test $onN $onT $offN $offT $example
-  set tFirst($id) -1
-  set tLast($id) -1
-  set tN($id) 0
-  
-  # time of last time the condition was detected
-  # current state of alarm
-  # timeout before resetting alarm
-  # count number of messages matched
-  
-  global alTlast alState alTimeout alCount alSent
-  set alTlast($id) -1
-  set alState($id) 0
-  set alTimeout($id) 30   
-  set alCount($id) 0
-  set alSent($id) 0
+
+  clearAlarm $id
 }
 
 
@@ -896,6 +921,85 @@ registerAlarm \
 ####################################################################
 
 
+# function to convert the TCL logical definition to the corresponding SQL query
+proc generateSQLFromCondition {condition_expr} {
+     set sql_conditions {}
+
+    # Split AND parts
+    set parts [split $condition_expr "&&"]
+
+    foreach part $parts {
+        set part [string trim $part]
+        if {$part eq ""} { continue }
+
+        # remove external ()
+        if {[string length $part] >= 2 &&
+            [string index $part 0] eq "(" &&
+            [string index $part end] eq ")"} {
+            set part [string trim [string range $part 1 end-1]]
+        }
+
+        # handle OR in Message
+        if {[string first "||" $part] != -1} {
+            set or_parts [split $part "||"]
+            set or_clauses {}
+
+            foreach or_part $or_parts {
+                set or_part [string trim $or_part]
+                if {$or_part eq ""} { continue }
+
+                # remove ()
+                if {[string length $or_part] >= 2 &&
+                    [string index $or_part 0] eq "(" &&
+                    [string index $or_part end] eq ")"} {
+                    set or_part [string trim [string range $or_part 1 end-1]]
+                }
+
+                # extract match string pattern
+                if {[regexp {\[string match "(.*)" "\$field\(Message\)"} $or_part -> pattern]} {
+                    set sql_pattern [string map {* %} $pattern]
+                    lappend or_clauses "Message LIKE '$sql_pattern'"
+                } else {
+                    puts "Warning: OR condition not supported: $or_part"
+                }
+            }
+
+            # recombine OR
+            set or_clause [join $or_clauses " OR "]
+            lappend sql_conditions "($or_clause)"
+
+        } else {
+            # No OR
+
+            # string match simple
+            if {[regexp {\[string match "(.*)" "\$field\(([^)]+)\)"} $part -> pattern field]} {
+                if {$field eq "Message"} {
+                    set sql_pattern [string map {* %} $pattern]
+                    lappend sql_conditions "Message LIKE '$sql_pattern'"
+                } else {
+                    puts "Warning: string match sur champ non Message: $part"
+                }
+
+            # compare chars
+            } elseif {[regexp {"\$field\(([^)]+)\)"\s*==\s*"([^"]+)"} $part -> field value]} {
+                lappend sql_conditions "$field = '$value'"
+
+            # compare numbers
+            } elseif {[regexp {"\$field\(([^)]+)\)"\s*==\s*([0-9]+)} $part -> field value]} {
+                lappend sql_conditions "$field = $value"
+
+            } else {
+                puts "Warning: condition not supported: $part"
+            }
+        }
+    }
+
+    set where_clause [join $sql_conditions " AND "]
+    return "WHERE $where_clause"
+}
+
+
+
 set metricFd [open "|socat - UNIX-SENDTO:$cfg(TelegrafSocket)" "w"]
 
 proc sendMetric {id value} {
@@ -915,6 +1019,7 @@ proc sendMetric {id value} {
 }
 
 
+
 set listAlarms {}
 foreach {id doc description test onN onT offN offT exampleTime} $alarms {
   lappend listAlarms $id
@@ -925,6 +1030,16 @@ if {$cfg(DumpRules)} {
   foreach {id doc description test onN onT offN offT exampleTime} $alarms {
     puts "| $id | $description | $doc | [getDetectorFromAlertId $id] | system | facility | errcode | rule1<BR>rule2 | $exampleTime | PROD |"
   }
+
+  # print SQL as well
+  puts "\n\n"
+  foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+    set sql ""
+    set sql [generateSQLFromCondition $test]
+    puts "$id : $sql"
+  }
+
+
   exit 0
 }
 
@@ -944,10 +1059,9 @@ while {1} {
   foreach {id doc description test onN onT offN offT exampleTime} $alarms {
     if ($alState($id)) {
       if {$now >= [expr $alTlast($id) + $offT]} {
-        doLogIlg ${id} "Alarm ${id} cleared after timeout."
+        doLogIlg ${id} "Alarm ${id} cleared after timeout. ($alCount($id) match)"
 	sendMetric $id 0
-        set alState($id) 0
-	set alSent($id) 0
+	clearAlarm $id
       } else {
         if {($alSent($id) == 0) || $repeatMetrics} {
 	  if {$logHandle != ""} {
@@ -955,7 +1069,6 @@ while {1} {
 	    $logContext setField "Level" "1"
 	    $logContext setField "Severity" "E"
 	    doLogIlg ${id} "$doc - $description"
-	    logResetFields
 	  }
 	  sendMetric $id 1
 	  set alSent($id) 1

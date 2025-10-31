@@ -12,6 +12,7 @@
 #include "InfoLoggerDispatch.h"
 #include <mysql.h>
 #include <mysqld_error.h>
+#include <errmsg.h>
 #include "utility.h"
 #include "infoLoggerMessage.h"
 #include <unistd.h>
@@ -61,6 +62,9 @@ class InfoLoggerDispatchSQLImpl
   int commitTimeout = 1000000; // time between commits
   Timer commitTimer;           // timer for transaction
   int commitNumberOfMsg;       // number of messages since last commit
+
+  int numberOfSuccessiveFailures = 0; // count consecutive insert failures
+  int maxNumberOfRetries = 1;         // number of retries allowed
 };
 
 void InfoLoggerDispatchSQLImpl::start()
@@ -393,9 +397,22 @@ int InfoLoggerDispatchSQLImpl::customMessageProcess(std::shared_ptr<InfoLoggerMe
         if ( err == ER_TRUNCATED_WRONG_VALUE_FOR_FIELD) {
           return returnDroppedMessage(msg, m);
         }
-        // retry with new connection - usually it means server was down
-        disconnectDB();
-        return returnDelayedMessage();
+	// server gone - retry with new connection
+	if (( err == CR_SERVER_LOST ) || ( err == CR_SERVER_GONE_ERROR )) {
+          disconnectDB();
+          return returnDelayedMessage();
+        }
+
+	numberOfSuccessiveFailures++;
+	if (numberOfSuccessiveFailures <= maxNumberOfRetries) {
+          disconnectDB();
+          return returnDelayedMessage();
+	}
+        numberOfSuccessiveFailures = 0;
+
+	// by default: drop message
+        parent->logError("Unhandled error code %d after %d attempts", mysql_errno(db), maxNumberOfRetries);
+	return returnDroppedMessage(msg, m);
       }
 
       insertCount++;

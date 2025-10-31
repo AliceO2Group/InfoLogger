@@ -1,4 +1,4 @@
-# InfoLogger release notes
+not# InfoLogger release notes
 
 This file describes the main feature changes for each InfoLogger released version.
 
@@ -174,3 +174,7 @@ This file describes the main feature changes for each InfoLogger released versio
 
 # v2.8.3 - 11/06/2025
 - Compilation / security fix. (string handling)
+
+# next
+- o2-infologger-server: improved handling of SQL insert errors, messages dropped after retry.
+- o2-infologger-alert service.

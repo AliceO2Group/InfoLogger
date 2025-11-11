@@ -11,6 +11,7 @@ The following executables, presented with the _nicknames_ used below, are part o
   - o2-infologger-admindb or _infoLoggerAdminDB_: to maintain the logging database, i.e. create, archive, clean or destroy the database content.
   - o2-infologger-newdb : helper script for the initial set-up of the logging database, in particular for the definition of access credentials.
   - o2-infologger-tester : a tool to check the logging chain, from injection to DB storage and online subscription.
+  - o2-infologger-alert
 
 The following libraries are also provided, to inject logs into the system:
 
@@ -314,3 +315,13 @@ achieved on CentOS 7 with e.g. (as root):
   - in the infoLoggerD configuration section, set: `msgQueueReset=1` (this is permanent, done on each startup of infoLoggerD, which might not be what you want)
   - when starting infoLoggerD process from the command line (not with the systemctl service), add option: `-o msgQueueReset=1`
   - create a file named [msgQueuePath].reset (by default, msgQueuePath=/tmp/infoLoggerD/infoLoggerD.queue), e.g. `touch /tmp/infoLoggerD/infoLoggerD.queue.reset`. This will reset the queue on next startup (by hand or with e.g. service infoLoggerD restart), and the reset file will also be deleted (which ensures cleanup is done once only).
+
+
+* o2-infologger-alert
+
+  This is a daemon connecting to the stream of online messages and generating alerts (themselves log message + telegraf metric) based on the definition of some logic rules to detect known bad situations possibly requiring intervention. This is intended to raise the awareness of the shift crew to some online operational issues, and trigger a response.
+ 
+* o2-infologger-server statistics
+
+  Messages are indexed by the server, and published as a TCL list on a socket (eg port 6103), to allow categorizing messages and presenting a high-level view of current logging activity.
+  See the configuration parameters to define window size, publish interval, and amount of history kept.

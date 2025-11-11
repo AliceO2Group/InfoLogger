@@ -50,6 +50,14 @@ class ConfigInfoLoggerServer
   // settings for infoBrowser clients
   int serverPortTx = INFOLOGGER_DEFAULT_SERVER_TX_PORT;
   int maxClientsTx = 100;
+
+  // settings for infoLoggerStats clients
+  int statsEnabled = 1; // flag to enable/disable feature
+  int statsPort = INFOLOGGER_DEFAULT_SERVER_STATS_PORT; // TCP/IP port number
+  int statsMaxClients = 5; // max number of clients connections allowed
+  int statsPublishInterval = 5 ; // publish interval time (seconds)
+  int statsResetInterval = 60; // size of the stats window (seconds)
+  int statsHistory = 600; // backlog of stats kept and published (seconds)
 };
 
 #endif // SRC_CONFIGINFOLOGGERSERVER_H_

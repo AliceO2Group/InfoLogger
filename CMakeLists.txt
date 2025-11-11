@@ -254,6 +254,7 @@ add_executable(
   src/infoLoggerServer.cxx
   src/InfoLoggerDispatch.cxx
   src/InfoLoggerDispatchBrowser.cxx
+  src/InfoLoggerDispatchStats.cxx
   src/ConfigInfoLoggerServer.cxx  
   src/infoLoggerMessageDecode.c
   src/InfoLoggerMessageHelper.cxx

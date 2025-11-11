@@ -132,6 +132,10 @@ InfoLoggerServer::InfoLoggerServer(int argc, char* argv[]) : Daemon(argc, argv)
       try {
         //dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchPrint>(&log));
         dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchOnlineBrowser>(&configInfoLoggerServer, &log));
+        
+	if (configInfoLoggerServer.statsEnabled) {
+	  dispatchEngines.push_back(std::make_unique<InfoLoggerDispatchStats>(&configInfoLoggerServer, &log));
+	}
 
         if (configInfoLoggerServer.dbEnabled) {
 #ifdef WITH_MYSQL

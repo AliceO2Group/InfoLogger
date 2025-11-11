@@ -96,5 +96,18 @@ class InfoLoggerDispatchSQL : public InfoLoggerDispatch
   std::unique_ptr<InfoLoggerDispatchSQLImpl> dPtr;
 };
 
+// a class to dispatch stats about online messages
+class InfoLoggerDispatchStatsImpl;
+class InfoLoggerDispatchStats : public InfoLoggerDispatch
+{
+ public:
+  InfoLoggerDispatchStats(ConfigInfoLoggerServer* theConfig, SimpleLog* theLog);
+  ~InfoLoggerDispatchStats();
+  int customMessageProcess(std::shared_ptr<InfoLoggerMessageList> msg);
+  int customLoop();
+
+ private:
+  std::unique_ptr<InfoLoggerDispatchStatsImpl> dPtr;
+};
 #endif
 

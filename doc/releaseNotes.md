@@ -179,4 +179,6 @@ This file describes the main feature changes for each InfoLogger released versio
 - o2-infologger-server:
   - improved handling of SQL insert errors, messages dropped after retry.
   - added indexing of messages to publish stats
-- o2-infologger-alert service.
+- o2-infologger-alert service
+- o2-infologger-browser:
+  - added some extra startup option, to preconfigure filters

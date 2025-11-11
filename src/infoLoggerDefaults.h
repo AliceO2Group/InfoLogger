@@ -29,6 +29,9 @@
 // default infoLoggerServer listening port for infoBrowser
 #define INFOLOGGER_DEFAULT_SERVER_TX_PORT 6102
 
+// default infoLoggerServer listening port for stats plublish
+#define INFOLOGGER_DEFAULT_SERVER_STATS_PORT 6103
+
 // default listening socket name for infoLoggerD
 #define INFOLOGGER_DEFAULT_LOCAL_SOCKET "infoLoggerD"
 

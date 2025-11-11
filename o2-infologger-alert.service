@@ -1,0 +1,14 @@
+[Unit]
+Description=O2 infoLogger alert daemon, generating alerts from log messages.
+After=network.target 
+
+[Service]
+Type=simple
+TimeoutSec=5
+ExecStart=/opt/o2-InfoLogger/bin/o2-infologger-alert -z /etc/o2.d/infologger/infoLogger.cfg
+ExecStop=/usr/bin/kill -s SIGTERM $MAINPID
+GuessMainPID=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

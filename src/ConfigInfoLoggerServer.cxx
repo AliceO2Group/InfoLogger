@@ -38,5 +38,13 @@ void ConfigInfoLoggerServer::readFromConfigFile(ConfigFile& config)
 
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".serverPortTx", serverPortTx);
   config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".maxClientsTx", maxClientsTx);
+  
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".statsEnabled", statsEnabled);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".statsPort", statsPort);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".statsMaxClients", statsMaxClients);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".statsPublishInterval", statsPublishInterval);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".statsResetInterval", statsResetInterval);
+  config.getOptionalValue<int>(INFOLOGGER_CONFIG_SECTION_NAME_SERVER ".statsHistory", statsHistory);
+  
 }
 

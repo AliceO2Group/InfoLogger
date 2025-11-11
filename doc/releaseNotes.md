@@ -174,3 +174,11 @@ This file describes the main feature changes for each InfoLogger released versio
 
 # v2.8.3 - 11/06/2025
 - Compilation / security fix. (string handling)
+
+# v2.9.0 - 11/11/2025
+- o2-infologger-server:
+  - improved handling of SQL insert errors, messages dropped after retry.
+  - added indexing of messages to publish stats
+- o2-infologger-alert service
+- o2-infologger-browser:
+  - added some extra startup option, to preconfigure filters

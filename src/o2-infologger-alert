@@ -1,0 +1,1079 @@
+#!/usr/bin/tclsh
+
+# toolkit to process online messages coming from infoLoggerServer
+# v1.0.0   24/06/2025 - initial release
+# v1.1.0   30/06/2025 - updated log message fields
+# v1.1.1   03/07/2025 - updated MFT rules
+# v1.2.0   25/07/2025 - adding info on the log message triggering the alert
+#                     - extra option to dump the rules
+#                     - adding info about example message timestamp for each rule
+# v1.3.0   21/08/2025 - adding debug mode
+#                     - quoting all rules comparisons for better debug display
+#		      - filter out self log messages
+#                     - extra rules
+# v1.3.1   01/10/2025 - adding detector field in alert message
+#                     - extra rules
+# v1.3.2   16/10/2025 - adding run + environment field in alert message
+#                     - generate SQL query for each alert
+
+set cfg(TelegrafSocket) "/tmp/telegraf.sock"
+set cfg(TelegrafBucket) "InfologgerAlerts"
+set cfg(RunWithoutDeps) 1
+set cfg(InfoLoggerConfigFile) "/etc/o2.d/infologger/infoLogger.cfg"
+set cfg(DumpRules) 0
+set cfg(Debug) 0
+set cfg(LogFacility) "ilg/alert"
+
+
+####################
+
+set configFile $cfg(InfoLoggerConfigFile)
+
+catch {
+  set configFile $env(INFOLOGGER_CONFIG)
+}
+
+# process command line arguments (pre-init)
+set x 0
+while {[set opt [lindex $argv $x]] != ""} {
+ switch -exact -- $opt {
+   -z {
+        set configFile [lindex $argv [expr $x + 1]]
+        incr x   
+   }
+   -i {
+        set cfg(DumpRules) 1
+   }
+ }
+ incr x
+}
+
+
+####################
+
+
+# function to log on stdout
+proc doLog {msg} {
+    set t [clock format [clock seconds] -format "%d/%m/%Y %H:%M:%S"]
+    puts "$t\t$msg"
+}
+
+# function to log on InfoLogger
+proc doLogIlg {errcode msg} {
+  global logHandle
+  global logContext
+  if {$logHandle == ""} {
+    return
+  }
+  
+  logSetFieldsForId $errcode
+  $logContext setField "ErrorCode" "$errcode"
+  $logContext setField "Detector" "[getDetectorFromAlertId $errcode]"
+  $logHandle log $logContext "$msg"
+  doLog "$msg"
+  logResetFields
+}
+
+####################
+# check dependencies
+####################
+
+set dependenciesOk 1
+
+# try to load infoLogger library
+set defaultLevel 11
+set defaultSeverity "I"
+proc logResetFields {} {
+  global logHandle
+  if {$logHandle == ""} {return}
+  global logContext
+  global defaultLevel
+  global defaultSeverity
+  global cfg
+  $logContext setField "Facility" $cfg(LogFacility)
+  $logContext setField "System" "FLP"
+  $logContext setField "Level" "$defaultLevel"
+  $logContext setField "Severity" "$defaultSeverity"
+  $logContext setField "ErrorCode" ""
+  $logContext setField "Run" ""
+  $logContext setField "Partition" ""
+  $logContext setField "Detector" ""
+}
+
+proc logSetFieldsForId {id} {
+  global logHandle
+  if {$logHandle == ""} {return}
+  global logContext
+  if {$id == ""} {return}
+  global alFieldsFirst
+  set venv $alFieldsFirst($id)
+  if {[llength $venv] == 3} {
+    $logContext setField "Run" "[lindex $venv 0]"
+    $logContext setField "Partition" "[lindex $venv 1]"
+  }
+}
+
+if {[catch {
+  set logHandle ""
+  load /opt/o2-InfoLogger/lib/infoLoggerForTcl.so
+  set logHandle [InfoLogger]
+  set logContext [InfoLoggerMetadata]
+  logResetFields
+  #doLog "InfoLogger library enabled"
+} err]} {
+  doLog "Failed to init infoLogger library: $err"
+  set dependenciesOk 0
+}
+
+
+# socat
+if {[catch {exec socat -V} err]} {
+  doLog "Failed to find 'socat': $err"
+  set dependenciesOk 0
+}
+
+# telegraf
+if {![file exists $cfg(TelegrafSocket)]} {
+  doLog "Failed to find Telegraf socket $cfg(TelegrafSocket)"
+  set dependenciesOk 0
+}
+
+# configFile
+if {![file exists $configFile]} {
+  doLog "Failed to find InfoLogger configuration $configFile"
+  set dependenciesOk 0
+}
+
+# exit or continue
+if {(!$dependenciesOk)} {
+  if ($cfg(RunWithoutDeps)) {
+    doLog "Dependencies failed, but continue running"
+  } else {
+    doLog "Dependencies failed, exiting"
+    exit 1
+  }
+}
+
+########################
+# end check dependencies
+########################
+
+
+proc doLogBoth {msg} {
+  doLog "$msg"
+  doLogIlg "" "$msg"
+}
+
+
+
+
+doLog "Starting infoLoggerAlarmGenerator - pid [pid]"
+
+
+
+###############
+# internal vars
+
+set subsecond_decimal 3
+set subsecond_decimal_l 0
+
+# display message with configured log fields
+set log_fields {Severity Level Date Time Subsecond Host Role Pid Username System Facility Detector Partition Run ErrCode srcLine srcFile Message}
+
+# real protocol used
+# number of fields
+set log_protocol_nFields 16
+set log_protocol_version 1.4
+
+# One global for each field contains list of items - create empty
+foreach item $log_fields {
+  set log_val_$item {}
+}
+# highlight selected log, defined in global variable log_selected
+set n_msgs 0
+set n_msgs_war 0
+set n_msgs_err 0
+set n_msgs_fat 0
+set n_msgs_bad 0
+
+
+
+
+
+# Define online server timeouts (seconds)
+set onlineserver(retry) 5
+set onlineserver(max) 60
+set onlineserver(timeout) $onlineserver(retry)
+set onlineserver(timer) ""
+
+set maxmess 10000
+
+
+
+set defaultDir "/tmp"
+set infoDir ""
+set configName "\[default config\]"
+
+set default_db_user ""
+set default_db_pwd ""
+set default_db_host ""
+set default_db_db ""
+set default_loghost "localhost"
+set default_logport "6102"
+
+set configFileSection "\[infoBrowser\]"
+set configFileSectionFound 0
+if {$configFile!=""} {
+  set fd [open $configFile "r"]
+  set keyfound {}
+  while {1} {
+    gets $fd line
+    if {[eof $fd]} {break}
+    # remove leading/trailing blanks
+    set line [string trim $line]
+    if {$line==$configFileSection} {
+      # entering infoBrowser section
+      set configFileSectionFound 1
+    } elseif {[regexp {^\[.*\]} $line]} {
+      # entering another section
+      set configFileSectionFound 0
+    }
+    if {!$configFileSectionFound} {
+      continue
+    }
+    set lv [split [string trim $line] "="]
+    set lkey [lindex $lv 0]
+    if {[string range $lkey 0 1]=="#"} {continue}
+    set lv [string trim [join [lrange $lv 1 end] "="]]
+    
+    lappend keyfound $lkey
+    set cfgvals($lkey) $lv
+  }
+  close $fd
+  
+  set cfgok 1
+  foreach {keyname isoptionnal varname defval} [list \
+    dbUser 0 db_user "$default_db_user" \
+    dbPassword 0 db_pwd "$default_db_pwd" \
+    dbHost 0 db_host "$default_db_host" \
+    dbName 0 db_db "$default_db_db" \
+    serverHost 1 loghost "$default_loghost" \
+    serverPortTx 1 logport "$default_logport" \
+    configName 1 configName "$configFile" \
+    queryLimit 1 maxmess "$maxmess" \
+  ] {
+    set $varname $defval
+    if {[catch { set $varname $cfgvals($keyname) }]} {   
+      if {!$isoptionnal} {
+        doLog "Configuration variable $keyname undefined"
+        set cfgok 0
+      }
+    }
+  }  
+  if {!$cfgok} {
+    doLog "Wrong configuration in $configFile, exiting"
+    exit -1
+  }
+  
+} else {
+
+  set envok 1
+  foreach {envname isoptionnal varname defval} [list \
+    INFOLOGGER_MYSQL_USER 1 db_user "$default_db_user" \
+    INFOLOGGER_MYSQL_PWD 1 db_pwd "$default_db_pwd" \
+    INFOLOGGER_MYSQL_HOST 1 db_host "$default_db_host" \
+    INFOLOGGER_MYSQL_DB 1 db_db "$default_db_db" \
+    INFOLOGGER_SERVER_HOST 1 loghost "${default_loghost}" \
+    INFOLOGGER_SERVER_PORT_TX 1 logport "${default_logport}" \
+  ] {
+    set $varname $defval
+    if {[catch { set $varname $env($envname) }]} {      
+      if {!$isoptionnal} {
+        doLog "Environment variable $envname undefined"
+        set envok 0
+      }
+    }
+  }
+   
+  if {!$envok} {
+    doLog "Wrong environment, exiting"
+    exit -1
+  }
+}
+# update the statistics on the number of messages
+# actions: reset, display
+proc update_stats {action} {
+  global n_msgs
+  global n_msgs_war
+  global n_msgs_err
+  global n_msgs_fat
+  global n_msgs_bad
+  global n_msgs_fullQuery
+  global maxmess
+  
+  set m {}
+  if {$action=="reset"} {
+    set n_msgs 0
+    set n_msgs_war 0
+    set n_msgs_err 0
+    set n_msgs_fat 0
+    set n_msgs_bad 0
+    set n_msgs_fullQuery 0
+    
+    # clear lists
+    global log_fields
+    foreach item $log_fields {
+      global log_val_$item
+      set log_val_$item {}
+    }
+    
+  }
+  if {$n_msgs} {
+    lappend m "$n_msgs messages"
+    if {$n_msgs_war} {lappend m "$n_msgs_war warnings"}
+    if {$n_msgs_err} {lappend m "$n_msgs_err errors"}
+    if {$n_msgs_fat} {lappend m "$n_msgs_fat fatals"}
+    if {$n_msgs_bad} {lappend m "$n_msgs_bad corrupted"}
+  
+    global maxmess
+    if {$n_msgs>$maxmess} {
+      lappend m " only last $maxmess displayed"
+    }
+
+    if {$n_msgs_fullQuery>$n_msgs} {lappend m " only first $n_msgs displayed (out of $n_msgs_fullQuery)"}
+    if {($n_msgs_fullQuery==-1)&&($n_msgs>=$maxmess)} {lappend m " only first $n_msgs displayed"}
+
+  } else {
+    lappend m "$n_msgs message"
+  }
+  
+  #puts [join $m ", "]
+}
+
+
+
+
+#################################
+# display online data
+#################################
+set server_fd -1
+
+# process an event on the socket
+proc server_event {} {
+  global cfg
+
+  global server_fd
+  global n_msgs
+  global n_msgs_war
+  global n_msgs_err
+  global n_msgs_fat
+  global n_msgs_bad  
+
+  global log_fields
+  global log_protocol_nFields
+  global log_protocol_version
+
+  fileevent $server_fd readable ""
+  set n_loop 0
+  set n_msgs_start $n_msgs
+    
+  # init empty fields
+  foreach f $log_fields {
+    set l_$f {}
+  }
+    
+  while {1} {
+    
+    # connection closed?
+    if {[eof $server_fd]} {
+      close $server_fd
+      set server_fd -1
+      global onlineserver
+      doLog "Connection closed. Reconnecting in $onlineserver(timeout) seconds"
+      update
+      set onlineserver(timer) [after [expr $onlineserver(timeout)*1000] {server_connect}]
+      break
+    }
+
+    # read and decode message
+    if {[gets $server_fd msg]==-1} {break}
+       
+    while {1} {
+      set item [split $msg "#"]
+      if {[llength $item]<$log_protocol_nFields} {
+    	  incr n_msgs_bad
+	  break
+      }
+      set v1 [lindex $item 0]
+
+     if {$cfg(Debug)} {
+       puts "online msg=${msg}(end of msg)"
+     }
+
+      if {[string equal $v1 "*${log_protocol_version}"]} {
+
+        set v_severity [lindex $item 1]
+        set v_level [lindex $item 2]
+        set tmicro [lindex $item 3]
+        set v_hostname [lindex $item 4]
+        set v_rolename [lindex $item 5]  
+        set v_pid [lindex $item 6]
+        set v_username [lindex $item 7]
+        set v_system [lindex $item 8]
+        set v_facility [lindex $item 9]
+        set v_detector [lindex $item 10]
+        set v_partition [lindex $item 11]       
+        set v_run [lindex $item 12]
+        set v_errcode [lindex $item 13]
+        set v_errline [lindex $item 14]
+        set v_errsource [lindex $item 15]
+        set v_message [join [lrange $item 16 end] "#"]
+
+      } else {
+    	  incr n_msgs_bad
+	  break
+      }
+
+      # severity
+      switch $v_severity {
+      "I" {set ss "Info"}
+      "W" {set ss "WARNING"; incr n_msgs_war}
+      "E" {set ss "ERROR"; incr n_msgs_err}
+      "D" {set ss "Debug"}
+      "F" {set ss "FATAL"; incr n_msgs_fat}
+      default {set ss "? $v_severity"}
+      }
+
+      # date/time : could format string only if not in same second as previous -> TODO      
+      set tval [expr int($tmicro)]
+
+      global subsecond_decimal
+      if {$subsecond_decimal} {
+	set subsecond_format "%0[expr ${subsecond_decimal}+3].${subsecond_decimal}f"
+	set the_clock_format [split [clock format $tval -format "%d/%m/%y %H:%M:%S %H:%M"]]
+	set lastt_str_d [lindex $the_clock_format 0]
+	set lastt_str_t [lindex $the_clock_format 1]
+	set lastt_str_hm [lindex $the_clock_format 2]
+	# expr does not like 1-digit numbers with a zero before: e.g. "09" is an invalid octal number
+	set lastt_str_s [expr $tval % 60]     
+	set lastt_str_t [format "${lastt_str_hm}:${subsecond_format}" [expr $tmicro - floor($tmicro) + $lastt_str_s]]
+      } else {
+	set lastt_str_d [clock format $tval -format "%d/%m/%y"]
+	set lastt_str_t [clock format $tval -format "%H:%M:%S"]
+      }
+
+      # re-format multiple line messages
+      foreach m [split $v_message "\f"] {
+
+if {0} {
+      lappend l_Severity "$ss"
+      lappend l_Date $lastt_str_d
+      lappend l_Time $lastt_str_t
+      lappend l_Subsecond $tmicro
+
+      # other fields
+      lappend l_Level $v_level
+      lappend l_Host $v_hostname
+      lappend l_Role $v_rolename
+      lappend l_Pid $v_pid
+      lappend l_Username $v_username
+      lappend l_System $v_system
+      lappend l_Facility $v_facility
+      lappend l_Detector $v_detector
+      lappend l_Partition $v_partition
+      lappend l_ErrCode $v_errcode
+      lappend l_srcLine $v_errline
+      lappend l_srcFile $v_errsource
+      lappend l_Run $v_run
+      lappend l_Message $m
+}
+
+      set field(Severity) "$v_severity"
+      set field(Timestamp) "$tval"
+      set field(Level) $v_level
+      set field(Host) $v_hostname
+      set field(Role) $v_rolename
+      set field(Pid) $v_pid
+      set field(Username) $v_username
+      set field(System) $v_system
+      set field(Facility) $v_facility
+      set field(Detector) $v_detector
+      set field(Partition) $v_partition
+      set field(ErrCode) $v_errcode
+      set field(srcLine) $v_errline
+      set field(srcFile) $v_errsource
+      set field(Run) $v_run
+      set field(Message) $m
+
+      #puts "$m"
+
+      if {$v_facility != $cfg(LogFacility)} {
+        # filter out own messages
+	global alarms
+	foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+          set status [expr $test]
+	  if {$cfg(Debug)} {
+	    puts "  $id -> $status"
+	    #puts "  $test"
+	    #puts "  == $field(Message)"
+	    puts "[subst -nocommands -nobackslashes $test]"
+	  }
+	  if {$status} {
+	    #exec /opt/o2-InfoLogger/bin/o2-infologger-log -oLevel=1 -oSeverity=Error "Alarm $id - $doc"
+	    incr tN($id)
+	    set tLast($id) $tval
+	    #puts "$id match"
+
+	    global alTlast alState alTimeout alCount alFieldsFirst
+	    if (!$alState($id)) {
+	       doLog "*** Alarm $id firing"
+	       set alFieldsFirst($id) [list "$v_run" "$v_partition" "$v_detector"]
+	       doLogIlg $id "Alarm $id triggered by message at $lastt_str_t on $v_hostname: $m"
+	    } else {
+	       doLog "*** Alarm $id still active"
+            }
+	    set alTlast($id) [clock seconds]
+	    set alState($id) 1
+	    incr alCount($id)
+	  }
+	}
+      }
+
+      incr n_msgs
+
+      }
+      break
+    }
+    
+    incr n_loop
+    if {$n_loop==1000} {break}
+  }
+
+  if {$n_msgs>$n_msgs_start} {
+    # assign values
+    global log_fields
+    global maxmess
+    foreach item $log_fields {
+      global log_val_$item
+      set a "set log_val_$item \[lrange \[concat \$log_val_$item \$l_$item\] end-[expr $maxmess-1] end\]"
+      eval $a
+    }
+  }
+  
+  # update stats on the number of messages
+  update_stats display
+  
+  if {$server_fd!=-1} {  
+    fileevent $server_fd readable server_event
+  }
+}
+
+
+# open socket to data server
+proc server_connect {} {
+  global server_fd
+  global env
+  global onlineserver
+  
+  set onlinetimer(timer) ""
+    
+  # connect only if not connected yet
+  if {$server_fd!=-1} {return}
+
+  global loghost
+  global logport
+
+  doLog "Connecting $loghost ..."
+  update
+
+  # open socket
+  if {[catch {set server_fd [socket $loghost $logport]} err]} {
+    doLog "while connecting $loghost:$logport - $err. Will retry in $onlineserver(timeout) seconds"
+    set onlineserver(timer) [after [expr $onlineserver(timeout)*1000] {server_connect}]
+    if {$onlineserver(timeout)<$onlineserver(max)} {set onlineserver(timeout) [expr $onlineserver(timeout) * 2]}
+    update
+    return
+  }
+  set onlineserver(timeout) $onlineserver(retry)
+  fconfigure $server_fd -blocking false   
+  fconfigure $server_fd -buffersize 1000000
+  fileevent $server_fd readable server_event
+  
+  doLog "Connected"
+  
+  update
+}
+
+set online 1
+set busy 0
+
+proc doOnline {} {
+  global online
+  global server_fd
+
+  global busy
+  
+  if {$online} {
+
+    if {$busy} {return}
+    set busy 1
+
+    # Go Online
+
+    # update status display
+    doLog "Opening infoLoggerServer"
+    
+    # connect server
+    server_connect
+    
+    update_stats reset
+    update
+    
+  } else {
+    # close server
+    if {$server_fd!=-1} {
+      close $server_fd
+      set server_fd -1
+    }
+
+    doLog "Closing infoLoggerServer"
+
+    global onlineserver
+    if {"$onlineserver(timer)"!=""} {
+      after cancel $onlineserver(timer)
+      set onlineserver(timer) ""
+    }
+    
+    update    
+    set busy 0
+  }
+}
+
+
+
+set alarms {}
+
+proc clearAlarm {id} {
+  # reset fields associated to an alarm
+
+  # time of last time the condition was detected
+  # current state of alarm
+  # timeout before resetting alarm
+  # count number of messages matched
+  # alFieldsFirst: keep track of ILG message fields of the message triggering the alert
+
+  global alTlast alState alTimeout alCount alSent alFieldsFirst
+  set alTlast($id) -1
+  set alState($id) 0
+  set alTimeout($id) 30
+  set alCount($id) 0
+  set alSent($id) 0
+  set alFieldsFirst($id) {}
+}
+
+proc registerAlarm {id description doc test example} {
+  global alarms
+  
+  set onN 1
+  set onT 0
+  set offN 0
+  set offT 10
+  
+  foreach {vid vdoc vdescription vtest vonN vonT voffN voffT vExampleTime} $alarms {
+    if {$id == $vid} {
+      doLog "Failed to register alarm - duplicate id $id $doc $test"
+      return -1
+    }
+  }
+  
+  
+  lappend alarms $id $doc $description $test $onN $onT $offN $offT $example
+
+  clearAlarm $id
+}
+
+
+
+####################################################################
+# detectors definitions
+# give for each detector the range of alert ids assigned
+# alert Ids range = id * 1000 + 1 -> id * 1000 + 999
+set detectorIds {
+  11 CTP
+  12 EMC
+  13 FDD
+  14 FT0
+  15 FV0
+  16 HMP
+  17 ITS
+  18 MCH
+  19 MFT
+  20 MID
+  21 TOF
+  22 TPC
+  23 TST
+  24 TRD
+  25 ZDC
+  30 FLP
+  31 EPN
+}
+
+proc getDetectorFromAlertId {id} {
+  global detectorIds
+  set id1 [expr $id / 1000]
+  foreach {i d} $detectorIds {
+    if {$i == $id1} {
+      return $d
+    }
+  }
+  return ""
+}
+
+
+####################################################################
+# alarms definitions
+
+
+# ex: 2025-07-02 21:02
+registerAlarm \
+	19002 \
+	"MFT mft-stf-decoder link cruID error" \
+	"URGENT: Call MFT on-call : error - link cruID:--- feeID:0x---" \
+	{
+	("$field(Detector)" == "MFT")
+	&& ("$field(System)" == "DPL")
+	&& ("$field(Facility)" == "mft-stf-decoder")
+	&& (
+	  [string match "link cruID:*" "$field(Message)"] ||
+	  [string match "feeID:0x*" "$field(Message)"]
+	)	
+	} \
+	"2025-07-02 21:02"
+
+# ex: 2025-06-04 01:11
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Non-contiguous XXX"
+registerAlarm \
+	19003 \
+	"MFT FLP readout warnings" \
+	"Call MFT on-call : error - non-contiguous timeframe IDs" \
+	{
+	("$field(Detector)" == "MFT")
+	&& ("$field(Facility)" == "readout")
+	&& ("$field(ErrCode)" == 3004)
+	&& (
+	  [string match "Non-contiguous*" "$field(Message)"]
+	)
+	} \
+	"2025-06-04 01:11"
+
+# ex: 2025-06-05 18:32
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX seems inconsistent from expected XXX"
+registerAlarm \
+	19004 \
+	"MFT FLP readout warnings" \
+	"Call MFT on-call : error - orbit seems inconsistent" \
+	{
+	("$field(Detector)" == "MFT")
+	&& ("$field(Facility)" == "readout")
+	&& ("$field(ErrCode)" == 3004)
+	&& (
+	  [string match "Equipment * seems inconsistent from expected*" "$field(Message)"]
+	)
+	} \
+	"2025-06-05 18:32"
+
+# ex: 2025-06-05 18:32
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oDetector=MFT -oFacility=readout -oErrorCode=3004 "Equipment XXX inconsistent link idsXXX"
+registerAlarm \
+	19005 \
+	"MFT FLP readout warnings" \
+	"Call MFT on-call : error - inconsistent link IDs" \
+	{
+	("$field(Detector)" == "MFT")
+	&& ("$field(Facility)" == "readout")
+	&& ("$field(ErrCode)" == 3004)
+	&& (
+	  [string match "Equipment * inconsistent link ids*" "$field(Message)"]
+	)
+	} \
+	"2025-06-05 18:32"
+
+
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=test -oDetector=TST "test message for fake alert"
+registerAlarm \
+	23001 \
+	"This is a test alert" \
+	"This is a fake alert for testing purposes. Do not take it into consideration." \
+	{
+	("$field(Detector)" == "TST")
+	&& ("$field(Facility)" == "test")
+	&& (
+	  [string match "test message for fake alert" "$field(Message)"]
+	)
+	} \
+	""
+
+#ex: 2025-07-30 13:41 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oSeverity="E" -oFacility=readout -oDetector=TOF -oErrorCode=3241 "Equipment equipment-roc-4 : first HB orbit of link 2 is different from first link(9): 0x1B34660 != 0x58095A60"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout" -d "TOF" -tmin "2025-07-30 13:41 CEST" -tmax "2025-07-30 13:42 CEST" -s "E F" -query
+
+registerAlarm \
+        21001 \
+        "TOF FLP readout fatal" \
+        "Restart the run, if it happens again call TOF on-call: first HB orbit mismatch." \
+        {
+           ("$field(ErrCode)" == "3241")
+	&& ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "TOF")
+        && ("$field(Facility)" == "readout")
+        && (
+	  [string match "Equipment * first HB orbit * different *" "$field(Message)"]
+	)
+        } \
+        "2025-07-30 13:41"
+
+
+
+
+#ex: 2025-06-05 18:32 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=readout -oDetector=ITS -oSeverity=E -oErrorCode=3241 "Equipment equipment-roc-1 : first HB orbit of link 15 is different from first link(0): 0x1FEB32A0 != 0x1E43060"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout" -d "ITS" -tmin "2025-06-05 18:32 CEST" -tmax "2025-06-05 18:33 CEST" -s "E F" -query
+
+registerAlarm \
+        17001 \
+        "ITS FLP readout fatal" \
+        "Call ITS on-call, as the next run is extremely likely to fail again for the same reason: first HB orbit mismatch." \
+        {
+           ("$field(ErrCode)" == "3241")
+	&& ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "ITS")
+        && ("$field(Facility)" == "readout")
+        && (
+	  [string match "Equipment * first HB orbit * different *" "$field(Message)"]
+	)
+        } \
+        "2025-06-05 18:32"
+
+	
+#ex: 2025-08-19 23:49 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=task/ITSFEE -oDetector=ITS -oSeverity=E -oSystem=QC "RAWPARSER: Incomplete HBF - jump in packet counter 213 to 215 (1 total RawParser errors)"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "task/ITSFEE" -d "ITS" -tmin "2025-08-19 23:49 CEST" -tmax "2025-08-19 23:50 CEST" -s "E F" -query
+
+registerAlarm \
+        17003 \
+        "ITS FLP QC errors" \
+        "If it appears right at SOR, call ITS on-call. Otherwise create a bookkeeping entry." \
+        {
+           ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "ITS")
+	&& ("$field(Facility)" == "task/ITSFEE")
+        && ("$field(System)" == "QC")
+        && (
+          [string match "RAWPARSER: Incomplete HBF - jump in packet counter *" "$field(Message)"]
+          )
+        } \
+        "2025-08-19 23:49"
+
+
+#ex: 2025-08-20 04:45 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=readout-proxy -oDetector=ITS -oSeverity=E -oSystem=DPL "INVALID runNumber / tfCounter: runNumber 0, tfCounter 0, FMQ runNumber 565476 for msgidx 0: ???/INFORMATION/0 part 0 of 1  payload 0"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout-proxy" -d "ITS" -tmin "2025-08-20 04:45 CEST" -tmax "2025-08-20 04:46 CEST" -s "E F" -query
+
+registerAlarm \
+        17004 \
+        "ITS FLP DPL errors" \
+        "If it appears at EOR, please ignore. Otherwise create a bookkeeping entry and call ITS on-call." \
+        {
+           ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "ITS")
+	&& ("$field(Facility)" == "readout-proxy")
+        && ("$field(System)" == "DPL")
+        && (
+          [string match "INVALID runNumber / tfCounter*" "$field(Message)"]
+          )
+        } \
+        "2025-08-20 04:45"
+
+
+#ex: 2025-05-05 15:00 CEST
+# /opt/o2-InfoLogger/bin/o2-infologger-log -oFacility=readout -oDetector=TPC -oSeverity=E -oErrorCode=3241 "Equipment equipment-roc-1 : first HB orbit of link 0 is different from first link(15): 0x0 != 0x446FE40"
+# /opt/o2-InfoLogger/bin/o2-infologger-browser -- -f "readout" -d "TPC" -tmin "2025-05-05 15:00 CEST" -tmax "2025-05-05 15:01 CEST" -s "E F" -query
+
+registerAlarm \
+        22001 \
+        "TPC FLP readout fatal" \
+        "Restart the run, if it happens again call TPC on-call: first HB orbit mismatch." \
+        {
+           ("$field(ErrCode)" == "3241")
+	&& ("$field(Severity)" == "E")
+	&& ("$field(Detector)" == "TPC")
+        && ("$field(Facility)" == "readout")
+        && (
+	  [string match "Equipment * first HB orbit * different *" "$field(Message)"]
+	)
+        } \
+        "2025-05-05 15:00"
+
+
+
+
+
+####################################################################
+
+
+# function to convert the TCL logical definition to the corresponding SQL query
+proc generateSQLFromCondition {condition_expr} {
+     set sql_conditions {}
+
+    # Split AND parts
+    set parts [split $condition_expr "&&"]
+
+    foreach part $parts {
+        set part [string trim $part]
+        if {$part eq ""} { continue }
+
+        # remove external ()
+        if {[string length $part] >= 2 &&
+            [string index $part 0] eq "(" &&
+            [string index $part end] eq ")"} {
+            set part [string trim [string range $part 1 end-1]]
+        }
+
+        # handle OR in Message
+        if {[string first "||" $part] != -1} {
+            set or_parts [split $part "||"]
+            set or_clauses {}
+
+            foreach or_part $or_parts {
+                set or_part [string trim $or_part]
+                if {$or_part eq ""} { continue }
+
+                # remove ()
+                if {[string length $or_part] >= 2 &&
+                    [string index $or_part 0] eq "(" &&
+                    [string index $or_part end] eq ")"} {
+                    set or_part [string trim [string range $or_part 1 end-1]]
+                }
+
+                # extract match string pattern
+                if {[regexp {\[string match "(.*)" "\$field\(Message\)"} $or_part -> pattern]} {
+                    set sql_pattern [string map {* %} $pattern]
+                    lappend or_clauses "Message LIKE '$sql_pattern'"
+                } else {
+                    puts "Warning: OR condition not supported: $or_part"
+                }
+            }
+
+            # recombine OR
+            set or_clause [join $or_clauses " OR "]
+            lappend sql_conditions "($or_clause)"
+
+        } else {
+            # No OR
+
+            # string match simple
+            if {[regexp {\[string match "(.*)" "\$field\(([^)]+)\)"} $part -> pattern field]} {
+                if {$field eq "Message"} {
+                    set sql_pattern [string map {* %} $pattern]
+                    lappend sql_conditions "Message LIKE '$sql_pattern'"
+                } else {
+                    puts "Warning: string match sur champ non Message: $part"
+                }
+
+            # compare chars
+            } elseif {[regexp {"\$field\(([^)]+)\)"\s*==\s*"([^"]+)"} $part -> field value]} {
+                lappend sql_conditions "$field = '$value'"
+
+            # compare numbers
+            } elseif {[regexp {"\$field\(([^)]+)\)"\s*==\s*([0-9]+)} $part -> field value]} {
+                lappend sql_conditions "$field = $value"
+
+            } else {
+                puts "Warning: condition not supported: $part"
+            }
+        }
+    }
+
+    set where_clause [join $sql_conditions " AND "]
+    return "WHERE $where_clause"
+}
+
+
+
+set metricFd [open "|socat - UNIX-SENDTO:$cfg(TelegrafSocket)" "w"]
+
+proc sendMetric {id value} {
+  global cfg
+  set t [expr [clock milliseconds] * 1000000]
+  set m "ilg.alert.${id},subsystem=$cfg(TelegrafBucket) value=${value}i $t"
+  doLog "Sending alert: $m"
+  if {[catch {
+    global metricFd
+    puts $metricFd $m
+    flush $metricFd
+  } err] } {
+    doLog "Sending failed: $err"
+  } else {
+    doLog "Sending done"
+  }
+}
+
+
+
+set listAlarms {}
+foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+  lappend listAlarms $id
+}
+doLog "Registered alarms: $listAlarms"
+
+if {$cfg(DumpRules)} {
+  foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+    puts "| $id | $description | $doc | [getDetectorFromAlertId $id] | system | facility | errcode | rule1<BR>rule2 | $exampleTime | PROD |"
+  }
+
+  # print SQL as well
+  puts "\n\n"
+  foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+    set sql ""
+    set sql [generateSQLFromCondition $test]
+    puts "$id : $sql"
+  }
+
+
+  exit 0
+}
+
+
+doOnline
+
+set repeatMetrics 0
+set loopTimeout 5000
+
+
+while {1} {
+  after $loopTimeout {set timeout 1}
+  vwait timeout
+  #doLog "loop"
+  set now [clock seconds]
+  global alarms
+  foreach {id doc description test onN onT offN offT exampleTime} $alarms {
+    if ($alState($id)) {
+      if {$now >= [expr $alTlast($id) + $offT]} {
+        doLogIlg ${id} "Alarm ${id} cleared after timeout. ($alCount($id) match)"
+	sendMetric $id 0
+	clearAlarm $id
+      } else {
+        if {($alSent($id) == 0) || $repeatMetrics} {
+	  if {$logHandle != ""} {
+            doLogIlg ${id} "Alarm ${id} firing."
+	    $logContext setField "Level" "1"
+	    $logContext setField "Severity" "E"
+	    doLogIlg ${id} "$doc - $description"
+	  }
+	  sendMetric $id 1
+	  set alSent($id) 1
+	}
+      }
+    }
+  }
+}

@@ -82,7 +82,8 @@ InfoLoggerDispatchOnlineBrowser::InfoLoggerDispatchOnlineBrowser(ConfigInfoLogge
     throw __LINE__;
   }
   //theLog.info("%s() success\n",__FUNCTION__);
-  
+  theLog->info("Publishing online messages on port %d", theConfig->serverPortTx);
+
   // enable customloop callback
   isReady = true;
 }
